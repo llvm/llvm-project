@@ -157,7 +157,7 @@ define <2 x i64> @v2i64_select_no_cmp(<2 x i64> %a, <2 x i64> %b, <2 x i1> %cond
 
 define <4 x half> @v4f16_select_ogt(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; COST-LABEL: v4f16_select_ogt
-; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %cmp.1 = fcmp ogt <4 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction:   %cmp.1 = fcmp ogt <4 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp ogt <4 x half> %a, %b
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
@@ -241,7 +241,7 @@ define <2 x double> @v2f64_select_ogt(<2 x double> %a, <2 x double> %b, <2 x dou
 
 define <4 x half> @v4f16_select_oge(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; COST-LABEL: v4f16_select_oge
-; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %cmp.1 = fcmp oge <4 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction:   %cmp.1 = fcmp oge <4 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp oge <4 x half> %a, %b
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
@@ -325,7 +325,7 @@ define <2 x double> @v2f64_select_oge(<2 x double> %a, <2 x double> %b, <2 x dou
 
 define <4 x half> @v4f16_select_olt(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; COST-LABEL: v4f16_select_olt
-; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %cmp.1 = fcmp olt <4 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction:   %cmp.1 = fcmp olt <4 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp olt <4 x half> %a, %b
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
@@ -409,7 +409,7 @@ define <2 x double> @v2f64_select_olt(<2 x double> %a, <2 x double> %b, <2 x dou
 
 define <4 x half> @v4f16_select_ole(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; COST-LABEL: v4f16_select_ole
-; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %cmp.1 = fcmp ole <4 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction:   %cmp.1 = fcmp ole <4 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp ole <4 x half> %a, %b
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
@@ -493,7 +493,7 @@ define <2 x double> @v2f64_select_ole(<2 x double> %a, <2 x double> %b, <2 x dou
 
 define <4 x half> @v4f16_select_oeq(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; COST-LABEL: v4f16_select_oeq
-; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %cmp.1 = fcmp oeq <4 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction:   %cmp.1 = fcmp oeq <4 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp oeq <4 x half> %a, %b
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
@@ -577,7 +577,7 @@ define <2 x double> @v2f64_select_oeq(<2 x double> %a, <2 x double> %b, <2 x dou
 
 define <4 x half> @v4f16_select_one(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; COST-LABEL: v4f16_select_one
-; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %cmp.1 = fcmp one <4 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction:   %cmp.1 = fcmp one <4 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp one <4 x half> %a, %b
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:  %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
@@ -671,7 +671,7 @@ define <2 x double> @v2f64_select_one(<2 x double> %a, <2 x double> %b, <2 x dou
 
 define <4 x half> @v4f16_select_une(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; COST-LABEL: v4f16_select_une
-; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %cmp.1 = fcmp une <4 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction:   %cmp.1 = fcmp une <4 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp une <4 x half> %a, %b
 ; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
