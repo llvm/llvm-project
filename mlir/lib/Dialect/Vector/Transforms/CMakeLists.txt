@@ -32,7 +32,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRDialectUtils
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRIR
   MLIRLinalgDialect
   MLIRMemRefDialect

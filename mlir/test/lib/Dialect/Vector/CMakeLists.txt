@@ -9,7 +9,7 @@ add_mlir_library(MLIRVectorTestPasses
   MLIRAnalysis
   MLIRArithDialect
   MLIRFuncDialect
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRLinalgDialect
   MLIRLinalgTransforms
   MLIRLLVMDialect
