@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wmismatched-tags -verify %s
-// RUN: not %clang_cc1 -fsyntax-only -Wmismatched-tags %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -Wmismatched-tags -fno-diagnostics-show-line-numbers -verify %s
+// RUN: not %clang_cc1 -fsyntax-only -Wmismatched-tags -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck %s
 class X; // expected-note 2{{here}}
 typedef struct X * X_t; // expected-warning{{previously declared}}
 union X { int x; float y; }; // expected-error{{use of 'X' with tag type that does not match previous declaration}}

@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -std=c++11 -fsyntax-only -fcaret-diagnostics-max-lines 5 %s 2>&1 | FileCheck %s -strict-whitespace
+// RUN: not %clang_cc1 -std=c++11 -fsyntax-only -fno-diagnostics-show-line-numbers -fcaret-diagnostics-max-lines 5 %s 2>&1 | FileCheck %s -strict-whitespace
 
 
 //CHECK: {{.*}}: error: excess elements in scalar initializer
