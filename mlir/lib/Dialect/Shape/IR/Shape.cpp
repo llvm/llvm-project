@@ -920,7 +920,8 @@ LogicalResult mlir::shape::ConstShapeOp::inferReturnTypes(
     DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   Builder b(context);
-  auto shape = attributes.getAs<DenseIntElementsAttr>("shape");
+  Properties *prop = properties.as<Properties *>();
+  DenseIntElementsAttr shape = prop->shape;
   if (!shape)
     return emitOptionalError(location, "missing shape attribute");
   inferredReturnTypes.assign({RankedTensorType::get(

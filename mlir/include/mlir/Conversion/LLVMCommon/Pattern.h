@@ -147,11 +147,11 @@ public:
                ConversionPatternRewriter &rewriter) const final {
     if constexpr (SourceOp::hasProperties())
       rewrite(cast<SourceOp>(op),
-              OpAdaptor(operands, op->getAttrDictionary(),
+              OpAdaptor(operands, op->getDiscardableAttrDictionary(),
                         cast<SourceOp>(op).getProperties()),
               rewriter);
-    rewrite(cast<SourceOp>(op), OpAdaptor(operands, op->getAttrDictionary()),
-            rewriter);
+    rewrite(cast<SourceOp>(op),
+            OpAdaptor(operands, op->getDiscardableAttrDictionary()), rewriter);
   }
   LogicalResult match(Operation *op) const final {
     return match(cast<SourceOp>(op));
@@ -161,12 +161,13 @@ public:
                   ConversionPatternRewriter &rewriter) const final {
     if constexpr (SourceOp::hasProperties())
       return matchAndRewrite(cast<SourceOp>(op),
-                             OpAdaptor(operands, op->getAttrDictionary(),
+                             OpAdaptor(operands,
+                                       op->getDiscardableAttrDictionary(),
                                        cast<SourceOp>(op).getProperties()),
                              rewriter);
-    return matchAndRewrite(cast<SourceOp>(op),
-                           OpAdaptor(operands, op->getAttrDictionary()),
-                           rewriter);
+    return matchAndRewrite(
+        cast<SourceOp>(op),
+        OpAdaptor(operands, op->getDiscardableAttrDictionary()), rewriter);
   }
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
