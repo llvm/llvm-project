@@ -376,6 +376,97 @@
 ; CHECK:   }
 ; CHECK: ]
 
+; CHECK-LABEL: FunctionType: Func_AClass (0x1008)
+; CHECK-NEXT:  CodeOffset: ?Func_AClass@@YA?AVAClass@@AEAV1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_AClass
+; CHECK-NEXT:  LinkageName: ?Func_AClass@@YA?AVAClass@@AEAV1@@Z
+; CHECK-LABEL: FunctionType: Func_BClass (0x1013)
+; CHECK-NEXT:  CodeOffset: ?Func_BClass@@YA?AVBClass@@AEAV1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_BClass
+; CHECK-NEXT:  LinkageName: ?Func_BClass@@YA?AVBClass@@AEAV1@@Z
+; CHECK-LABEL: FunctionType: Func_C1Class (0x101D)
+; CHECK-NEXT:  CodeOffset: ?Func_C1Class@@YA?AVC1Class@@AEAV1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_C1Class
+; CHECK-NEXT:  LinkageName: ?Func_C1Class@@YA?AVC1Class@@AEAV1@@Z
+; CHECK-LABEL: FunctionType: Func_C2Class (0x1027)
+; CHECK-NEXT:  CodeOffset: ?Func_C2Class@@YA?AVC2Class@@AEAV1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_C2Class
+; CHECK-NEXT:  LinkageName: ?Func_C2Class@@YA?AVC2Class@@AEAV1@@Z
+; CHECK-LABEL: FunctionType: Func_DClass (0x102F)
+; CHECK-NEXT:  CodeOffset: ?Func_DClass@@YA?AVDClass@@AEAV1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_DClass
+; CHECK-NEXT:  LinkageName: ?Func_DClass@@YA?AVDClass@@AEAV1@@Z
+; CHECK-LABEL: FunctionType: Func_FClass (0x103A)
+; CHECK-NEXT:  CodeOffset: ?Func_FClass@@YA?AVFClass@@AEAV1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_FClass
+; CHECK-NEXT:  LinkageName: ?Func_FClass@@YA?AVFClass@@AEAV1@@Z
+; CHECK-LABEL: FunctionType: Func_AStruct (0x1041)
+; CHECK-NEXT:  CodeOffset: ?Func_AStruct@@YA?AUAStruct@@AEAU1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_AStruct
+; CHECK-NEXT:  LinkageName: ?Func_AStruct@@YA?AUAStruct@@AEAU1@@Z
+; CHECK-LABEL: FunctionType: Func_BStruct (0x104B)
+; CHECK-NEXT:  CodeOffset: ?Func_BStruct@@YA?AUBStruct@@AEAU1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_BStruct
+; CHECK-NEXT:  LinkageName: ?Func_BStruct@@YA?AUBStruct@@AEAU1@@Z
+; CHECK-LABEL: FunctionType: Func_AUnion (0x1052)
+; CHECK-NEXT:  CodeOffset: ?Func_AUnion@@YA?ATAUnion@@AEAT1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_AUnion
+; CHECK-NEXT:  LinkageName: ?Func_AUnion@@YA?ATAUnion@@AEAT1@@Z
+; CHECK-LABEL: FunctionType: Func_BUnion (0x105C)
+; CHECK-NEXT:  CodeOffset: ?Func_BUnion@@YA?ATBUnion@@AEAT1@@Z+0x0
+; CHECK-NEXT:  Segment: 0x0
+; CHECK-NEXT:  Flags [ (0xC0)
+; CHECK-NEXT:    HasOptimizedDebugInfo (0x80)
+; CHECK-NEXT:    IsNoInline (0x40)
+; CHECK-NEXT:  ]
+; CHECK-NEXT:  DisplayName: Func_BUnion
+; CHECK-NEXT:  LinkageName: ?Func_BUnion@@YA?ATBUnion@@AEAT1@@Z
+
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
