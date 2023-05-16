@@ -443,13 +443,19 @@ bool CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
 ///       -0 --> true
 ///   x > +0 --> true
 ///   x < -0 --> false
-bool CannotBeOrderedLessThanZero(const Value *V, const TargetLibraryInfo *TLI);
+bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI);
 
 /// Return true if the floating-point scalar value is not an infinity or if
 /// the floating-point vector value has no infinities. Return false if a value
 /// could ever be infinity.
-bool isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
-                          unsigned Depth = 0);
+bool isKnownNeverInfinity(const Value *V, const DataLayout &DL,
+                          const TargetLibraryInfo *TLI = nullptr,
+                          unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                          const Instruction *CtxI = nullptr,
+                          const DominatorTree *DT = nullptr,
+                          OptimizationRemarkEmitter *ORE = nullptr,
+                          bool UseInstrInfo = true);
 
 /// Return true if the floating-point value can never contain a NaN or infinity.
 inline bool isKnownNeverInfOrNaN(
@@ -465,8 +471,13 @@ inline bool isKnownNeverInfOrNaN(
 /// Return true if the floating-point scalar value is not a NaN or if the
 /// floating-point vector value has no NaN elements. Return false if a value
 /// could ever be NaN.
-bool isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
-                     unsigned Depth = 0);
+bool isKnownNeverNaN(const Value *V, const DataLayout &DL,
+                     const TargetLibraryInfo *TLI = nullptr, unsigned Depth = 0,
+                     AssumptionCache *AC = nullptr,
+                     const Instruction *CtxI = nullptr,
+                     const DominatorTree *DT = nullptr,
+                     OptimizationRemarkEmitter *ORE = nullptr,
+                     bool UseInstrInfo = true);
 
 /// Return true if we can prove that the specified FP value's sign bit is 0.
 ///
@@ -475,7 +486,8 @@ bool isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
 ///       -0 --> false
 ///   x > +0 --> true
 ///   x < -0 --> false
-bool SignBitMustBeZero(const Value *V, const TargetLibraryInfo *TLI);
+bool SignBitMustBeZero(const Value *V, const DataLayout &DL,
+                       const TargetLibraryInfo *TLI);
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8

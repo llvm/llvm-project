@@ -2204,7 +2204,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
-    if (SignBitMustBeZero(Sign, &TLI)) {
+    if (SignBitMustBeZero(Sign, DL, &TLI)) {
       // If we know that the sign argument is positive, reduce to FABS:
       // copysign Mag, +Sign --> fabs Mag
       Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
