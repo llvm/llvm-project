@@ -35,7 +35,8 @@ private:
 };
 
 bool FormatErrorReporter::Say(const common::FormatMessage &msg) {
-  if (!msg.isError && !context_.warnOnNonstandardUsage()) {
+  if (!msg.isError &&
+      !context_.ShouldWarn(common::LanguageFeature::AdditionalFormats)) {
     return false;
   }
   parser::MessageFormattedText text{
@@ -904,8 +905,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
   auto upper{Normalize(value)};
   if (specValues.at(specKind).count(upper) == 0) {
     if (specKind == IoSpecKind::Access && upper == "APPEND") {
-      if (context_.languageFeatures().ShouldWarn(
-              common::LanguageFeature::OpenAccessAppend)) {
+      if (context_.ShouldWarn(common::LanguageFeature::OpenAccessAppend)) {
         context_.Say(source,
             "ACCESS='%s' interpreted as POSITION='%s'"_port_en_US, value,
             upper);

@@ -859,7 +859,7 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
           auto restorer{messages_.SetLocation(symbol.name())};
           context_.set_location(symbol.name());
           CheckInitialTarget(
-              foldingContext_, *designator, *object->init(), DEREF(scope_));
+              context_, *designator, *object->init(), DEREF(scope_));
         }
       }
     } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
