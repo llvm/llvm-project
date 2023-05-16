@@ -38751,11 +38751,11 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     KnownBits Known2;
     if (!!DemandedLHS) {
       Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedLHS, Depth + 1);
-      Known = KnownBits::commonBits(Known, Known2);
+      Known = Known.intersectWith(Known2);
     }
     if (!!DemandedRHS) {
       Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedRHS, Depth + 1);
-      Known = KnownBits::commonBits(Known, Known2);
+      Known = Known.intersectWith(Known2);
     }
 
     if (Known.countMinLeadingZeros() < BitWidth)
@@ -38842,7 +38842,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
 
     // Only known if known in both the LHS and RHS.
-    Known = KnownBits::commonBits(Known, Known2);
+    Known = Known.intersectWith(Known2);
     break;
   }
   case X86ISD::BEXTR:
@@ -38952,7 +38952,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
           break;
         }
         KnownBits Known2 = KnownBits::makeConstant(EltBits[I]);
-        Known = KnownBits::commonBits(Known, Known2);
+        Known = Known.intersectWith(Known2);
       }
       return;
     }
@@ -39003,7 +39003,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
             continue;
           KnownBits Known2 =
               DAG.computeKnownBits(Ops[i], DemandedOps[i], Depth + 1);
-          Known = KnownBits::commonBits(Known, Known2);
+          Known = Known.intersectWith(Known2);
         }
       }
     }
@@ -43947,7 +43947,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
         return true;
 
       KnownScl = KnownScl.trunc(VecVT.getScalarSizeInBits());
-      Known = KnownBits::commonBits(KnownVec, KnownScl);
+      Known = KnownVec.intersectWith(KnownScl);
       return false;
     }
     break;
@@ -54852,8 +54852,8 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   if (VT.isVector() && OpVT.isVector() && OpVT.isInteger()) {
     bool CanMakeSigned = false;
     if (ISD::isUnsignedIntSetCC(CC)) {
-      KnownBits CmpKnown = KnownBits::commonBits(DAG.computeKnownBits(LHS),
-                                                 DAG.computeKnownBits(RHS));
+      KnownBits CmpKnown =
+          DAG.computeKnownBits(LHS).intersectWith(DAG.computeKnownBits(RHS));
       // If we know LHS/RHS share the same sign bit at each element we can
       // make this signed.
       // NOTE: `computeKnownBits` on a vector type aggregates common bits

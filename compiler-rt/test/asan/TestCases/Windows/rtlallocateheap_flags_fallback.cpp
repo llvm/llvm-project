@@ -1,9 +1,6 @@
-// UNSUPPORTED: target={{.*-windows-gnu}}
-
-// RUN: %clang_cl_asan -Od %s -Fe%t /MD
+// RUN: %clang_cl_asan %Od %s %Fe%t %MD
 // RUN: %env_asan_opts=windows_hook_rtl_allocators=true %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: asan-64-bits
-// REQUIRES: asan-rtl-heap-interception
 
 #include <assert.h>
 #include <stdio.h>

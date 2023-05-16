@@ -396,7 +396,7 @@ define float @ret_frem_same_operands_nonan(float nofpclass(nan) %arg) #0 {
 }
 
 define float @ret_frem_no_neg_lhs(float nofpclass(ninf nsub nnorm) %arg0, float %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_no_neg_lhs
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_frem_no_neg_lhs
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -426,7 +426,7 @@ define float @ret_frem_no_neg_nzero_rhs(float %arg0, float nofpclass(ninf nsub n
 }
 
 define float @ret_frem_no_neg(float nofpclass(ninf nsub nnorm) %arg0, float nofpclass(ninf nsub nnorm) %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_no_neg
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_frem_no_neg
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf nsub nnorm) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -446,7 +446,7 @@ define float @ret_frem_no_neg_nzero(float nofpclass(ninf nsub nnorm nzero) %arg0
 }
 
 define float @ret_frem_no_neg_rhs_no_nzero(float nofpclass(ninf nsub nnorm) %arg0, float nofpclass(ninf nsub nnorm nzero) %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_no_neg_rhs_no_nzero
+; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_frem_no_neg_rhs_no_nzero
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf nzero nsub nnorm) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -486,7 +486,7 @@ define float @ret_frem_no_pos_rhs(float %arg0, float nofpclass(pinf psub pnorm p
 }
 
 define float @ret_frem_no_pos_zero_lhs(float nofpclass(pinf psub pnorm) %arg0, float %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_no_pos_zero_lhs
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_frem_no_pos_zero_lhs
 ; CHECK-SAME: (float nofpclass(pinf psub pnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]

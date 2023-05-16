@@ -212,7 +212,7 @@ let isCall = 1 in
       def CALLpcrel16 : Ii16PCRel<0xE8, RawFrm,
                              (outs), (ins i16imm_brtarget:$dst),
                              "call{w}\t$dst", []>, OpSize16,
-                        Sched<[WriteJump]>;
+                        Requires<[Not64BitMode]>, Sched<[WriteJump]>;
     def CALL16r     : I<0xFF, MRM2r, (outs), (ins GR16:$dst),
                         "call{w}\t{*}$dst", [(X86call GR16:$dst)]>,
                       OpSize16, Requires<[Not64BitMode]>, Sched<[WriteJump]>;

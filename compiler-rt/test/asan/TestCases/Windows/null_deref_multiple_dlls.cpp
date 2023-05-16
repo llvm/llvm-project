@@ -1,12 +1,12 @@
-// UNSUPPORTED: target={{.*-windows-gnu}}
-
 // Make sure everything works even if the main module doesn't have any stack
 // variables, thus doesn't explicitly reference any symbol exported by the
 // runtime thunk.
 //
-// RUN: %clang_cl_asan -LD -Od -DDLL1 %s -Fe%t1.dll
-// RUN: %clang_cl_asan -LD -Od -DDLL2 %s -Fe%t2.dll
-// RUN: %clang_cl_asan -Od -DEXE %s %t1.lib %t2.lib -Fe%t
+// RUN: %clang_cl_asan %LD %Od -DDLL1 %s %Fe%t1.dll \
+// RUN:   %if target={{.*-windows-gnu}} %{ -Wl,--out-implib,%t1.lib %}
+// RUN: %clang_cl_asan %LD %Od -DDLL2 %s %Fe%t2.dll \
+// RUN:   %if target={{.*-windows-gnu}} %{ -Wl,--out-implib,%t2.lib %}
+// RUN: %clang_cl_asan %Od -DEXE %s %t1.lib %t2.lib %Fe%t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 #include <malloc.h>

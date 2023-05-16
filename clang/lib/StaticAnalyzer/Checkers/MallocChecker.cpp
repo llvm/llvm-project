@@ -3259,6 +3259,11 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     return true;
   }
 
+  if (FName == "singleShotImpl" &&
+      FD->getQualifiedNameAsString() == "QTimer::singleShotImpl") {
+    return true;
+  }
+
   // Handle cases where we know a buffer's /address/ can escape.
   // Note that the above checks handle some special cases where we know that
   // even though the address escapes, it's still our responsibility to free the

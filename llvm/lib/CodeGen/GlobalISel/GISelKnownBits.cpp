@@ -115,7 +115,7 @@ void GISelKnownBits::computeKnownBitsMin(Register Src0, Register Src1,
   computeKnownBitsImpl(Src0, Known2, DemandedElts, Depth);
 
   // Only known if known in both the LHS and RHS.
-  Known = KnownBits::commonBits(Known, Known2);
+  Known = Known.intersectWith(Known2);
 }
 
 // Bitfield extract is computed as (Src >> Offset) & Mask, where Mask is
@@ -191,7 +191,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                            Depth + 1);
 
       // Known bits are the values that are shared by every demanded element.
-      Known = KnownBits::commonBits(Known, Known2);
+      Known = Known.intersectWith(Known2);
 
       // If we don't know any bits, early out.
       if (Known.isUnknown())
@@ -235,10 +235,10 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
         // For COPYs we don't do anything, don't increase the depth.
         computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
                              Depth + (Opcode != TargetOpcode::COPY));
-        Known = KnownBits::commonBits(Known, Known2);
+        Known = Known.intersectWith(Known2);
         // If we reach a point where we don't know anything
         // just stop looking through the operands.
-        if (Known.One == 0 && Known.Zero == 0)
+        if (Known.isUnknown())
           break;
       } else {
         // We know nothing.

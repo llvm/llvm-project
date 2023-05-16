@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Linalg/TransformOps/LinalgMatchOps.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/TransformOps/Syntax.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/FunctionImplementation.h"
@@ -744,82 +745,6 @@ static void printStructuredTransformDims(OpAsmPrinter &printer, Operation *op,
   if (isInverted) {
     printer << ")";
   }
-}
-/// Parses a single non-function type or a function type with at least one
-/// argument. This allows for the following syntax:
-///
-///   - type: just the argument type;
-///   - `(` type `)` `->` type: one argument and one result type;
-///   - `(` type `)` `->` `(` comma-separated-type-list `)`: one argument and
-///     multiple result types.
-///
-/// Unlike FunctionType, this allows and requires one to omit the parens around
-/// the argument type in absence of result types, and does not accept the
-/// trailing `-> ()` construct, which makes the syntax nicer for operations.
-static ParseResult parseSemiFunctionType(OpAsmParser &parser,
-                                         Type &argumentType, Type &resultType) {
-  argumentType = resultType = nullptr;
-  bool hasLParen = parser.parseOptionalLParen().succeeded();
-  if (parser.parseType(argumentType).failed())
-    return failure();
-  if (!hasLParen)
-    return success();
-
-  return failure(parser.parseRParen().failed() ||
-                 parser.parseArrow().failed() ||
-                 parser.parseType(resultType).failed());
-}
-static ParseResult parseSemiFunctionType(OpAsmParser &parser,
-                                         Type &argumentType,
-                                         SmallVectorImpl<Type> &resultTypes) {
-  argumentType = nullptr;
-  bool hasLParen = parser.parseOptionalLParen().succeeded();
-  if (parser.parseType(argumentType).failed())
-    return failure();
-  if (!hasLParen)
-    return success();
-
-  if (parser.parseRParen().failed() || parser.parseArrow().failed())
-    return failure();
-
-  if (parser.parseOptionalLParen().failed()) {
-    Type type;
-    if (parser.parseType(type).failed())
-      return failure();
-    resultTypes.push_back(type);
-    return success();
-  }
-  if (parser.parseTypeList(resultTypes).failed() ||
-      parser.parseRParen().failed()) {
-    resultTypes.clear();
-    return failure();
-  }
-  return success();
-}
-
-/// Prints argument and result types in a syntax similar to that of FunctionType
-/// but allowing and requiring one to omit the parens around the argument type
-/// in absence of result types, and without the trailing `-> ()`.
-static void printSemiFunctionType(OpAsmPrinter &printer, Operation *op,
-                                  Type argumentType, TypeRange resultType) {
-  if (!resultType.empty())
-    printer << "(";
-  printer << argumentType;
-  if (resultType.empty())
-    return;
-  printer << ") -> ";
-
-  if (resultType.size() > 1)
-    printer << "(";
-  llvm::interleaveComma(resultType, printer.getStream());
-  if (resultType.size() > 1)
-    printer << ")";
-}
-static void printSemiFunctionType(OpAsmPrinter &printer, Operation *op,
-                                  Type argumentType, Type resultType) {
-  return printSemiFunctionType(printer, op, argumentType,
-                               resultType ? TypeRange(resultType)
-                                          : TypeRange());
 }
 
 #define GET_OP_CLASSES
