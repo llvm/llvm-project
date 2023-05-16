@@ -9981,6 +9981,42 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
                                      : DAG.getZExtOrTrunc(Result, DL, WideVT));
 }
 
+// fold (bswap (logic_op(bswap(x),y))) -> logic_op(x,bswap(y))
+// This helper function accept SDNode with opcode ISD::BSWAP and ISD::BITREVERSE
+static SDValue foldBitOrderCrossLogicOp(SDNode *N, SelectionDAG &DAG) {
+  unsigned Opcode = N->getOpcode();
+  if (Opcode != ISD::BSWAP && Opcode != ISD::BITREVERSE)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  if (ISD::isBitwiseLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
+    SDValue OldLHS = N0.getOperand(0);
+    SDValue OldRHS = N0.getOperand(1);
+
+    // If both operands are bswap/bitreverse, ignore the multiuse
+    // Otherwise need to ensure logic_op and bswap/bitreverse(x) have one use.
+    if (OldLHS.getOpcode() == Opcode && OldRHS.getOpcode() == Opcode) {
+      return DAG.getNode(N0.getOpcode(), DL, VT, OldLHS.getOperand(0),
+                         OldRHS.getOperand(0));
+    }
+
+    if (OldLHS.getOpcode() == Opcode && OldLHS.hasOneUse()) {
+      SDValue NewBitReorder = DAG.getNode(Opcode, DL, VT, OldRHS);
+      return DAG.getNode(N0.getOpcode(), DL, VT, OldLHS.getOperand(0),
+                         NewBitReorder);
+    }
+
+    if (OldRHS.getOpcode() == Opcode && OldRHS.hasOneUse()) {
+      SDValue NewBitReorder = DAG.getNode(Opcode, DL, VT, OldLHS);
+      return DAG.getNode(N0.getOpcode(), DL, VT, NewBitReorder,
+                         OldRHS.getOperand(0));
+    }
+  }
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSRA(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -10765,6 +10801,9 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
       return DAG.getNode(InverseShift, DL, VT, NewSwap, N0.getOperand(1));
     }
   }
+
+  if (SDValue V = foldBitOrderCrossLogicOp(N, DAG))
+    return V;
 
   return SDValue();
 }
