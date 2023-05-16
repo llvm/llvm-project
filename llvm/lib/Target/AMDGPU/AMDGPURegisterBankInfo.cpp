@@ -215,6 +215,10 @@ static bool isVectorRegisterBank(const RegisterBank &Bank) {
   return BankID == AMDGPU::VGPRRegBankID || BankID == AMDGPU::AGPRRegBankID;
 }
 
+bool AMDGPURegisterBankInfo::isDivergentRegBank(const RegisterBank *RB) const {
+  return RB != &AMDGPU::SGPRRegBank;
+}
+
 unsigned AMDGPURegisterBankInfo::copyCost(const RegisterBank &Dst,
                                           const RegisterBank &Src,
                                           unsigned Size) const {
