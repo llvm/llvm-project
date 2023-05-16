@@ -46,7 +46,7 @@ struct NonTbpDefinedIoTable {
   // True when the only procedures to be used are the type-bound special
   // procedures in the type information tables and any non-null procedures
   // in this table.  When false, the entries in this table override whatever
-  // non-type-bound specific procedures might be in the type inforamtion,
+  // non-type-bound specific procedures might be in the type information,
   // but the remaining specifics remain visible.
   bool ignoreNonTbpEntries{false};
 };
