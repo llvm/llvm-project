@@ -4067,7 +4067,7 @@ bool ArgumentAnalyzer::OkLogicalIntegerAssignment(
 
 std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
   const Symbol *proc{nullptr};
-  int passedObjectIndex{-1};
+  std::optional<int> passedObjectIndex;
   std::string oprNameString{"assignment(=)"};
   parser::CharBlock oprName{oprNameString};
   const auto &scope{context_.context().FindScope(source_)};
@@ -4099,8 +4099,23 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
     return std::nullopt;
   }
   ActualArguments actualsCopy{actuals_};
-  if (passedObjectIndex >= 0) {
-    actualsCopy[passedObjectIndex]->set_isPassedObject();
+  // Ensure that the RHS argument is not passed as a variable unless
+  // the dummy argument has the VALUE attribute.
+  if (evaluate::IsVariable(actualsCopy.at(1).value().UnwrapExpr())) {
+    auto chars{evaluate::characteristics::Procedure::Characterize(
+        *proc, context_.GetFoldingContext())};
+    const auto *rhsDummy{chars && chars->dummyArguments.size() == 2
+            ? std::get_if<evaluate::characteristics::DummyDataObject>(
+                  &chars->dummyArguments.at(1).u)
+            : nullptr};
+    if (!rhsDummy ||
+        !rhsDummy->attrs.test(
+            evaluate::characteristics::DummyDataObject::Attr::Value)) {
+      actualsCopy.at(1).value().Parenthesize();
+    }
+  }
+  if (passedObjectIndex) {
+    actualsCopy[*passedObjectIndex]->set_isPassedObject();
   }
   return ProcedureRef{ProcedureDesignator{*proc}, std::move(actualsCopy)};
 }
