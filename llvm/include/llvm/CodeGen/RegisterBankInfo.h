@@ -587,6 +587,11 @@ public:
   /// Get the total number of register banks.
   unsigned getNumRegBanks() const { return NumRegBanks; }
 
+  /// Returns true if the register bank is considered divergent.
+  virtual bool isDivergentRegBank(const RegisterBank *RB) const {
+    return false;
+  }
+
   /// Get a register bank that covers \p RC.
   ///
   /// \pre \p RC is a user-defined register class (as opposed as one
