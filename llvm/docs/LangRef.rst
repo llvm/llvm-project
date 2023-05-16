@@ -4193,7 +4193,7 @@ or '``void``') and be used anywhere a constant is permitted.
 
 .. note::
 
-  A '``poison``' value (decribed in the next section) should be used instead of
+  A '``poison``' value (described in the next section) should be used instead of
   '``undef``' whenever possible. Poison values are stronger than undef, and
   enable more optimizations. Just the existence of '``undef``' blocks certain
   optimizations (see the examples below).

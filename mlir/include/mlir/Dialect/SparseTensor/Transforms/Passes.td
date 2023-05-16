@@ -73,6 +73,7 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
     "affine::AffineDialect",
     "arith::ArithDialect",
     "bufferization::BufferizationDialect",
+    "gpu::GPUDialect",
     "LLVM::LLVMDialect",
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
@@ -100,7 +101,12 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
                         "Enable dense parallelization for any loop."),
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
-                        "Enable sparse parallelization for any storage and loop."))}]>
+                        "Enable sparse parallelization for any storage and loop."))}]>,
+    Option<"enableGPULibgen", "enable-gpu-libgen", "bool",
+           "false",
+           "Enable GPU acceleration by means of direct library calls (like cuSPARSE)">,
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "true", "Enable runtime library for manipulating sparse tensors">,
   ];
 }
 

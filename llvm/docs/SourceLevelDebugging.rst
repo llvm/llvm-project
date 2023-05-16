@@ -250,14 +250,14 @@ the complex expression derives the direct value.
                         Value *Address,
                         DIExpression *AddressExpression)
 
-This intrinsic marks the position in IR where a source assignment occured. It
+This intrinsic marks the position in IR where a source assignment occurred. It
 encodes the value of the variable. It references the store, if any, that
 performs the assignment, and the destination address.
 
 The first three arguments are the same as for an ``llvm.dbg.value``. The fourth
 argument is a ``DIAssignID`` used to reference a store. The fifth is the
 destination of the store (wrapped as metadata), and the sixth is a `complex
-expression <LangRef.html#diexpression>`_ that modfies it.
+expression <LangRef.html#diexpression>`_ that modifies it.
 
 The formal LLVM-IR signature is:
 

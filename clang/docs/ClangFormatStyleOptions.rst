@@ -2453,7 +2453,7 @@ the configuration (without a prefix: ``Auto``).
   * ``BBCDS_Allowed`` (in configuration: ``Allowed``)
     Breaking between template declaration and ``concept`` is allowed. The
     actual behavior depends on the content and line breaking rules and
-    penalities.
+    penalties.
 
   * ``BBCDS_Always`` (in configuration: ``Always``)
     Always break before ``concept``, putting it in the line after the

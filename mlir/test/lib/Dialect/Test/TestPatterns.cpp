@@ -192,7 +192,9 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
       return failure();
     if (!toBeHoisted->hasAttr("eligible"))
       return failure();
-    toBeHoisted->moveBefore(op);
+    // Hoisting means removing an op from the enclosing op. I.e., the enclosing
+    // op is modified.
+    rewriter.updateRootInPlace(op, [&]() { toBeHoisted->moveBefore(op); });
     return success();
   }
 };
@@ -316,7 +318,8 @@ private:
       Operation *newOp =
           rewriter.create(op->getLoc(), op->getName().getIdentifier(),
                           op->getOperands(), op->getResultTypes());
-      op->setAttr("skip", rewriter.getBoolAttr(true));
+      rewriter.updateRootInPlace(
+          op, [&]() { op->setAttr("skip", rewriter.getBoolAttr(true)); });
       newOp->setAttr("skip", rewriter.getBoolAttr(true));
 
       return success();
@@ -433,7 +436,7 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
       std::array<Value, 2> values = {{fop.getArgument(i), fop.getArgument(j)}};
       SmallVector<Type, 2> inferredReturnTypes;
       if (succeeded(OpTy::inferReturnTypes(
-              context, std::nullopt, values, op->getAttrDictionary(),
+              context, std::nullopt, values, op->getDiscardableAttrDictionary(),
               op->getPropertiesStorage(), op->getRegions(),
               inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());

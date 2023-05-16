@@ -349,7 +349,7 @@ uint64_t Debugger::GetTerminalWidth() const {
       idx, g_debugger_properties[idx].default_uint_value);
 }
 
-bool Debugger::SetTerminalWidth(uint32_t term_width) {
+bool Debugger::SetTerminalWidth(uint64_t term_width) {
   if (auto handler_sp = m_io_handler_stack.Top())
     handler_sp->TerminalSizeChanged();
 
@@ -544,7 +544,7 @@ uint64_t Debugger::GetTabSize() const {
       idx, g_debugger_properties[idx].default_uint_value);
 }
 
-bool Debugger::SetTabSize(uint32_t tab_size) {
+bool Debugger::SetTabSize(uint64_t tab_size) {
   const uint32_t idx = ePropertyTabSize;
   return SetPropertyAtIndex(idx, tab_size);
 }

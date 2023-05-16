@@ -106,6 +106,12 @@
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 // RUN: %clang -### -target ve-unknown-linux-gnu -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-linux-android -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-linux-android -S -O2 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=aarch64-linux-android -S -Os %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 
 // RUN: %clang -### -target powerpc64 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s
@@ -153,6 +159,9 @@
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s
 // RUN: %clang -### -target armv7a-linux-androideabi- -mthumb -mbig-endian -O1 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s
-
+// RUN: %clang -### --target=riscv64-linux-android -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+// RUN: %clang -### --target=riscv64-linux-android -mbig-endian -O1 -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 void f0() {}
 void f1() { f0(); }

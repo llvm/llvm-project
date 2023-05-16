@@ -1890,11 +1890,12 @@ private:
     if constexpr (has_fold_adaptor_single_result_v<ConcreteOpT>) {
       if constexpr (hasProperties()) {
         result = cast<ConcreteOpT>(op).fold(typename ConcreteOpT::FoldAdaptor(
-            operands, op->getAttrDictionary(),
+            operands, op->getDiscardableAttrDictionary(),
             cast<ConcreteOpT>(op).getProperties(), op->getRegions()));
       } else {
         result = cast<ConcreteOpT>(op).fold(typename ConcreteOpT::FoldAdaptor(
-            operands, op->getAttrDictionary(), {}, op->getRegions()));
+            operands, op->getDiscardableAttrDictionary(), {},
+            op->getRegions()));
       }
     } else {
       result = cast<ConcreteOpT>(op).fold(operands);
@@ -1920,13 +1921,14 @@ private:
       if constexpr (hasProperties()) {
         result = cast<ConcreteOpT>(op).fold(
             typename ConcreteOpT::FoldAdaptor(
-                operands, op->getAttrDictionary(),
+                operands, op->getDiscardableAttrDictionary(),
                 cast<ConcreteOpT>(op).getProperties(), op->getRegions()),
             results);
       } else {
         result = cast<ConcreteOpT>(op).fold(
-            typename ConcreteOpT::FoldAdaptor(operands, op->getAttrDictionary(),
-                                              {}, op->getRegions()),
+            typename ConcreteOpT::FoldAdaptor(
+                operands, op->getDiscardableAttrDictionary(), {},
+                op->getRegions()),
             results);
       }
     } else {

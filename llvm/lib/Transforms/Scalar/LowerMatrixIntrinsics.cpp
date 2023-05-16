@@ -72,6 +72,11 @@ static cl::opt<bool> AllowContractEnabled(
     cl::desc("Allow the use of FMAs if available and profitable. This may "
              "result in different results, due to less rounding error."));
 
+static cl::opt<bool>
+    VerifyShapeInfo("verify-matrix-shapes", cl::Hidden,
+                    cl::desc("Enable/disable matrix shape verification."),
+                    cl::init(false));
+
 enum class MatrixLayoutTy { ColumnMajor, RowMajor };
 
 static cl::opt<MatrixLayoutTy> MatrixLayout(
@@ -535,6 +540,15 @@ public:
 
     auto SIter = ShapeMap.find(V);
     if (SIter != ShapeMap.end()) {
+      if (VerifyShapeInfo && (SIter->second.NumRows != Shape.NumRows ||
+                              SIter->second.NumColumns != Shape.NumColumns)) {
+        errs() << "Conflicting shapes (" << SIter->second.NumRows << "x"
+               << SIter->second.NumColumns << " vs " << Shape.NumRows << "x"
+               << Shape.NumColumns << ") for " << *V << "\n";
+        report_fatal_error(
+            "Matrix shape verification failed, compilation aborted!");
+      }
+
       LLVM_DEBUG(dbgs() << "  not overriding existing shape: "
                         << SIter->second.NumRows << " "
                         << SIter->second.NumColumns << " for " << *V << "\n");
@@ -1345,10 +1359,12 @@ public:
       return;
 
     auto CanBeFlattened = [](Value *Op) {
-      return match(Op, m_OneUse(m_CombineOr(
-                           m_Load(m_Value()),
-                           m_Intrinsic<Intrinsic::matrix_column_major_load>(
-                               m_Value(), m_SpecificInt(1)))));
+      return match(
+          Op, m_OneUse(m_CombineOr(
+                  m_Load(m_Value()),
+                  m_CombineOr(m_Intrinsic<Intrinsic::matrix_transpose>(),
+                              m_Intrinsic<Intrinsic::matrix_column_major_load>(
+                                  m_Value(), m_SpecificInt(1))))));
     };
     // Returns the cost benefit of using \p Op with the dot product lowering. If
     // the returned cost is < 0, the argument is cheaper to use in the
@@ -1360,21 +1376,34 @@ public:
       FixedVectorType *VecTy = cast<FixedVectorType>(Op->getType());
       Type *EltTy = VecTy->getElementType();
 
-      if (CanBeFlattened(Op)) {
-        if (N == 1)
-          return InstructionCost(0);
-
-        return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0) -
-               N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0);
+      if (!CanBeFlattened(Op)) {
+        InstructionCost EmbedCost(0);
+        // Roughly estimate the cost for embedding the columns into a vector.
+        for (unsigned I = 1; I < N; ++I)
+          EmbedCost -=
+              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+                                 std::nullopt, TTI::TCK_RecipThroughput);
+        return EmbedCost;
       }
 
-      InstructionCost EmbedCost(0);
-      // Roughly estimate the cost for embedding the columns into a vector.
-      for (unsigned I = 1; I < N; ++I)
-        EmbedCost +=
-            TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                               std::nullopt, TTI::TCK_RecipThroughput);
-      return EmbedCost;
+      if (match(Op, m_Intrinsic<Intrinsic::matrix_transpose>())) {
+        // The transpose can be skipped for the dot product lowering, roughly
+        // estimate the savings as the cost of embedding the columns in a
+        // vector.
+        InstructionCost EmbedCost(0);
+        for (unsigned I = 1; I < N; ++I)
+          EmbedCost +=
+              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+                                 std::nullopt, TTI::TCK_RecipThroughput);
+        return EmbedCost;
+      }
+
+      // Costs for loads.
+      if (N == 1)
+        return InstructionCost(0);
+
+      return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0) -
+             N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0);
     };
     auto LHSCost = GetCostForArg(LHS, LShape.NumColumns);
 
@@ -1396,8 +1425,8 @@ public:
 
     FusedInsts.insert(MatMul);
     IRBuilder<> Builder(MatMul);
-    auto FlattenArg = [&Builder, &FusedInsts,
-                       &CanBeFlattened](Value *Op) -> Value * {
+    auto FlattenArg = [&Builder, &FusedInsts, &CanBeFlattened,
+                       this](Value *Op) -> Value * {
       // Matmul must be the only user of loads because we don't use LowerLoad
       // for row vectors (LowerLoad results in scalar loads and shufflevectors
       // instead of single vector load).
@@ -1405,15 +1434,21 @@ public:
         return Op;
 
       FusedInsts.insert(cast<Instruction>(Op));
+
       // If vector uses the builtin load, lower to a LoadInst
-      Value *Ptr;
+      Value *Arg;
       if (match(Op, m_Intrinsic<Intrinsic::matrix_column_major_load>(
-                        m_Value(Ptr)))) {
-        auto *NewLoad = Builder.CreateLoad(Op->getType(), Ptr);
+                        m_Value(Arg)))) {
+        auto *NewLoad = Builder.CreateLoad(Op->getType(), Arg);
         Op->replaceAllUsesWith(NewLoad);
         cast<Instruction>(Op)->eraseFromParent();
         return NewLoad;
+      } else if (match(Op, m_Intrinsic<Intrinsic::matrix_transpose>(
+                               m_Value(Arg)))) {
+        ToRemove.push_back(cast<Instruction>(Op));
+        return Arg;
       }
+
       return Op;
     };
     LHS = FlattenArg(LHS);

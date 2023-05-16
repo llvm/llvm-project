@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_UNWRAP_REF_H
-#define _LIBCPP___FUNCTIONAL_UNWRAP_REF_H
+#ifndef _LIBCPP___TYPE_TRAITS_UNWRAP_REF_H
+#define _LIBCPP___TYPE_TRAITS_UNWRAP_REF_H
 
 #include <__config>
 #include <__type_traits/decay.h>
@@ -42,7 +42,7 @@ struct unwrap_ref_decay : unwrap_reference<__decay_t<_Tp> > { };
 
 template <class _Tp>
 using unwrap_ref_decay_t = typename unwrap_ref_decay<_Tp>::type;
-#endif // > C++17
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
 struct __unwrap_ref_decay
@@ -55,4 +55,4 @@ struct __unwrap_ref_decay
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_UNWRAP_REF_H
+#endif // _LIBCPP___TYPE_TRAITS_UNWRAP_REF_H

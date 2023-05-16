@@ -153,7 +153,7 @@ size_t OptionValueArray::GetArgs(Args &args) const {
   args.Clear();
   const uint32_t size = m_values.size();
   for (uint32_t i = 0; i < size; ++i) {
-    std::optional<llvm::StringRef> string_value = m_values[i]->GetStringValue();
+    auto string_value = m_values[i]->GetValueAs<llvm::StringRef>();
     if (string_value)
       args.AppendArgument(*string_value);
   }

@@ -136,7 +136,7 @@ needed) email conduct@llvm.org.
 Code of Conduct Committee
 =========================
 
-The committee will consist of a mininum of 5 members and members are asked to
+The committee will consist of a minimum of 5 members and members are asked to
 serve at least a 1 year term. New committee members will be selected by the
 current committee and the LLVM Foundation Board of Directors.
 

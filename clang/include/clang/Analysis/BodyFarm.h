@@ -40,6 +40,9 @@ public:
   /// Remove copy constructor to avoid accidental copying.
   BodyFarm(const BodyFarm &other) = delete;
 
+  /// Delete copy assignment operator.
+  BodyFarm &operator=(const BodyFarm &other) = delete;
+
 private:
   typedef llvm::DenseMap<const Decl *, std::optional<Stmt *>> BodyMap;
 

@@ -118,6 +118,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.CPlusPlus17 = Std.isCPlusPlus17();
   Opts.CPlusPlus20 = Std.isCPlusPlus20();
   Opts.CPlusPlus23 = Std.isCPlusPlus23();
+  Opts.CPlusPlus26 = Std.isCPlusPlus26();
   Opts.GNUMode = Std.isGNUMode();
   Opts.GNUCVersion = 0;
   Opts.HexFloats = Std.hasHexFloats();

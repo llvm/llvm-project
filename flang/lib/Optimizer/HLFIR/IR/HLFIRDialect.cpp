@@ -148,6 +148,17 @@ bool hlfir::isI1Type(mlir::Type type) {
   return false;
 }
 
+bool hlfir::isFortranLogicalArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+  if (auto arrayTy =
+          getFortranElementOrSequenceType(type).dyn_cast<fir::SequenceType>()) {
+    mlir::Type eleTy = arrayTy.getEleTy();
+    return mlir::isa<fir::LogicalType>(eleTy);
+  }
+  return false;
+}
+
 bool hlfir::isMaskArgument(mlir::Type type) {
   if (isBoxAddressType(type))
     return false;

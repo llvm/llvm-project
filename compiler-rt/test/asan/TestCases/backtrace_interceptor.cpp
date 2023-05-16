@@ -1,8 +1,8 @@
 // RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// Interceptor can cause use-after-free
-// (https://github.com/google/sanitizers/issues/321)
-// XFAIL: *
+// Windows does not have execinfo.h. For now, be conservative and
+// restrict the test to glibc.
+// REQUIRES: glibc-2.27
 
 // Test the backtrace() interceptor.
 
@@ -19,6 +19,8 @@ int main() {
   assert(buffer != NULL);
   free(buffer);
 
+  // Deliberate use-after-free of 'buffer'. We expect ASan to
+  // catch this, without triggering internal sanitizer errors.
   int numEntries = backtrace(buffer, MAX_BT);
   printf("backtrace returned %d entries\n", numEntries);
 

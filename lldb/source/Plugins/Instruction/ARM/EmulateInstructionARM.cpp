@@ -14364,7 +14364,7 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
     out_stream->Printf("TestEmulation: Error reading opcode from test file.\n");
     return false;
   }
-  test_opcode = value_sp->GetUInt64Value().value_or(0);
+  test_opcode = value_sp->GetValueAs<uint64_t>().value_or(0);
 
   if (arch.GetTriple().getArch() == llvm::Triple::thumb ||
       arch.IsAlwaysThumbInstructions()) {

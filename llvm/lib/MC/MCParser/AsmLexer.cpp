@@ -578,7 +578,7 @@ AsmToken AsmLexer::LexSingleQuote() {
       } else if (peekNextChar() == '\'') {
         // In MASM single-quote strings, doubled single-quotes mean an escaped
         // single quote, so should be lexed in.
-        getNextChar();
+        (void)getNextChar();
         CurChar = getNextChar();
       } else {
         break;
@@ -635,7 +635,7 @@ AsmToken AsmLexer::LexQuote() {
       } else if (peekNextChar() == '"') {
         // In MASM double-quoted strings, doubled double-quotes mean an escaped
         // double quote, so should be lexed in.
-        getNextChar();
+        (void)getNextChar();
         CurChar = getNextChar();
       } else {
         break;

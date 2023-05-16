@@ -174,8 +174,6 @@ public:
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
-
-  static bool classof(const AArch64MCExpr *) { return true; }
 };
 
 class AArch64AuthMCExpr : public AArch64MCExpr {

@@ -320,14 +320,29 @@ module std [system] {
       module partition_point                 { private header "__algorithm/partition_point.h" }
       module pop_heap                        { private header "__algorithm/pop_heap.h" }
       module prev_permutation                { private header "__algorithm/prev_permutation.h" }
-      module pstl {
+      module pstl_backends_cpu_backend       {
         private header "__algorithm/pstl_backends/cpu_backend.h"
+        export *
+      }
+      module pstl_backends_cpu_backends_any_of {
         private header "__algorithm/pstl_backends/cpu_backends/any_of.h"
+      }
+      module pstl_backends_cpu_backends_backend {
         private header "__algorithm/pstl_backends/cpu_backends/backend.h"
-        private header "__algorithm/pstl_backends/cpu_backends/fill.h"
+        export *
+      }
+      module pstl_backends_cpu_backends_fill { private header "__algorithm/pstl_backends/cpu_backends/fill.h" }
+      module pstl_backends_cpu_backends_find_if {
         private header "__algorithm/pstl_backends/cpu_backends/find_if.h"
+      }
+      module pstl_backends_cpu_backends_for_each {
         private header "__algorithm/pstl_backends/cpu_backends/for_each.h"
+      }
+      module pstl_backends_cpu_backends_serial {
         private header "__algorithm/pstl_backends/cpu_backends/serial.h"
+      }
+      module pstl_backends_cpu_backends_transform {
+        private header "__algorithm/pstl_backends/cpu_backends/transform.h"
       }
       module push_heap                       { private header "__algorithm/push_heap.h" }
       module ranges_adjacent_find            { private header "__algorithm/ranges_adjacent_find.h" }
@@ -563,6 +578,7 @@ module std [system] {
         private header "__algorithm/ranges_stable_sort.h"
         export functional.__functional.ranges_operations
       }
+      module ranges_starts_with         { private header "__algorithm/ranges_starts_with.h" }
       module ranges_swap_ranges {
         private header "__algorithm/ranges_swap_ranges.h"
         export algorithm.__algorithm.in_in_result
@@ -965,6 +981,8 @@ module std [system] {
   }
   module functional {
     header "functional"
+    // the contents of __type_traits/unwrap_ref.h should be available from functional too.
+    export type_traits.unwrap_ref
     export *
 
     module __functional {
@@ -998,7 +1016,6 @@ module std [system] {
       module reference_wrapper          { private header "__functional/reference_wrapper.h" }
       module unary_function             { private header "__functional/unary_function.h" }
       module unary_negate               { private header "__functional/unary_negate.h" }
-      module unwrap_ref                 { private header "__functional/unwrap_ref.h" }
       module weak_result_type           { private header "__functional/weak_result_type.h" }
     }
   }
@@ -1509,7 +1526,6 @@ module std [system] {
   }
   module type_traits {
     header "type_traits"
-    export functional.__functional.unwrap_ref
     export *
 
     module add_const                                 { private header "__type_traits/add_const.h" }
@@ -1670,6 +1686,7 @@ module std [system] {
 
       export type_traits
     }
+    module unwrap_ref                                { private header "__type_traits/unwrap_ref.h" }
     module void_t                                    { private header "__type_traits/void_t.h" }
   }
   module typeindex {

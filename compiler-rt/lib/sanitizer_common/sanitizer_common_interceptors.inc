@@ -4404,12 +4404,16 @@ INTERCEPTOR(int, pthread_sigmask, int how, __sanitizer_sigset_t *set,
 INTERCEPTOR(int, backtrace, void **buffer, int size) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, backtrace, buffer, size);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(backtrace)(buffer, size);
-  if (res && buffer)
+  // 'buffer' might be freed memory, hence it is unsafe to directly call
+  // REAL(backtrace)(buffer, size). Instead, we use our own known-good
+  // scratch buffer.
+  void **scratch = (void**)InternalAlloc(sizeof(void*) * size);
+  int res = REAL(backtrace)(scratch, size);
+  if (res && buffer) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buffer, res * sizeof(*buffer));
+    internal_memcpy(buffer, scratch, res * sizeof(*buffer));
+  }
+  InternalFree(scratch);
   return res;
 }
 

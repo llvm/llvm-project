@@ -16,7 +16,7 @@ specified architecture and generate object file or executable as a output
 for a specified architecture. 
 
 :program:`llvm-mc` provide powerful set of the tool for working with the machine code such 
-as encoding of their instruction and their internal representation, dissasemble 
+as encoding of their instruction and their internal representation, disassemble
 string to bytes etc. 
 
 The choice of architecture for the output assembly code is automatically

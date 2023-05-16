@@ -30,6 +30,13 @@ scheduling models. To that end, we also provide analysis of the results.
 :program:`llvm-exegesis` can also benchmark arbitrary user-provided code
 snippets.
 
+SUPPORTED PLATFORMS
+-------------------
+
+:program:`llvm-exegesis` currently only supports X86 (64-bit only), ARM (AArch64
+only), MIPS, and PowerPC (PowerPC64LE only) on Linux. Not all functionality is
+guaranteed to work on every platform.
+
 SNIPPET ANNOTATIONS
 -------------------
 

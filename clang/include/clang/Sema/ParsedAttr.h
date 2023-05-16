@@ -696,6 +696,7 @@ public:
   AttributePool(AttributeFactory &factory) : Factory(factory) {}
 
   AttributePool(const AttributePool &) = delete;
+  AttributePool &operator=(const AttributePool &) = delete;
 
   ~AttributePool() { Factory.reclaimPool(*this); }
 
@@ -912,6 +913,7 @@ class ParsedAttributes : public ParsedAttributesView {
 public:
   ParsedAttributes(AttributeFactory &factory) : pool(factory) {}
   ParsedAttributes(const ParsedAttributes &) = delete;
+  ParsedAttributes &operator=(const ParsedAttributes &) = delete;
 
   AttributePool &getPool() const { return pool; }
 

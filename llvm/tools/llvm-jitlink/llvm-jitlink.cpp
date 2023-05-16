@@ -893,7 +893,8 @@ public:
   }
 };
 
-Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
+Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
+                                                   SubtargetFeatures Features) {
 
   std::unique_ptr<ExecutorProcessControl> EPC;
   if (OutOfProcessExecutor.getNumOccurrences()) {
@@ -923,6 +924,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
   std::unique_ptr<Session> S(new Session(std::move(EPC), Err));
   if (Err)
     return std::move(Err);
+  S->Features = std::move(Features);
   return std::move(S);
 }
 
@@ -1223,8 +1225,8 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 
 } // end namespace llvm
 
-static Triple getFirstFileTriple() {
-  static Triple FirstTT = []() {
+static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
+  static std::pair<Triple, SubtargetFeatures> FirstTTAndFeatures = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
     for (auto InputFile : InputFiles) {
       auto ObjBuffer = ExitOnErr(getFile(InputFile));
@@ -1241,16 +1243,19 @@ static Triple getFirstFileTriple() {
           TT.setObjectFormat(Triple::COFF);
           TT.setOS(Triple::OSType::Win32);
         }
-        return TT;
+        SubtargetFeatures Features;
+        if (auto ObjFeatures = Obj->getFeatures())
+          Features = std::move(*ObjFeatures);
+        return std::make_pair(TT, Features);
       }
       default:
         break;
       }
     }
-    return Triple();
+    return std::make_pair(Triple(), SubtargetFeatures());
   }();
 
-  return FirstTT;
+  return FirstTTAndFeatures;
 }
 
 static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
@@ -1808,7 +1813,9 @@ struct TargetInfo {
 };
 } // anonymous namespace
 
-static TargetInfo getTargetInfo(const Triple &TT) {
+static TargetInfo
+getTargetInfo(const Triple &TT,
+              const SubtargetFeatures &TF = SubtargetFeatures()) {
   auto TripleName = TT.str();
   std::string ErrorStr;
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
@@ -1818,7 +1825,7 @@ static TargetInfo getTargetInfo(const Triple &TT) {
                                       inconvertibleErrorCode()));
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+      TheTarget->createMCSubtargetInfo(TripleName, "", TF.getString()));
   if (!STI)
     ExitOnErr(
         make_error<StringError>("Unable to create subtarget for " + TripleName,
@@ -1879,7 +1886,7 @@ static Error runChecks(Session &S) {
 
   LLVM_DEBUG(dbgs() << "Running checks...\n");
 
-  auto TI = getTargetInfo(S.ES.getTargetTriple());
+  auto TI = getTargetInfo(S.ES.getTargetTriple(), S.Features);
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
     return S.isSymbolRegistered(Symbol);
@@ -2026,9 +2033,10 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<JITLinkTimers> Timers =
       ShowTimes ? std::make_unique<JITLinkTimers>() : nullptr;
 
-  ExitOnErr(sanitizeArguments(getFirstFileTriple(), argv[0]));
+  auto [TT, Features] = getFirstFileTripleAndFeatures();
+  ExitOnErr(sanitizeArguments(TT, argv[0]));
 
-  auto S = ExitOnErr(Session::Create(getFirstFileTriple()));
+  auto S = ExitOnErr(Session::Create(std::move(TT), std::move(Features)));
 
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);

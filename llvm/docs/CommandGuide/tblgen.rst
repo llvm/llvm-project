@@ -109,7 +109,7 @@ clang-tblgen Options
 
 .. option:: -gen-clang-attr-classes
 
-  Generate Clang attribute clases.
+  Generate Clang attribute classes.
 
 .. option:: -gen-clang-attr-parser-string-switches
 

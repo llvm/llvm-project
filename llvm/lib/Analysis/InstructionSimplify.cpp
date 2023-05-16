@@ -1130,12 +1130,21 @@ static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
   if (Op0 == Op1)
     return IsDiv ? ConstantInt::get(Ty, 1) : Constant::getNullValue(Ty);
 
+
+  KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+  // X / 0 -> poison
+  // X % 0 -> poison
+  // If the divisor is known to be zero, just return poison. This can happen in
+  // some cases where its provable indirectly the denominator is zero but it's
+  // not trivially simplifiable (i.e known zero through a phi node).
+  if (Known.isZero())
+    return PoisonValue::get(Ty);
+
   // X / 1 -> X
   // X % 1 -> 0
   // If the divisor can only be zero or one, we can't have division-by-zero
   // or remainder-by-zero, so assume the divisor is 1.
   //   e.g. 1, zext (i8 X), sdiv X (Y and 1)
-  KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
   if (Known.countMinLeadingZeros() == Known.getBitWidth() - 1)
     return IsDiv ? Op0 : Constant::getNullValue(Ty);
 

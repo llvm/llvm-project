@@ -242,7 +242,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
 
     // Build the control flow graph for the target function.
     auto MaybeCFCtx =
-        ControlFlowContext::build(Target, *Target->getBody(), Context);
+        ControlFlowContext::build(*Target, *Target->getBody(), Context);
     if (!MaybeCFCtx) return MaybeCFCtx.takeError();
     auto &CFCtx = *MaybeCFCtx;
 

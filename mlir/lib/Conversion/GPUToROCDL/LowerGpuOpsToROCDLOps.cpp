@@ -280,6 +280,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
                                    "__ocml_tanh_f64");
   populateOpPatterns<math::TanOp>(converter, patterns, "__ocml_tan_f32",
                                   "__ocml_tan_f64");
+  populateOpPatterns<math::ErfOp>(converter, patterns, "__ocml_erf_f32",
+                                  "__ocml_erf_f64");
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

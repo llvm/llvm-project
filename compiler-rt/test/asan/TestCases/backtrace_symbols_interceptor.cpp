@@ -1,5 +1,9 @@
 // RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+// Windows does not have execinfo.h. For now, be conservative and
+// restrict the test to glibc.
+// REQUIRES: glibc-2.27
+
 // Test the backtrace_symbols() interceptor.
 
 #include <assert.h>

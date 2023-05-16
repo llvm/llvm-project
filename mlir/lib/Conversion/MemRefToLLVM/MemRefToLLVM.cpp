@@ -19,6 +19,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
@@ -131,8 +132,11 @@ struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    return matchAndRewrite(cast<memref::ReallocOp>(op),
-                           OpAdaptor(operands, op->getAttrDictionary()),
+    auto reallocOp = cast<memref::ReallocOp>(op);
+    return matchAndRewrite(reallocOp,
+                           OpAdaptor(operands,
+                                     op->getDiscardableAttrDictionary(),
+                                     reallocOp.getProperties()),
                            rewriter);
   }
 
@@ -1055,34 +1059,6 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     auto srcType = cast<BaseMemRefType>(op.getSource().getType());
     auto targetType = cast<BaseMemRefType>(op.getTarget().getType());
 
-    auto isStaticShapeAndContiguousRowMajor = [](MemRefType type) {
-      if (!type.hasStaticShape())
-        return false;
-
-      SmallVector<int64_t> strides;
-      int64_t offset;
-      if (failed(getStridesAndOffset(type, strides, offset)))
-        return false;
-
-      // MemRef is contiguous if outer dimensions are size-1 and inner
-      // dimensions have unit strides.
-      int64_t runningStride = 1;
-      int64_t curDim = strides.size() - 1;
-      // Finds all inner dimensions with unit strides.
-      while (curDim >= 0 && strides[curDim] == runningStride) {
-        runningStride *= type.getDimSize(curDim);
-        --curDim;
-      }
-
-      // Check if other dimensions are size-1.
-      while (curDim >= 0 && type.getDimSize(curDim) == 1) {
-        --curDim;
-      }
-
-      // All dims are unit-strided or size-1.
-      return curDim < 0;
-    };
-
     auto isContiguousMemrefType = [&](BaseMemRefType type) {
       auto memrefType = dyn_cast<mlir::MemRefType>(type);
       // We can use memcpy for memrefs if they have an identity layout or are
@@ -1091,7 +1067,7 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
       return memrefType &&
              (memrefType.getLayout().isIdentity() ||
               (memrefType.hasStaticShape() && memrefType.getNumElements() > 0 &&
-               isStaticShapeAndContiguousRowMajor(memrefType)));
+               memref::isStaticShapeAndContiguousRowMajor(memrefType)));
     };
 
     if (isContiguousMemrefType(srcType) && isContiguousMemrefType(targetType))

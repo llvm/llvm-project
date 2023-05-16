@@ -2176,13 +2176,16 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
           return Actions.ConvertDeclToDeclGroup(TheDecl);
         }
 
-        if (isDeclarationSpecifier(ImplicitTypenameContext::No)) {
-          // If there is an invalid declaration specifier right after the
-          // function prototype, then we must be in a missing semicolon case
-          // where this isn't actually a body.  Just fall through into the code
-          // that handles it as a prototype, and let the top-level code handle
-          // the erroneous declspec where it would otherwise expect a comma or
-          // semicolon.
+        if (isDeclarationSpecifier(ImplicitTypenameContext::No) ||
+            Tok.is(tok::kw_namespace)) {
+          // If there is an invalid declaration specifier or a namespace
+          // definition right after the function prototype, then we must be in a
+          // missing semicolon case where this isn't actually a body.  Just fall
+          // through into the code that handles it as a prototype, and let the
+          // top-level code handle the erroneous declspec where it would
+          // otherwise expect a comma or semicolon. Note that
+          // isDeclarationSpecifier already covers 'inline namespace', since
+          // 'inline' can be a declaration specifier.
         } else {
           Diag(Tok, diag::err_expected_fn_body);
           SkipUntil(tok::semi);
@@ -2303,10 +2306,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     // Okay, there was no semicolon and one was expected.  If we see a
     // declaration specifier, just assume it was missing and continue parsing.
     // Otherwise things are very confused and we skip to recover.
-    if (!isDeclarationSpecifier(ImplicitTypenameContext::No)) {
-      SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
-      TryConsumeToken(tok::semi);
-    }
+    if (!isDeclarationSpecifier(ImplicitTypenameContext::No))
+      SkipMalformedDecl();
   }
 
   return Actions.FinalizeDeclaratorGroup(getCurScope(), DS, DeclsInGroup);

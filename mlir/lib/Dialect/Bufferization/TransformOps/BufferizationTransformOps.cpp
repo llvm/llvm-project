@@ -41,7 +41,7 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
     options.setFunctionBoundaryTypeConversion(
         *getFunctionBoundaryTypeConversion());
 
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  auto payloadOps = state.getPayloadOps(getTarget());
   for (Operation *target : payloadOps) {
     if (!isa<ModuleOp, FunctionOpInterface>(target))
       return emitSilenceableError() << "expected module or function target";
@@ -80,8 +80,7 @@ transform::EliminateEmptyTensorsOp::apply(TransformResults &transformResults,
   OneShotBufferizationOptions options;
   options.allowReturnAllocs = true;
 
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
-  for (Operation *target : payloadOps) {
+  for (Operation *target : state.getPayloadOps(getTarget())) {
     OneShotAnalysisState state(target, options);
     if (failed(analyzeOp(target, state)))
       return mlir::emitSilenceableFailure(target->getLoc())

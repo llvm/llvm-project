@@ -29,6 +29,9 @@ if __name__ == '__main__':
                 elif re.match(r'^\s*module (\w+)_fwd\s+[{] private header "__fwd/\1[.]h" [}]', line):
                     # It's a private submodule with forward declarations, such as <__fwd/span.h>.
                     pass
+                elif re.match(r'^\s*module (?:\w+_)*(\w+)\s+[{] private (textual )?header "__(\w+/)*\1[.]h" [}]', line):
+                    # It's a private pstl submodule, such as <__algorithm/pstl_backends/cpu_backend.h>
+                    pass
                 else:
                     okay = False
                     print("LINE DOESN'T MATCH REGEX in libcxx/include/module.modulemap.in!")

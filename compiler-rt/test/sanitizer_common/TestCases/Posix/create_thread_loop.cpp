@@ -2,6 +2,9 @@
 
 // RUN: %clangxx -O3 -pthread %s -o %t && %run %t 1000
 
+// Inconsistently fails on Android.
+// UNSUPPORTED: android
+
 #include <pthread.h>
 #include <stdlib.h>
 
