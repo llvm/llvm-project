@@ -7,6 +7,8 @@
 // FIXME: printf is not intercepted on Windows yet.
 // XFAIL: target={{.*windows-(msvc.*|gnu)}}
 
+// XFAIL: !rdar109379358
+
 #include <stdio.h>
 #include <string.h>
 int main() {
