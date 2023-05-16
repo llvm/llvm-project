@@ -159,50 +159,32 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
-; FLATSCR-NEXT:    s_mov_b32 s8, 0
-; FLATSCR-NEXT:    s_mov_b32 s12, 0
-; FLATSCR-NEXT:    s_mov_b32 s11, 0
-; FLATSCR-NEXT:    s_mov_b32 s10, 0
-; FLATSCR-NEXT:    s_mov_b32 s9, 0
-; FLATSCR-NEXT:    s_mov_b32 s13, 0
-; FLATSCR-NEXT:    s_mov_b32 s7, 0
-; FLATSCR-NEXT:    s_mov_b32 s5, 0
-; FLATSCR-NEXT:    s_mov_b32 s3, 0
-; FLATSCR-NEXT:    s_mov_b32 s1, 0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
-; FLATSCR-NEXT:    s_mov_b32 s2, 0
-; FLATSCR-NEXT:    s_mov_b32 s4, 0
-; FLATSCR-NEXT:    s_mov_b32 s6, 0
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s8 offset:8
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s12 offset:16
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s11 offset:24
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s10 offset:32
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s9 offset:40
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s13 offset:48
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s7 offset:56
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s5 offset:64
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s3 offset:72
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s1 offset:80
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:8
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:16
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:24
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:32
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:40
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:48
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:56
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:64
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:72
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:80
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:88
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s2 offset:96
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s4 offset:104
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s6 offset:112
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s8 offset:120
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s12 offset:128
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s11 offset:8
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:96
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:104
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:112
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:120
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:128
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, s0 offset:8
 ; FLATSCR-NEXT:    s_nop 0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s10 offset:16
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[4:5], off, s9 offset:24
-; FLATSCR-NEXT:    s_mov_b32 s37, 0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[6:7], off, s37 offset:32
-; FLATSCR-NEXT:    s_mov_b32 s36, 0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[8:9], off, s36 offset:40
-; FLATSCR-NEXT:    s_mov_b32 s35, 0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[10:11], off, s35 offset:48
-; FLATSCR-NEXT:    s_mov_b32 s34, 0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[12:13], off, s34 offset:56
-; FLATSCR-NEXT:    s_mov_b32 s33, 0
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[14:15], off, s33 offset:64
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[2:3], off, s0 offset:16
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[4:5], off, s0 offset:24
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[6:7], off, s0 offset:32
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[8:9], off, s0 offset:40
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[10:11], off, s0 offset:48
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[12:13], off, s0 offset:56
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[14:15], off, s0 offset:64
 ; FLATSCR-NEXT:    s_movk_i32 s32, 0x50
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_byval@rel32@lo+4
