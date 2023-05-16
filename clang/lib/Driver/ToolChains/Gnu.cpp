@@ -9,6 +9,7 @@
 #include "Gnu.h"
 #include "Arch/ARM.h"
 #include "Arch/CSKY.h"
+#include "Arch/LoongArch.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
@@ -857,6 +858,13 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     Args.AddLastArg(CmdArgs, options::OPT_march_EQ);
     normalizeCPUNamesForAssembler(Args, CmdArgs);
 
+    break;
+  }
+  // TODO: handle loongarch32.
+  case llvm::Triple::loongarch64: {
+    StringRef ABIName =
+        loongarch::getLoongArchABI(D, Args, getToolChain().getTriple());
+    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
     break;
   }
   case llvm::Triple::mips:
