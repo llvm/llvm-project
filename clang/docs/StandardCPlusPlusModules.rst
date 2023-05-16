@@ -105,7 +105,7 @@ Built Module Interface file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A ``Built Module Interface file`` stands for the precompiled result of an importable module unit.
-It is also called the acronym ``BMI`` genrally.
+It is also called the acronym ``BMI`` generally.
 
 Global module fragment
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -331,7 +331,7 @@ How to specify the dependent BMIs
 
 There are 3 methods to specify the dependent BMIs:
 
-* (1) ``-fprebuilt-module-path=<path/to/direcotry>``.
+* (1) ``-fprebuilt-module-path=<path/to/directory>``.
 * (2) ``-fmodule-file=<path/to/BMI>`` (Deprecated).
 * (3) ``-fmodule-file=<module-name>=<path/to/BMI>``.
 
@@ -351,7 +351,7 @@ for the module specified by ``<module-name>`` when necessary. The main differenc
 with ``-fprebuilt-module-path``. The option ``-fmodule-file=<path/to/BMI>`` for named modules is deprecated
 and is planning to be removed in future versions.
 
-In case all ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>`` and
+In case all ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<path/to/BMI>`` and
 ``-fmodule-file=<module-name>=<path/to/BMI>`` exist, the ``-fmodule-file=<path/to/BMI>`` option
 takes highest precedence and ``-fmodule-file=<module-name>=<path/to/BMI>`` will take the second
 highest precedence.
@@ -366,7 +366,7 @@ the primary module interface unit.
   A module-declaration that contains neither an export-keyword nor a module-partition implicitly
   imports the primary module interface unit of the module as if by a module-import-declaration.
 
-All of the 3 options ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>``
+All of the 3 options ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<path/to/BMI>``
 and ``-fmodule-file=<module-name>=<path/to/BMI>`` may occur multiple times.
 For example, the command line to compile ``M.cppm`` in
 the above example could be rewritten into:
@@ -791,7 +791,7 @@ Discover Dependencies
 =====================
 
 Prior to modules, all the translation units can be compiled parallelly.
-But it is not true for the module units. The presense of module units requires
+But it is not true for the module units. The presence of module units requires
 us to compile the translation units in a (topological) order.
 
 The clang-scan-deps scanner implemented
@@ -1011,10 +1011,10 @@ Then clang-scan-deps will extract the necessary information from the options.
 Note that we need to specify the path to the compiler executable instead of saying
 ``clang++`` simply.
 
-The users may want the scanner to get the tranditional dependency information for headers.
+The users may want the scanner to get the transitional dependency information for headers.
 Otherwise, the users have to scan twice for the project, once for headers and once for modules.
 To address the requirement, clang-scan-deps will recognize the specified preprocessor options
-in the given command line and generate the corresponding dependency informaiton. For example,
+in the given command line and generate the corresponding dependency information. For example,
 
 .. code-block:: console
 
@@ -1034,7 +1034,7 @@ We will get:
     ...
 
 When clang-scan-deps detects ``-MF`` option, clang-scan-deps will try to write the
-dependency informaiton for headers to the file specified by ``-MF``.
+dependency information for headers to the file specified by ``-MF``.
 
 Possible Questions
 ==================
