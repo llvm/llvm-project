@@ -168,6 +168,12 @@ mlir::Value genIsNotAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
                                               mlir::Location loc,
                                               const fir::MutableBoxValue &box);
 
+/// Generate an unallocated box of the given \p boxTy
+/// and store it into a temporary storage.
+/// Return address of the temporary storage.
+mlir::Value genNullBoxStorage(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Type boxTy);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_MUTABLEBOX_H
