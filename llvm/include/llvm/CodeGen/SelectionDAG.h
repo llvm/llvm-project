@@ -2013,7 +2013,7 @@ public:
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
   /// is set.
-  bool isKnownToBeAPowerOfTwo(SDValue Val) const;
+  bool isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth = 0) const;
 
   /// Return the number of times the sign bit of the register is replicated into
   /// the other bits. We know that at least 1 bit is always equal to the sign
@@ -2121,7 +2121,7 @@ public:
   bool isKnownNeverZeroFloat(SDValue Op) const;
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
-  bool isKnownNeverZero(SDValue Op) const;
+  bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
 
   /// Test whether two SDValues are known to compare equal. This
   /// is true if they are the same value, or if one is negative zero and the
