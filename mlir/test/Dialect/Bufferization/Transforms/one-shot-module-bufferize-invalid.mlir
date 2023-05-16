@@ -324,3 +324,17 @@ func.func @copy_of_unranked_tensor(%t: tensor<*xf32>) -> tensor<*xf32> {
 
 // This function may write to buffer(%ptr).
 func.func private @maybe_writing_func(%ptr : tensor<*xf32>)
+
+// -----
+
+func.func @regression_scf_while() {
+  %false = arith.constant false
+  %8 = bufferization.alloc_tensor() : tensor<10x10xf32>
+  scf.while (%arg0 = %8) : (tensor<10x10xf32>) -> () {
+    scf.condition(%false)
+  } do {
+    // expected-error @+1 {{Yield operand #0 is not equivalent to the corresponding iter bbArg}}
+    scf.yield %8 : tensor<10x10xf32>
+  }
+  return
+}

@@ -501,16 +501,22 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
   if (isa<ConstantArray>(C) || isa<ConstantVector>(C) ||
       isa<ConstantDataSequential>(C)) {
-    uint64_t NumElts;
+    uint64_t NumElts, EltSize;
     Type *EltTy;
     if (auto *AT = dyn_cast<ArrayType>(C->getType())) {
       NumElts = AT->getNumElements();
       EltTy = AT->getElementType();
+      EltSize = DL.getTypeAllocSize(EltTy);
     } else {
       NumElts = cast<FixedVectorType>(C->getType())->getNumElements();
       EltTy = cast<FixedVectorType>(C->getType())->getElementType();
+      // TODO: For non-byte-sized vectors, current implementation assumes there is
+      // padding to the next byte boundary between elements.
+      if (!DL.typeSizeEqualsStoreSize(EltTy))
+        return false;
+
+      EltSize = DL.getTypeStoreSize(EltTy);
     }
-    uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     uint64_t Index = ByteOffset / EltSize;
     uint64_t Offset = ByteOffset - Index * EltSize;
 

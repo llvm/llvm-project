@@ -122,6 +122,17 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-bnoentry");
   }
 
+  if (Args.hasFlag(options::OPT_mxcoff_roptr, options::OPT_mno_xcoff_roptr,
+                   false)) {
+    if (Args.hasArg(options::OPT_shared))
+      D.Diag(diag::err_roptr_cannot_build_shared);
+
+    // The `-mxcoff-roptr` option places constants in RO sections as much as
+    // possible. Then `-bforceimprw` changes such sections to RW if they contain
+    // imported symbols that need to be resolved.
+    CmdArgs.push_back("-bforceimprw");
+  }
+
   // PGO instrumentation generates symbols belonging to special sections, and
   // the linker needs to place all symbols in a particular section together in
   // memory; the AIX linker does that under an option.

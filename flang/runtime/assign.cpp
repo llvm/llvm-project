@@ -129,9 +129,9 @@ static void MaximalByteOffsetRange(
     if (extent > 0) {
       auto sm{dim.ByteStride()};
       if (sm < 0) {
-        least += extent * sm;
+        least += (extent - 1) * sm;
       } else {
-        most += extent * sm;
+        most += (extent - 1) * sm;
       }
     }
   }
@@ -294,6 +294,10 @@ static void Assign(
       StaticDescriptor<maxRank, true, 16> staticDesc;
       Descriptor &newFrom{staticDesc.descriptor()};
       std::memcpy(&newFrom, &from, descBytes);
+      // Pretend the temporary descriptor is for an ALLOCATABLE
+      // entity, otherwise, the Deallocate() below will not
+      // free the descriptor memory.
+      newFrom.raw().attribute = CFI_attribute_allocatable;
       auto stat{ReturnError(terminator, newFrom.Allocate())};
       if (stat == StatOk) {
         char *toAt{newFrom.OffsetElement()};

@@ -6,4 +6,5 @@ kernel void str_array_decy() {
   test_func("Test string literal");
 }
 
-// CHECK: call i32 @test_func(ptr addrspace(2) noundef @{{.*}})
+// CHECK: ptr addrspace(2) noundef
+// CHECK-NOT: addrspacecast
