@@ -2896,18 +2896,8 @@ void DWARFASTParserClang::ParseSingleMember(
           last_field_end += word_width - (last_field_end % word_width);
       }
 
-      // If we have a gap between the last_field_end and the current
-      // field we have an unnamed bit-field.
-      // If we have a base class, we assume there is no unnamed
-      // bit-field if this is the first field since the gap can be
-      // attributed to the members from the base class. This assumption
-      // is not correct if the first field of the derived class is
-      // indeed an unnamed bit-field. We currently do not have the
-      // machinary to track the offset of the last field of classes we
-      // have seen before, so we are not handling this case.
-      if (this_field_info.bit_offset > last_field_end &&
-          !(last_field_info.bit_offset == 0 && last_field_info.bit_size == 0 &&
-            layout_info.base_offsets.size() != 0)) {
+      if (ShouldCreateUnnamedBitfield(last_field_info, last_field_end,
+                                      this_field_info, layout_info)) {
         unnamed_field_info = FieldInfo{};
         unnamed_field_info->bit_size =
             this_field_info.bit_offset - last_field_end;
@@ -3702,4 +3692,30 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   }
 
   return !failures.empty();
+}
+
+bool DWARFASTParserClang::ShouldCreateUnnamedBitfield(
+    FieldInfo const &last_field_info, uint64_t last_field_end,
+    FieldInfo const &this_field_info,
+    lldb_private::ClangASTImporter::LayoutInfo const &layout_info) const {
+  // If we have a gap between the last_field_end and the current
+  // field we have an unnamed bit-field.
+  if (this_field_info.bit_offset <= last_field_end)
+    return false;
+
+  // If we have a base class, we assume there is no unnamed
+  // bit-field if this is the first field since the gap can be
+  // attributed to the members from the base class. This assumption
+  // is not correct if the first field of the derived class is
+  // indeed an unnamed bit-field. We currently do not have the
+  // machinary to track the offset of the last field of classes we
+  // have seen before, so we are not handling this case.
+  const bool have_base = layout_info.base_offsets.size() != 0;
+  const bool this_is_first_field =
+      last_field_info.bit_offset == 0 && last_field_info.bit_size == 0;
+
+  if (have_base && this_is_first_field)
+    return false;
+
+  return true;
 }
