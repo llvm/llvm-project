@@ -1228,24 +1228,24 @@ Expr ScriptParser::readConstant() {
 static std::optional<uint64_t> parseInt(StringRef tok) {
   // Hexadecimal
   uint64_t val;
-  if (tok.startswith_insensitive("0x")) {
+  if (tok.starts_with_insensitive("0x")) {
     if (!to_integer(tok.substr(2), val, 16))
       return std::nullopt;
     return val;
   }
-  if (tok.endswith_insensitive("H")) {
+  if (tok.ends_with_insensitive("H")) {
     if (!to_integer(tok.drop_back(), val, 16))
       return std::nullopt;
     return val;
   }
 
   // Decimal
-  if (tok.endswith_insensitive("K")) {
+  if (tok.ends_with_insensitive("K")) {
     if (!to_integer(tok.drop_back(), val, 10))
       return std::nullopt;
     return val * 1024;
   }
-  if (tok.endswith_insensitive("M")) {
+  if (tok.ends_with_insensitive("M")) {
     if (!to_integer(tok.drop_back(), val, 10))
       return std::nullopt;
     return val * 1024 * 1024;
