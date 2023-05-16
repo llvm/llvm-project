@@ -1621,7 +1621,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
     // Otherwise take the unions of the known bit sets of the operands,
     // taking conservative care to avoid excessive recursion.
-    if (Depth < MaxAnalysisRecursionDepth - 1 && !Known.Zero && !Known.One) {
+    if (Depth < MaxAnalysisRecursionDepth - 1 && Known.isUnknown()) {
       // Skip if every incoming value references to ourself.
       if (isa_and_nonnull<UndefValue>(P->hasConstantValue()))
         break;
