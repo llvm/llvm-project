@@ -328,11 +328,25 @@ private:
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
-  uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
-                         uint32_t ThreadLimitClause[3]) const;
-  uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
-                        uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
-                        uint32_t NumThreads) const;
+  virtual uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
+                                 uint32_t ThreadLimitClause[3]) const;
+  virtual uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
+                                uint32_t BlockLimitClause[3],
+                                uint64_t LoopTripCount,
+                                uint32_t NumThreads) const;
+
+  /// The kernel name.
+  const char *Name;
+
+  /// The execution flags of the kernel.
+  OMPTgtExecModeFlags ExecutionMode;
+
+protected:
+  /// The preferred number of threads to run the kernel.
+  uint32_t PreferredNumThreads;
+
+  /// The maximum number of threads which the kernel could leverage.
+  uint32_t MaxNumThreads;
 
   /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
   bool isGenericSPMDMode() const {
@@ -353,19 +367,6 @@ private:
   bool isXTeamReductionsMode() const {
     return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
   }
-
-  /// The kernel name.
-  const char *Name;
-
-  /// The execution flags of the kernel.
-  OMPTgtExecModeFlags ExecutionMode;
-
-protected:
-  /// The preferred number of threads to run the kernel.
-  uint32_t PreferredNumThreads;
-
-  /// The maximum number of threads which the kernel could leverage.
-  uint32_t MaxNumThreads;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned

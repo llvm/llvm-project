@@ -692,6 +692,139 @@ private:
   std::optional<utils::KernelMetaDataTy> KernelInfo;
   /// CodeGen generate WGSize
   uint16_t ConstWGSize;
+
+  /// Get the number of threads and blocks for the kernel based on the
+  /// user-defined threads and block clauses.
+  uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
+                         uint32_t ThreadLimitClause[3]) const override {
+    if (isNoLoopMode() || isBigJumpLoopMode() || isXTeamReductionsMode())
+      return ConstWGSize;
+
+    assert(ThreadLimitClause[1] == 0 && ThreadLimitClause[2] == 0 &&
+           "Multi dimensional launch not supported yet.");
+
+    if (ThreadLimitClause[0] > 0 && isGenericMode()) {
+      if (ThreadLimitClause[0] == (uint32_t)-1)
+        ThreadLimitClause[0] = PreferredNumThreads;
+      else
+        ThreadLimitClause[0] += GenericDevice.getWarpSize();
+    }
+
+    return std::min(MaxNumThreads, (ThreadLimitClause[0] > 0)
+                                       ? ThreadLimitClause[0]
+                                       : PreferredNumThreads);
+  }
+  uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
+                        uint32_t NumTeamsClause[3], uint64_t LoopTripCount,
+                        uint32_t NumThreads) const override {
+    assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
+           "Multi dimensional launch not supported yet.");
+
+    const auto getNumGroupsFromThreadsAndTripCount =
+        [](const uint64_t TripCount, const uint32_t NumThreads) {
+          return ((TripCount - 1) / NumThreads) + 1;
+        };
+    uint64_t DeviceNumCUs = GenericDevice.getNumComputeUnits(); // FIXME
+
+    if (isNoLoopMode()) {
+      return LoopTripCount > 0 ? getNumGroupsFromThreadsAndTripCount(
+                                     LoopTripCount, NumThreads)
+                               : 1;
+    }
+
+    if (isBigJumpLoopMode()) {
+      uint64_t NumGroups = 1;
+      // Cannot assert a non-zero tripcount. Instead, launch with 1 team if the
+      // tripcount is indeed zero.
+      if (LoopTripCount > 0)
+        NumGroups =
+            getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads);
+
+      // Honor num_teams clause but lower it if tripcount dictates to
+      if (NumTeamsClause[0] > 0 &&
+          NumTeamsClause[0] <= GenericDevice.getBlockLimit()) {
+        NumGroups =
+            std::min(static_cast<uint64_t>(NumTeamsClause[0]), NumGroups);
+      } else {
+        // num_teams clause is not specified. Choose lower of tripcount-based
+        // num-groups and a value that maximizes occupancy. At this point, aim
+        // to have 16 wavefronts in a CU.
+        // TODO: This logic needs to be moved to the AMDGPU plugin.
+        uint64_t NumWavesInGroup = NumThreads / GenericDevice.getWarpSize();
+        uint64_t MaxOccupancyFactor =
+            NumWavesInGroup ? (16 / NumWavesInGroup) : 16;
+        NumGroups = std::min(NumGroups, MaxOccupancyFactor * DeviceNumCUs);
+      }
+      return NumGroups;
+    }
+
+    if (isXTeamReductionsMode()) {
+      uint64_t NumGroups = 0;
+      if (NumTeamsClause[0] > 0 &&
+          NumTeamsClause[0] <= GenericDevice.getBlockLimit()) {
+        NumGroups = NumTeamsClause[0];
+      } else {
+        // If num_teams clause is not specified, we allow a max of 2*CU teams
+        if (NumThreads > 0) {
+          const uint64_t UIntTwo = 2;
+          NumGroups =
+              DeviceNumCUs *
+              std::min(UIntTwo, static_cast<uint64_t>(1024 / NumThreads));
+        } else {
+          NumGroups = DeviceNumCUs;
+        }
+        // Ensure we don't have a large number of teams running if the tripcount
+        // is low
+        uint64_t NumGroupsFromTripCount = 1;
+        if (LoopTripCount > 0)
+          NumGroupsFromTripCount =
+              getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads);
+        NumGroups = std::min(NumGroups, NumGroupsFromTripCount);
+      }
+      // For now, we don't allow number of teams beyond 512.
+      uint64_t fiveTwelve = 512;
+      NumGroups = std::min(fiveTwelve, NumGroups);
+      return NumGroups;
+    }
+
+    if (NumTeamsClause[0] > 0) {
+      // TODO: We need to honor any value and consequently allow more than the
+      // block limit. For this we might need to start multiple kernels or let
+      // the blocks start again until the requested number has been started.
+      return std::min(NumTeamsClause[0], GenericDevice.getBlockLimit());
+    }
+
+    uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
+    if (LoopTripCount > 0) {
+      if (isSPMDMode()) {
+        // We have a combined construct, i.e. `target teams distribute
+        // parallel for [simd]`. We launch so many teams so that each thread
+        // will execute one iteration of the loop. round up to the nearest
+        // integer
+        TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
+      } else {
+        assert((isGenericMode() || isGenericSPMDMode()) &&
+               "Unexpected execution mode!");
+        // If we reach this point, then we have a non-combined construct, i.e.
+        // `teams distribute` with a nested `parallel for` and each team is
+        // assigned one iteration of the `distribute` loop. E.g.:
+        //
+        // #pragma omp target teams distribute
+        // for(...loop_tripcount...) {
+        //   #pragma omp parallel for
+        //   for(...) {}
+        // }
+        //
+        // Threads within a team will execute the iterations of the `parallel`
+        // loop.
+        TripCountNumBlocks = LoopTripCount;
+      }
+    }
+    // If the loops are long running we rather reuse blocks than spawn too many.
+    uint32_t PreferredNumBlocks = std::min(uint32_t(TripCountNumBlocks),
+                                           getDefaultNumBlocks(GenericDevice));
+    return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
+  }
 };
 
 /// Class representing an HSA signal. Signals are used to define dependencies
