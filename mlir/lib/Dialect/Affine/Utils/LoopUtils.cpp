@@ -1972,7 +1972,7 @@ static LogicalResult generateCopy(
     const MemRefRegion &region, Block *block, Block::iterator begin,
     Block::iterator end, Block *copyPlacementBlock,
     Block::iterator copyInPlacementStart, Block::iterator copyOutPlacementStart,
-    AffineCopyOptions copyOptions, DenseMap<Value, Value> &fastBufferMap,
+    const AffineCopyOptions &copyOptions, DenseMap<Value, Value> &fastBufferMap,
     DenseSet<Operation *> &copyNests, uint64_t *sizeInBytes,
     Block::iterator *nBegin, Block::iterator *nEnd) {
   *nBegin = begin;
