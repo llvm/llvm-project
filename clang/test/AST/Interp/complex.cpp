@@ -38,6 +38,10 @@ static_assert(__real(I2) == 0, "");
 static_assert(__imag(I2) == 0, "");
 
 
+/// Standalone complex expressions.
+static_assert(__real((_Complex float){1.0, 3.0}) == 1.0, "");
+
+
 #if 0
 /// FIXME: This should work in the new interpreter.
 constexpr _Complex double D2 = {12};
