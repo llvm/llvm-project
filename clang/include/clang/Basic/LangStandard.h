@@ -56,11 +56,12 @@ enum LangFeatures {
   CPlusPlus17 = (1 << 8),
   CPlusPlus20 = (1 << 9),
   CPlusPlus23 = (1 << 10),
-  Digraphs = (1 << 11),
-  GNUMode = (1 << 12),
-  HexFloat = (1 << 13),
-  OpenCL = (1 << 14),
-  HLSL = (1 << 15)
+  CPlusPlus26 = (1 << 11),
+  Digraphs = (1 << 12),
+  GNUMode = (1 << 13),
+  HexFloat = (1 << 14),
+  OpenCL = (1 << 15),
+  HLSL = (1 << 16)
 };
 
 /// LangStandard - Information about the properties of a particular language
@@ -120,6 +121,9 @@ public:
 
   /// isCPlusPlus23 - Language is a post-C++23 variant (or later).
   bool isCPlusPlus23() const { return Flags & CPlusPlus23; }
+
+  /// isCPlusPlus26 - Language is a post-C++26 variant (or later).
+  bool isCPlusPlus26() const { return Flags & CPlusPlus26; }
 
   /// hasDigraphs - Language supports digraphs.
   bool hasDigraphs() const { return Flags & Digraphs; }

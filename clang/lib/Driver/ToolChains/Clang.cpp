@@ -3681,6 +3681,7 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
       IsCXX && Std &&
       (Std->containsValue("c++2a") || Std->containsValue("c++20") ||
        Std->containsValue("c++2b") || Std->containsValue("c++23") ||
+       Std->containsValue("c++2c") || Std->containsValue("c++26") ||
        Std->containsValue("c++latest"));
   bool HaveModules = HaveStdCXXModules;
 
@@ -6847,8 +6848,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
-                             // TODO add c++23 when MSVC supports it.
-                             .Case("c++latest", "-std=c++23")
+                             // TODO add c++23 and c++26 when MSVC supports it.
+                             .Case("c++latest", "-std=c++26")
                              .Default("");
       if (LanguageStandard.empty())
         D.Diag(clang::diag::warn_drv_unused_argument)
