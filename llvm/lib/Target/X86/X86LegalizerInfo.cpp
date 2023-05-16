@@ -65,6 +65,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   setLegalizerInfoSSE1();
   setLegalizerInfoSSE2();
   setLegalizerInfoSSE41();
+  setLegalizerInfoSSE42();
   setLegalizerInfoAVX();
   setLegalizerInfoAVX2();
   setLegalizerInfoAVX512();
@@ -286,6 +287,10 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
                        LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_MERGE_VALUES, 1, s128}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_UNMERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
+  getActionDefinitionsBuilder(G_BSWAP)
+    .legalFor({s32, s64})
+    .widenScalarToNextPow2(1, /*Min=*/32)
+    .clampScalar(0, s32, s64);
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE1() {
@@ -383,6 +388,28 @@ void X86LegalizerInfo::setLegalizerInfoSSE41() {
 
   LegacyInfo.setAction({G_MUL, v4s32}, LegacyLegalizeActions::Legal);
 }
+
+void X86LegalizerInfo::setLegalizerInfoSSE42() {
+  if (!Subtarget.hasSSE42())
+    return;
+
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
+
+  // popcount
+  getActionDefinitionsBuilder(G_CTPOP)
+    .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
+    .widenScalarToNextPow2(1, /*Min=*/16)
+    .clampScalar(1, s16, s64);
+
+  // count leading zeros (LZCNT)
+  getActionDefinitionsBuilder(G_CTLZ)
+    .legalFor({{s16, s16}, {s32, s32}, {s64, s64}})
+    .widenScalarToNextPow2(1, /*Min=*/16)
+    .clampScalar(1, s16, s64);
+}
+
 
 void X86LegalizerInfo::setLegalizerInfoAVX() {
   if (!Subtarget.hasAVX())
