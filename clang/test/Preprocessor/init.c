@@ -16,7 +16,7 @@
 // CXX2B:#define __GXX_EXPERIMENTAL_CXX0X__ 1
 // CXX2B:#define __GXX_RTTI 1
 // CXX2B:#define __GXX_WEAK__ 1
-// CXX2B:#define __cplusplus 202101L
+// CXX2B:#define __cplusplus 202302L
 // CXX2B:#define __private_extern__ extern
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2A %s
@@ -139,7 +139,7 @@
 //
 // GXX2B:#define __GNUG__ 4
 // GXX2B:#define __GXX_WEAK__ 1
-// GXX2B:#define __cplusplus 202101L
+// GXX2B:#define __cplusplus 202302L
 // GXX2B:#define __private_extern__ extern
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2A %s
