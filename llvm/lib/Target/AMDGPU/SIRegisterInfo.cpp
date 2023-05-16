@@ -1731,6 +1731,33 @@ void SIRegisterInfo::buildSpillLoadStore(
 
     if (NeedSuperRegImpOperand && (IsFirstSubReg || IsLastSubReg))
       MIB.addReg(ValueReg, RegState::Implicit | SrcDstRegState);
+
+    // The epilog restore of a wwm-scratch register can cause undesired
+    // optimization during machine-cp post PrologEpilogInserter if the same
+    // register was assigned for return value ABI lowering with a COPY
+    // instruction. As given below, with the epilog reload, the earlier COPY
+    // appeared to be dead during machine-cp.
+    // ...
+    // v0 in WWM operation, needs the WWM spill at prolog/epilog.
+    // $vgpr0 = V_WRITELANE_B32 $sgpr20, 0, $vgpr0
+    // ...
+    // Epilog block:
+    // $vgpr0 = COPY $vgpr1 // outgoing value moved to v0
+    // ...
+    // WWM spill restore to preserve the inactive lanes of v0.
+    // $sgpr4_sgpr5 = S_XOR_SAVEEXEC_B64 -1
+    // $vgpr0 = BUFFER_LOAD $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0
+    // $exec = S_MOV_B64 killed $sgpr4_sgpr5
+    // ...
+    // SI_RETURN implicit $vgpr0
+    // ...
+    // To fix it, mark the same reg as a tied op for such restore instructions
+    // so that it marks a usage for the preceding COPY.
+    if (!IsStore && MI != MBB.end() && MI->isReturn() &&
+        MI->readsRegister(SubReg, this)) {
+      MIB.addReg(SubReg, RegState::Implicit);
+      MIB->tieOperands(0, MIB->getNumOperands() - 1);
+    }
   }
 
   if (UninitStackPtrOffset) {
