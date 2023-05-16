@@ -1099,11 +1099,7 @@ define i1 @smax_nonzero_pos_arg_fail_nonstrict_pos(i8 %xx, i8 %yy, i8 %ind) {
 
 define i1 @mul_nonzero_contains_nonzero_mul(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_nonzero_contains_nonzero_mul(
-; CHECK-NEXT:    [[XX:%.*]] = or i8 [[X:%.*]], 16
-; CHECK-NEXT:    [[YY:%.*]] = or i8 [[Y:%.*]], 8
-; CHECK-NEXT:    [[XY:%.*]] = mul i8 [[XX]], [[YY]]
-; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[XY]], 0
-; CHECK-NEXT:    ret i1 [[NZ]]
+; CHECK-NEXT:    ret i1 true
 ;
   %xx = or i8 %x, 16
   %yy = or i8 %y, 8
