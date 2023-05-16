@@ -262,12 +262,17 @@ def LLVM_USubWithOverflowOp : LLVM_ArithWithOverflowOp<"usub.with.overflow">;
 def LLVM_SMulWithOverflowOp : LLVM_ArithWithOverflowOp<"smul.with.overflow">;
 def LLVM_UMulWithOverflowOp : LLVM_ArithWithOverflowOp<"umul.with.overflow">;
 
+//
+// Optimization hint intrinsics.
+//
+
 def LLVM_AssumeOp
   : LLVM_ZeroResultIntrOp<"assume", []>, Arguments<(ins I1:$cond)>;
 
-//
-// Expect intrinsics.
-//
+def LLVM_IsConstantOp : LLVM_IntrOp<"is.constant", [], [0], [Pure], 1> {
+  let arguments = (ins LLVM_Type:$val);
+  let results = (outs I1:$res);
+}
 
 def LLVM_ExpectOp
   : LLVM_OneResultIntrOp<"expect", [], [0],
