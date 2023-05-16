@@ -131,7 +131,6 @@ struct Configuration {
   bool saveTemps = false;
   bool adhocCodesign = false;
   bool emitFunctionStarts = false;
-  bool emitBitcodeBundle = false;
   bool emitDataInCodeInfo = false;
   bool emitEncryptionInfo = false;
   bool emitInitOffsets = false;

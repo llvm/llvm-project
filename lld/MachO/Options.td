@@ -644,21 +644,6 @@ def add_ast_path : Separate<["-"], "add_ast_path">,
     HelpText<"AST paths will be emitted as STABS">,
     Group<grp_symtab>;
 
-def grp_bitcode : OptionGroup<"bitcode">, HelpText<"BITCODE BUILD FLOW">;
-
-def bitcode_bundle : Flag<["-"], "bitcode_bundle">,
-    HelpText<"Generate an embedded bitcode bundle in the __LLVM,__bundle section of the output">,
-    Group<grp_bitcode>;
-def bitcode_hide_symbols : Flag<["-"], "bitcode_hide_symbols">,
-    HelpText<"With -bitcode_bundle, hide all non-exported symbols from output bitcode bundle.">,
-    Flags<[HelpHidden]>,
-    Group<grp_bitcode>;
-def bitcode_symbol_map : Separate<["-"], "bitcode_symbol_map">,
-    MetaVarName<"<path>">,
-    HelpText<"Write the bitcode symbol reverse mapping to file <path>, or if a directory, to <path>/UUID.bcsymbolmap">,
-    Flags<[HelpHidden]>,
-    Group<grp_bitcode>;
-
 def grp_rare : OptionGroup<"rare">, HelpText<"RARELY USED">;
 
 def v : Flag<["-"], "v">,
@@ -1200,6 +1185,28 @@ def slow_stubs : Flag<["-"], "slow_stubs">,
     Flags<[HelpHidden]>,
     Group<grp_obsolete>;
 
+def bitcode_bundle : Flag<["-"], "bitcode_bundle">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+def bitcode_hide_symbols : Flag<["-"], "bitcode_hide_symbols">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+def bitcode_symbol_map : Separate<["-"], "bitcode_symbol_map">,
+    MetaVarName<"<path>">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+def bitcode_process_mode : Separate<["-"], "bitcode_process_mode">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+def bitcode_verify : Flag<["-"], "bitcode_verify">,
+    HelpText<"Obsolete since the App Store no longer supports binaries with embedded bitcode">,
+    Flags<[HelpHidden]>,
+    Group<grp_obsolete>;
+
 def grp_undocumented : OptionGroup<"undocumented">, HelpText<"UNDOCUMENTED">;
 
 def add_linker_option : Flag<["-"], "add_linker_option">,
@@ -1223,14 +1230,6 @@ def allow_dead_duplicates : Flag<["-"], "allow_dead_duplicates">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
 def allow_simulator_linking_to_macosx_dylibs : Flag<["-"], "allow_simulator_linking_to_macosx_dylibs">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
-def bitcode_process_mode : Separate<["-"], "bitcode_process_mode">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
-def bitcode_verify : Flag<["-"], "bitcode_verify">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;

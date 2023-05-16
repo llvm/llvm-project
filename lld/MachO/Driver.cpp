@@ -1614,7 +1614,6 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
   config->emitFunctionStarts =
       args.hasFlag(OPT_function_starts, OPT_no_function_starts, true);
-  config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->emitChainedFixups = shouldEmitChainedFixups(args);
@@ -1653,11 +1652,6 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitEncryptionInfo =
       args.hasFlag(OPT_encryptable, OPT_no_encryption,
                    is_contained(encryptablePlatforms, config->platform()));
-
-#ifndef LLVM_HAVE_LIBXAR
-  if (config->emitBitcodeBundle)
-    error("-bitcode_bundle unsupported because LLD wasn't built with libxar");
-#endif
 
   if (const Arg *arg = args.getLastArg(OPT_install_name)) {
     if (config->warnDylibInstallName && config->outputType != MH_DYLIB)
