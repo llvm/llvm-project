@@ -30,9 +30,9 @@ func.func @tensor_pad_constant(%t: tensor<?x10xindex>, %l2: index, %h1: index,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.get_result %0[0] : (!pdl.operation) -> !transform.any_value
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.get_result %0[0] : (!transform.any_op) -> !transform.any_value
   %2 = transform.structured.bufferize_to_allocation %1
 }
 
@@ -56,12 +56,12 @@ func.func @tensor_pad_constant(%t: tensor<?x10xindex>, %l2: index, %h1: index,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.get_result %0[0] : (!pdl.operation) -> !transform.any_value
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.get_result %0[0] : (!transform.any_op) -> !transform.any_value
   %2 = transform.structured.bufferize_to_allocation %1
   // Make sure that One-Shot Bufferize can bufferize the rest.
-  %3 = transform.bufferization.one_shot_bufferize %arg1 : (!pdl.operation) -> !pdl.operation
+  %3 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -82,9 +82,9 @@ func.func @materialization_of_bbarg(%t: tensor<?x10xindex>, %idx: index) -> inde
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!pdl.operation) -> !transform.any_value
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!transform.any_op) -> !transform.any_value
   %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
 }
 
@@ -103,12 +103,12 @@ func.func @materialization_of_bbarg(%t: tensor<?x10xindex>, %idx: index) -> inde
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!pdl.operation) -> !transform.any_value
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!transform.any_op) -> !transform.any_value
   %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
   // Make sure that One-Shot Bufferize can bufferize the rest.
-  %3 = transform.bufferization.one_shot_bufferize %arg1 : (!pdl.operation) -> !pdl.operation
+  %3 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -125,9 +125,9 @@ func.func @materialization_of_opresult(%idx: index) -> tensor<?x10xindex> {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["dummy.some_op"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.get_result %0[0] : (!pdl.operation) -> !transform.any_value
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["dummy.some_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.get_result %0[0] : (!transform.any_op) -> !transform.any_value
   %2 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
 }
 
