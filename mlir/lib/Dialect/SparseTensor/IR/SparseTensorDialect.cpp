@@ -66,13 +66,11 @@ void StorageLayout::foreachField(
   // Per-level storage.
   for (Level l = 0; l < end; l++) {
     const auto dlt = lvlTypes[l];
-    if (isCompressedDLT(dlt) || isCompressedWithHiDLT(dlt)) {
+    if (isDLTWithPos(dlt)) {
       RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, dlt);
+    }
+    if (isDLTWithCrd(dlt)) {
       RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, dlt);
-    } else if (isSingletonDLT(dlt)) {
-      RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, dlt);
-    } else {
-      assert(isDenseDLT(dlt)); // no fields
     }
   }
   // The values array.
@@ -786,6 +784,8 @@ static LogicalResult verifySparsifierGetterSetter(
   return success();
 }
 
+// DEPRECATED: This function is deprecated! Remove it after unpack supports
+// arbitrary sparse encoding.
 static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
                                       SparseTensorType tensorTp,
                                       RankedTensorType valuesTp,
@@ -843,16 +843,83 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
   return success();
 }
 
-LogicalResult PackOp::verify() {
-  const auto valuesTp = getRankedTensorType(getValues());
-  const auto coordinatesTp = getRankedTensorType(getCoordinates());
-  const auto resTp = getSparseTensorType(getResult());
-  return verifyPackUnPack(*this, true, resTp, valuesTp, coordinatesTp,
-                          getBatchedLvlsAttr());
+static Type getFieldElemType(SparseTensorType stt, SparseTensorFieldKind kind) {
+  switch (kind) {
+  case SparseTensorFieldKind::CrdMemRef:
+    return stt.getCrdType();
+  case SparseTensorFieldKind::PosMemRef:
+    return stt.getPosType();
+  case SparseTensorFieldKind::ValMemRef:
+    return stt.getElementType();
+  case SparseTensorFieldKind::StorageSpec:
+    return nullptr;
+  }
+  llvm_unreachable("Unrecognizable FieldKind");
 }
 
-unsigned PackOp::getNumBatchedLvls() {
-  return getBatchedLvls().has_value() ? getBatchedLvls()->getZExtValue() : 0;
+static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
+                                      SparseTensorType stt,
+                                      RankedTensorType valTp,
+                                      TypeRange lvlTps) {
+  if (requiresStaticShape && !stt.hasStaticDimShape())
+    return op->emitError("the sparse-tensor must have static shape");
+  if (!stt.hasEncoding())
+    return op->emitError("the sparse-tensor must have an encoding attribute");
+  if (!stt.isIdentity())
+    return op->emitError("the sparse-tensor must have the identity mapping");
+
+  // Verifies the trailing COO.
+  Level cooStartLvl = getCOOStart(stt.getEncoding());
+  if (cooStartLvl < stt.getLvlRank()) {
+    // We only supports trailing COO for now, must be the last input.
+    auto cooTp = lvlTps.back().cast<ShapedType>();
+    // The coordinates should be in shape of <? x rank>
+    unsigned expCOORank = stt.getLvlRank() - cooStartLvl;
+    if (cooTp.getRank() != 2 || expCOORank != cooTp.getShape().back()) {
+      op->emitError("input/output trailing COO level-ranks don't match");
+    }
+  }
+
+  // Verifies that all types match.
+  StorageLayout layout(stt.getEncoding());
+  if (layout.getNumDataFields() != lvlTps.size() + 1) // plus one value memref
+    return op->emitError("inconsistent number of fields between input/output");
+
+  unsigned idx = 0;
+  bool misMatch = false;
+  layout.foreachField([&idx, &misMatch, stt, valTp,
+                       lvlTps](FieldIndex fid, SparseTensorFieldKind fKind,
+                               Level lvl, DimLevelType dlt) -> bool {
+    if (fKind == SparseTensorFieldKind::StorageSpec)
+      return true;
+
+    Type inputTp = nullptr;
+    if (fKind == SparseTensorFieldKind::ValMemRef) {
+      inputTp = valTp;
+    } else {
+      assert(fid == idx && stt.getLvlType(lvl) == dlt);
+      inputTp = lvlTps[idx++];
+    }
+    // The input element type and expected element type should match.
+    Type inpElemTp = inputTp.cast<TensorType>().getElementType();
+    Type expElemTp = getFieldElemType(stt, fKind);
+    if (inpElemTp != expElemTp) {
+      misMatch = true;
+      return false; // to terminate the iteration
+    }
+    return true;
+  });
+
+  if (misMatch)
+    return op->emitError("input/output element-types don't match");
+  return success();
+}
+
+LogicalResult PackOp::verify() {
+  const auto valuesTp = getRankedTensorType(getValues());
+  const auto lvlsTp = getLevels().getTypes();
+  const auto resTp = getSparseTensorType(getResult());
+  return verifyPackUnPack(*this, true, resTp, valuesTp, lvlsTp);
 }
 
 LogicalResult UnpackOp::verify() {

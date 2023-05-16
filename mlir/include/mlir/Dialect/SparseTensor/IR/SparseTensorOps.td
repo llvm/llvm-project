@@ -55,34 +55,32 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
 
 def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
     Arguments<(ins TensorOf<[AnyType]>:$values,
-                   TensorOf<[AnySignlessIntegerOrIndex]>:$coordinates,
-                   OptionalAttr<IndexAttr>:$batched_lvls)>,
+                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels)>,
     Results<(outs AnySparseTensor: $result)> {
-  let summary = "Returns a sparse tensor from the given (values, coordinates) pair";
+  let summary = "Returns a sparse tensor from the given values, levels";
 
   let description = [{
-    Packs the values/coordinates into a COO sparse tensor.  The length
-    of `values` must match the outer-length of `coordinates`, since these
-    two tensors are "zipped" together.  The `coordinates` argument provides
-    level-coords for each value, therefore, the inner-length of `coordinates`
-    must match the level-rank of the returned tensor, and each level-coords
-    must be valid for the level-sizes of the returned tensor.  Note that
-    the returned tensor must be statically shaped because it is impossible
-    to infer the dimension-shape from level-coordinates alone.
+    Packs the values and per-level coordinate or postion arrays into a sparse tensor.
+    The order and types of provided levels must be consistent with the actual storage
+    layout of the returned sparse tensor described below.
+
+    - `values : tensor<? x V>`
+      supplies the value for each stored element in the sparse tensor.
+    - `levels: [tensor<? x iType>, ...]`
+      each supplies the sparse tensor coordinates scheme in the sparse tensor for
+      the corresponding level as specifed by `sparse_tensor::StorageLayout`.
+
+    This operation can be used to materialize a sparse tensor from external
+    sources; e.g., when passing two numpy arrays from Python.
+
+    Disclaimer: This is users' responsibility to provide input that can be
+    correctly interpreted by the sparse compiler, which does not perform
+    any sanity test during runtime to verify data integrity.
 
     TODO: The returned tensor is allowed (in principle) to have non-identity
     dimOrdering/higherOrdering mappings.  However, the current implementation
     does not yet support them.
 
-    - `coordinates : tensor<NSE x lvlRank x iType>`
-      supplies the level-coords for each element in `values`.
-    - `values : tensor<NSE x V>`
-      supplies the corresponding values for each entry in `coordinates`.
-    - `batched_lvls : optional<index>`
-      supplies the number of leading levels that are batched.
-
-    This operation can be used to materialize a sparse tensor from external
-    sources; e.g., when passing two numpy arrays from Python.
 
     Example:
 
@@ -95,30 +93,12 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
     //     of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
     //                   |0.0, 0.0, 0.0, 0.0|
     ```
-
-    If `batched_lvls` is provided, the operation materializes a batched sparse tensor.
-    Example:
-
-    ```mlir
-    %values      = arith.constant dense<[[ 1.1,   2.2,   3.3 ],
-                                         [ 1.2,   2.3,   0.0 ]]> : tensor<2x3xf64>
-    %coordinates = arith.constant dense<[[ [0],   [1],   [2] ],
-                                         [ [1],   [2],   [3] ]> : tensor<2x3x1xindex>
-    %st = sparse_tensor.pack %values, %coordinates batched_lvls=1
-        : tensor<2x3xf64>, tensor<2x3x1xindex> to tensor<2x4xf64, #BCOO>
-    // yields BCOO format |1.1, 2.2, 3.3, 0.0|
-    //      of 2x4 matrix |0.0, 1.2, 2.3, 0.0|
     ```
   }];
 
-  let extraClassDeclaration = [{
-    /// Returns the number of leading levels that are batched.
-    unsigned getNumBatchedLvls();
-  }];
-
   let assemblyFormat =
-    "$values `,` $coordinates (`batched_lvls` `=` $batched_lvls^)? attr-dict"
-    "`:` type($values) `,` type($coordinates) `to` type($result)";
+    "$values `,` $levels attr-dict"
+    "`:` type($values) `,` type($levels) `to` type($result)";
 
   let hasVerifier = 1;
 }
