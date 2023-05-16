@@ -289,7 +289,7 @@ public:
 
   uint64_t GetTerminalWidth() const;
 
-  bool SetTerminalWidth(uint32_t term_width);
+  bool SetTerminalWidth(uint64_t term_width);
 
   llvm::StringRef GetPrompt() const;
 
@@ -355,7 +355,7 @@ public:
 
   uint64_t GetTabSize() const;
 
-  bool SetTabSize(uint32_t tab_size);
+  bool SetTabSize(uint64_t tab_size);
 
   lldb::DWIMPrintVerbosity GetDWIMPrintVerbosity() const;
 
