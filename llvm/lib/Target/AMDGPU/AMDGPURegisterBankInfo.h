@@ -168,6 +168,8 @@ public:
 public:
   AMDGPURegisterBankInfo(const GCNSubtarget &STI);
 
+  bool isDivergentRegBank(const RegisterBank *RB) const override;
+
   unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
                     unsigned Size) const override;
 
