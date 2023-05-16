@@ -223,11 +223,15 @@ private:
     uint64_t bit_size = 0;
     uint64_t bit_offset = 0;
     bool is_bitfield = false;
+    bool is_artificial = false;
 
     FieldInfo() = default;
 
     void SetIsBitfield(bool flag) { is_bitfield = flag; }
     bool IsBitfield() { return is_bitfield; }
+
+    void SetIsArtificial(bool flag) { is_artificial = flag; }
+    bool IsArtificial() const { return is_artificial; }
 
     bool NextBitfieldOffsetIsValid(const uint64_t next_bit_offset) const {
       // Any subsequent bitfields must not overlap and must be at a higher
