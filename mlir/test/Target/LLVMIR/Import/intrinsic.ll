@@ -467,6 +467,14 @@ define void @assume(i1 %true) {
   ret void
 }
 
+; CHECK-LABEL: @is_constant
+; CHECK-SAME:  %[[VAL:[a-zA-Z0-9]+]]
+define void @is_constant(i32 %0) {
+  ; CHECK:  "llvm.intr.is.constant"(%[[VAL]]) : (i32) -> i1
+  %2 = call i1 @llvm.is.constant.i32(i32 %0)
+  ret void
+}
+
 ; CHECK-LABEL: @expect
 ; CHECK-SAME:  %[[VAL:[a-zA-Z0-9]+]]
 define void @expect(i32 %0) {
@@ -792,6 +800,7 @@ declare { i32, i1 } @llvm.smul.with.overflow.i32(i32, i32)
 declare { <8 x i32>, <8 x i1> } @llvm.smul.with.overflow.v8i32(<8 x i32>, <8 x i32>)
 declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 declare { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32(<8 x i32>, <8 x i32>)
+declare i1 @llvm.is.constant.i32(i32)
 declare i32 @llvm.expect.i32(i32, i32)
 declare i16 @llvm.expect.with.probability.i16(i16, i16, double immarg)
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)

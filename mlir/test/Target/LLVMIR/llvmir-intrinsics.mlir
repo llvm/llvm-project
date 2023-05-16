@@ -466,6 +466,13 @@ llvm.func @umul_with_overflow_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>,
   llvm.return
 }
 
+// CHECK-LABEL: @is_constant
+llvm.func @is_constant(%arg0: i32) {
+  // CHECK: call i1 @llvm.is.constant.i32(i32 %{{.*}})
+  %0 = "llvm.intr.is.constant"(%arg0) : (i32) -> i1
+  llvm.return
+}
+
 // CHECK-LABEL: @expect
 llvm.func @expect(%arg0: i32) {
   %0 = llvm.mlir.constant(42 : i32) : i32
@@ -830,6 +837,7 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.usub.with.overflow.v8i32(<8 x i32>, <8 x i32>)
 // CHECK-DAG: declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i1 @llvm.is.constant.i32(i32)
 // CHECK-DAG: declare i32 @llvm.expect.i32(i32, i32)
 // CHECK-DAG: declare i16 @llvm.expect.with.probability.i16(i16, i16, double immarg)
 // CHECK-DAG: declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
