@@ -480,6 +480,23 @@ TEST_F(TokenAnnotatorTest, UnderstandsGreaterAfterTemplateCloser) {
   EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
+  auto Tokens = annotate("return a < b && c > d;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_BinaryOperator);
+
+  Tokens = annotate("a < 0 ? b : a > 0 ? c : d;");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[7], tok::greater, TT_BinaryOperator);
+
+  Tokens = annotate("ratio{-1, 2} < ratio{-1, 3} == -1 / 3 > -1 / 2;");
+  ASSERT_EQ(Tokens.size(), 27u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[20], tok::greater, TT_BinaryOperator);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsWhitespaceSensitiveMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.WhitespaceSensitiveMacros.push_back("FOO");
