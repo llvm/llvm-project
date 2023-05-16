@@ -413,3 +413,17 @@ define i32 @load_via_strip_invariant_group() {
   %d = load i32, ptr %b
   ret i32 %d
 }
+
+; TODO: For non-byte-sized vectors, current implementation assumes there is
+; padding to the next byte boundary between elements.
+@foo = constant <2 x i4> <i4 u0x1, i4 u0x2>, align 8
+
+define i4 @test_vector_load_i4_non_byte_sized() {
+; CHECK-LABEL: @test_vector_load_i4_non_byte_sized(
+; CHECK-NEXT:    [[RES0:%.*]] = load i4, ptr @foo, align 8
+; CHECK-NEXT:    ret i4 [[RES0]]
+;
+  %ptr0 = getelementptr i8, ptr @foo, i64 0
+  %res0 = load i4, ptr %ptr0, align 1
+  ret i4 %res0
+}
