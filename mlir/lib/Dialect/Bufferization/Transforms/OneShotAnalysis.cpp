@@ -79,6 +79,8 @@ static bool isaTensor(Type t) { return isa<TensorType>(t); }
 /// Attribute marker to specify op operands that bufferize in-place.
 constexpr StringLiteral kInPlaceOperandsAttrName = "__inplace_operands_attr__";
 
+constexpr StringLiteral kAliasSetAttrName = "__alias_set_attr__";
+
 /// Mark whether OpOperand will be bufferized inplace.
 static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
   Operation *op = opOperand.getOwner();
@@ -986,6 +988,29 @@ annotateOpsWithBufferizationMarkers(Operation *op,
   });
 }
 
+static void annotateOpsWithAliasSets(Operation *op,
+                                     const OneShotAnalysisState &state) {
+  AsmState asmState(op);
+  Builder b(op->getContext());
+  op->walk([&](Operation *op) {
+    SmallVector<Attribute> aliasSets;
+    for (OpResult opResult : op->getOpResults()) {
+      if (opResult.getType().isa<TensorType>()) {
+        SmallVector<Attribute> aliases;
+        state.applyOnAliases(opResult, [&](Value alias) {
+          std::string buffer;
+          llvm::raw_string_ostream stream(buffer);
+          alias.printAsOperand(stream, asmState);
+          aliases.push_back(b.getStringAttr(stream.str()));
+        });
+        aliasSets.push_back(b.getArrayAttr(aliases));
+      }
+    }
+    if (!aliasSets.empty())
+      op->setAttr(kAliasSetAttrName, b.getArrayAttr(aliasSets));
+  });
+}
+
 /// Assert that every allocation can be deallocated in the same block. I.e.,
 /// every value that is returned or yielded from a block is:
 /// * guaranteed to be aliasing a bbArg of that block or a parent block, or
@@ -1100,6 +1125,8 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   // Annotate operations if we only want to report the analysis.
   if (options.testAnalysisOnly)
     annotateOpsWithBufferizationMarkers(op, state);
+  if (options.dumpAliasSets)
+    annotateOpsWithAliasSets(op, state);
 
   return success(!failedAnalysis);
 }
