@@ -62,6 +62,12 @@ struct UnimplementedFeature {
   // Coroutines
   static bool unhandledException() { return false; }
 
+  // Clang early struct optimizations
+  static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
+  static bool shouldUseMemSetToInitialize() { return false; }
+  static bool shouldSplitConstantStore() { return false; }
+  static bool shouldCreateMemCpyFromGlobal() { return false; }
+
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -79,6 +85,7 @@ struct UnimplementedFeature {
   static bool setCommonAttributes() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool createLaunderInvariantGroup() { return false; }
+  static bool addAutoInitAnnotation() { return false; }
 };
 } // namespace cir
 

@@ -92,6 +92,11 @@ public:
     return mlir::cir::ZeroAttr::get(getContext(), t);
   }
 
+  mlir::TypedAttr getNullPtrAttr(mlir::Type t) {
+    assert(t.isa<mlir::cir::PointerType>() && "expected cir.ptr");
+    return mlir::cir::NullAttr::get(getContext(), t);
+  }
+
   mlir::cir::ConstArrayAttr getString(llvm::StringRef str, mlir::Type eltTy,
                                       unsigned size = 0) {
     unsigned finalSize = size ? size : str.size();
@@ -105,7 +110,8 @@ public:
   }
 
   mlir::cir::ConstStructAttr getAnonConstStruct(mlir::ArrayAttr arrayAttr,
-                                                bool packed = false) {
+                                                bool packed = false,
+                                                mlir::Type ty = {}) {
     assert(!packed && "NYI");
     llvm::SmallVector<mlir::Type, 4> members;
     for (auto &f : arrayAttr) {
@@ -113,8 +119,13 @@ public:
       assert(ta && "expected typed attribute member");
       members.push_back(ta.getType());
     }
-    auto sTy = mlir::cir::StructType::get(arrayAttr.getContext(), members, "",
-                                          /*body=*/true);
+    auto *ctx = arrayAttr.getContext();
+    if (!ty)
+      ty = mlir::cir::StructType::get(ctx, members, mlir::StringAttr::get(ctx),
+                                      /*body=*/true, packed,
+                                      /*ast=*/std::nullopt);
+    auto sTy = ty.dyn_cast<mlir::cir::StructType>();
+    assert(sTy && "expected struct type");
     return mlir::cir::ConstStructAttr::get(sTy, arrayAttr);
   }
 
@@ -175,9 +186,7 @@ public:
 
   // Creates constant nullptr for pointer type ty.
   mlir::cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
-    assert(ty.isa<mlir::cir::PointerType>() && "expected cir.ptr");
-    return create<mlir::cir::ConstantOp>(
-        loc, ty, mlir::cir::NullAttr::get(getContext(), ty));
+    return create<mlir::cir::ConstantOp>(loc, ty, getNullPtrAttr(ty));
   }
 
   // Creates constant null value for integral type ty.

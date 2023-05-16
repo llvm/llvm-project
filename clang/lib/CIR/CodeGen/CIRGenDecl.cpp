@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRDataLayout.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "EHScopeStack.h"
@@ -146,6 +147,32 @@ bool CIRGenFunction::isTrivialInitializer(const Expr *Init) {
 
   return false;
 }
+
+static void emitStoresForConstant(CIRGenModule &CGM, const VarDecl &D,
+                                  Address addr, bool isVolatile,
+                                  CIRGenBuilderTy &builder,
+                                  mlir::TypedAttr constant, bool IsAutoInit) {
+  auto Ty = constant.getType();
+  cir::CIRDataLayout layout{CGM.getModule()};
+  uint64_t ConstantSize = layout.getTypeAllocSize(Ty);
+  if (!ConstantSize)
+    return;
+  assert(!UnimplementedFeature::addAutoInitAnnotation());
+  assert(!UnimplementedFeature::cirVectorType());
+  assert(!UnimplementedFeature::shouldUseBZeroPlusStoresToInitialize());
+  assert(!UnimplementedFeature::shouldUseMemSetToInitialize());
+  assert(!UnimplementedFeature::shouldSplitConstantStore());
+  assert(!UnimplementedFeature::shouldCreateMemCpyFromGlobal());
+  // In CIR we want to emit a store for the whole thing, later lowering
+  // prepare to LLVM should unwrap this into the best policy (see asserts
+  // above).
+  //
+  // FIXME(cir): This is closer to memcpy behavior but less optimal, instead of
+  // copy from a global, we just create a cir.const out of it.
+  auto loc = CGM.getLoc(D.getSourceRange());
+  builder.createStore(loc, builder.getConstant(loc, constant), addr);
+}
+
 void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   assert(emission.Variable && "emission was not valid!");
 
@@ -228,7 +255,11 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   if (!emission.IsConstantAggregate)
     llvm_unreachable("NYI");
 
-  llvm_unreachable("NYI");
+  // FIXME(cir): migrate most of this file to use mlir::TypedAttr directly.
+  auto typedConstant = constant.dyn_cast<mlir::TypedAttr>();
+  assert(typedConstant && "expected typed attribute");
+  emitStoresForConstant(CGM, D, Loc, type.isVolatileQualified(), builder,
+                        typedConstant, /*IsAutoInit=*/false);
 }
 
 void CIRGenFunction::buildAutoVarCleanups(const AutoVarEmission &emission) {

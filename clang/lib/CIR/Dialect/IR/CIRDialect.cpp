@@ -168,11 +168,6 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (attrType.isa<mlir::cir::ConstArrayAttr>()) {
-    // ConstArrayAttr is already verified to bing with cir.array type.
-    return success();
-  }
-
   if (attrType.isa<SymbolRefAttr>()) {
     if (opType.isa<::mlir::cir::PointerType>())
       return success();
@@ -181,6 +176,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (attrType.isa<mlir::cir::GlobalViewAttr>() ||
       attrType.isa<mlir::cir::TypeInfoAttr>() ||
+      attrType.isa<mlir::cir::ConstArrayAttr>() ||
       attrType.isa<mlir::cir::ConstStructAttr>() ||
       attrType.isa<mlir::cir::VTableAttr>())
     return success();
