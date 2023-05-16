@@ -449,4 +449,14 @@ def TestRequiredMemoryEffectsOp
   let cppNamespace = "::mlir::test";
 }
 
+def TestTrackedRewriteOp
+  : Op<Transform_Dialect, "test_tracked_rewrite",
+      [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins TransformHandleTypeInterface:$in);
+  let results = (outs);
+  let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD
