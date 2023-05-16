@@ -32,13 +32,13 @@ func.func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.pad %0 {
-    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32], 
-    padding_dimensions=[0, 1, 2], 
+    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+    padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 0]
-  }
+  } : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -74,13 +74,13 @@ func.func @static_sizes_output_divisible_on_empty_op(%arg0: tensor<24x12xf32>,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.pad %0 {
     padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 0]
-  }
+  } : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -94,14 +94,14 @@ func.func @pad(%arg0: tensor<24x12xf32>,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error @below {{op expects a padding value of type 'f32', got 0 : i32}}
   %1 = transform.structured.pad %0 {
     padding_values=[0: i32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 0]
-  }
+  } : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -115,14 +115,14 @@ func.func @pad(%arg0: tensor<24x12xf32>,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error @below {{expects a padding that parses to 'f32', got "{foo}"}}
   %1 = transform.structured.pad %0 {
     padding_values=["{foo}", 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 0]
-  }
+  } : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -138,15 +138,15 @@ func.func @pad(%arg0: tensor<24x12xf32>,
 }
 
 transform.sequence failures(suppress) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // This error is silenceable and is not reported by this transform
   //   {{transform.structured.pad failed to apply}}
   %1 = transform.structured.pad %0 {
     padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 0]
-  }
+  } : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -200,11 +200,11 @@ func.func @outs_not_produced_by_empty_or_extract_slice(%a : tensor<128x2044xf32>
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.pad %0 {
     padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 1]
-  }
+  } : (!transform.any_op) -> !transform.any_op
 }
