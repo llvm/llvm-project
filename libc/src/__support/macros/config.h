@@ -13,8 +13,6 @@
 #ifndef LLVM_LIBC_SUPPORT_MACROS_CONFIG_H
 #define LLVM_LIBC_SUPPORT_MACROS_CONFIG_H
 
-#define LIBC_INLINE inline
-
 // LIBC_HAS_BUILTIN()
 //
 // Checks whether the compiler supports a Clang Feature Checking Macro, and if
