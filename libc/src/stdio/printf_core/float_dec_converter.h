@@ -598,8 +598,9 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         const bool trailingZeros =
             requiredTwos <= 0 ||
             (requiredTwos < 60 &&
-             multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
-                                    static_cast<uint32_t>(requiredTwos)));
+             multiple_of_power_of_2(
+                 static_cast<uint64_t>(float_bits.get_explicit_mantissa()),
+                 static_cast<uint32_t>(requiredTwos)));
         switch (fputil::get_round()) {
         case FE_TONEAREST:
           // Round to nearest, if it's exactly halfway then round to even.
@@ -772,8 +773,9 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   const bool trailingZeros =
       requiredTwos <= 0 ||
       (requiredTwos < 60 &&
-       multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
-                              static_cast<uint32_t>(requiredTwos)));
+       multiple_of_power_of_2(
+           static_cast<uint64_t>(float_bits.get_explicit_mantissa()),
+           static_cast<uint32_t>(requiredTwos)));
   switch (fputil::get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
@@ -1020,8 +1022,9 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   const bool trailingZeros =
       requiredTwos <= 0 ||
       (requiredTwos < 60 &&
-       multiple_of_power_of_2(float_bits.get_explicit_mantissa(),
-                              static_cast<uint32_t>(requiredTwos)));
+       multiple_of_power_of_2(
+           static_cast<uint64_t>(float_bits.get_explicit_mantissa()),
+           static_cast<uint32_t>(requiredTwos)));
   switch (fputil::get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
@@ -1147,7 +1150,8 @@ LIBC_INLINE int convert_float_decimal(Writer *writer,
                                                       float_bits);
     }
   } else {
-    fputil::FPBits<double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<double>::UIntType float_raw =
+        static_cast<uint64_t>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_decimal_typed<double>(writer, to_conv, float_bits);
@@ -1167,7 +1171,8 @@ LIBC_INLINE int convert_float_dec_exp(Writer *writer,
                                                       float_bits);
     }
   } else {
-    fputil::FPBits<double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<double>::UIntType float_raw =
+        static_cast<uint64_t>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_dec_exp_typed<double>(writer, to_conv, float_bits);
@@ -1187,7 +1192,8 @@ LIBC_INLINE int convert_float_dec_auto(Writer *writer,
                                                        float_bits);
     }
   } else {
-    fputil::FPBits<double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<double>::UIntType float_raw =
+        static_cast<uint64_t>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_dec_auto_typed<double>(writer, to_conv, float_bits);

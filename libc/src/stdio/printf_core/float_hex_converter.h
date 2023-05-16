@@ -51,7 +51,8 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   } else {
     mantissa_width = fputil::MantissaWidth<double>::VALUE;
     exponent_bias = fputil::FPBits<double>::EXPONENT_BIAS;
-    fputil::FPBits<double>::UIntType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<double>::UIntType float_raw =
+        static_cast<uint64_t>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_exponent();
@@ -146,8 +147,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   size_t mant_cur = mant_len;
   size_t first_non_zero = 1;
   for (; mant_cur > 0; --mant_cur, mantissa /= 16) {
-    char new_digit = ((mantissa % 16) > 9) ? ((mantissa % 16) - 10 + a)
-                                           : ((mantissa % 16) + '0');
+    char new_digit =
+        static_cast<uint8_t>(((mantissa % 16) > 9) ? ((mantissa % 16) - 10 + a)
+                                                   : ((mantissa % 16) + '0'));
     mant_buffer[mant_cur - 1] = new_digit;
     if (new_digit != '0' && first_non_zero < mant_cur)
       first_non_zero = mant_cur;
