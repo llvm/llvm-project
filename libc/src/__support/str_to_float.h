@@ -298,9 +298,11 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   BitsType msb = final_approx_upper >> (BITS_IN_MANTISSA - 1);
   BitsType final_mantissa =
       final_approx_upper >>
-      (msb + BITS_IN_MANTISSA -
-       (fputil::FloatProperties<long double>::MANTISSA_WIDTH + 3));
-  exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
+      static_cast<uint64_t>(
+          msb + BITS_IN_MANTISSA -
+          (fputil::FloatProperties<long double>::MANTISSA_WIDTH + 3));
+  exp2 -=
+      static_cast<uint32_t>(1ULL ^ static_cast<uint64_t>(msb)); // same as !msb
 
   if (round == RoundDirection::Nearest) {
     // Half-way ambiguity
@@ -565,7 +567,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   }
 
   fputil::FPBits<T> result;
-  T float_mantissa = static_cast<T>(mantissa);
+  T float_mantissa = static_cast<T>(static_cast<uint64_t>(mantissa));
 
   if (exp10 == 0) {
     result = fputil::FPBits<T>(float_mantissa);
@@ -800,7 +802,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
 
   BitsType round_bit_mask = BitsType(1) << (amount_to_shift_right - 1);
   BitsType sticky_mask = round_bit_mask - 1;
-  bool round_bit = mantissa & round_bit_mask;
+  bool round_bit = static_cast<bool>(mantissa & round_bit_mask);
   bool sticky_bit = static_cast<bool>(mantissa & sticky_mask) || truncated;
 
   if (amount_to_shift_right < NUMBITS) {
@@ -810,7 +812,7 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
   } else {
     mantissa = 0;
   }
-  bool least_significant_bit = mantissa & BitsType(1);
+  bool least_significant_bit = static_cast<bool>(mantissa & BitsType(1));
 
   // TODO: check that this rounding behavior is correct.
 
