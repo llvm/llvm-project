@@ -1974,31 +1974,18 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // If IRGen failed without errors, the root cause may be a fatal
   // Clang diagnostic.
   if (m_swift_ast_ctx.HasErrors() || m_swift_ast_ctx.HasClangImporterErrors()) {
-    diagnostic_manager.Printf(eDiagnosticSeverityRemark,
-                              "couldn't IRGen expression.");
+    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                 "couldn't IRGen expression.");
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
 
   if (!m_module) {
-    auto &warnings = m_swift_ast_ctx.GetModuleImportWarnings();
-    for (StringRef message : warnings) {
-      // FIXME: Don't store diagnostics as strings.
-      auto severity = eDiagnosticSeverityWarning;
-      if (message.consume_front("warning: "))
-        severity = eDiagnosticSeverityWarning;
-      if (message.consume_front("error: "))
-        severity = eDiagnosticSeverityError;
-      diagnostic_manager.PutString(severity, message);
-    }
-    std::string error = "couldn't IRGen expression";
     diagnostic_manager.Printf(
-        eDiagnosticSeverityError, "couldn't IRGen expression: %s",
-        warnings.empty()
-            ? "Please enable the expression log by running \"log enable lldb "
-              "expr\", then run the failing expression again, and file a "
-              "bugreport with the log output."
-            : "Please check the above error messages for possible root causes.");
+        eDiagnosticSeverityError,
+        "couldn't IRGen expression. Please enable the expression log by "
+        "running \"log enable lldb expr\", then run the failing expression "
+        "again, and file a bug report with the log output.");
     return ParseResult::unrecoverable_error;
   }
 

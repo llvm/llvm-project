@@ -16,14 +16,19 @@
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
-#include "swift/SymbolGraphGen/SymbolGraphOptions.h"
-#include "swift/Parse/ParseVersion.h"
+
 #include "lldb/Core/SwiftForward.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Utility/Either.h"
+
+#include "swift/Parse/ParseVersion.h"
+#include "swift/SymbolGraphGen/SymbolGraphOptions.h"
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Target/TargetOptions.h"
+
 #include <memory>
 
 namespace swift {
@@ -425,9 +430,10 @@ public:
 
   /// Error handling
   /// \{
-  bool HasErrors();
-  bool HasClangImporterErrors();
+  bool HasErrors() const;
+  bool HasClangImporterErrors() const;
 
+  void AddDiagnostic(DiagnosticSeverity severity, llvm::StringRef message);
   void RaiseFatalError(std::string msg) { m_fatal_errors.SetErrorString(msg); }
   static bool HasFatalErrors(swift::ASTContext *ast_context);
   bool HasFatalErrors() const {
@@ -445,7 +451,6 @@ public:
   void ClearDiagnostics();
 
   bool SetColorizeDiagnostics(bool b);
-  void AddErrorStatusAsGenericDiagnostic(Status error);
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
@@ -469,11 +474,6 @@ public:
   typedef llvm::StringMap<swift::ModuleDecl *> SwiftModuleMap;
 
   const SwiftModuleMap &GetModuleCache() { return m_swift_module_cache; }
-
-  /// Return a list of warnings collected from ClangImporter.
-  const std::vector<std::string> &GetModuleImportWarnings() const {
-    return m_module_import_warnings;
-  }
 
   const swift::irgen::TypeInfo *
   GetSwiftTypeInfo(lldb::opaque_compiler_type_t type);
@@ -866,9 +866,6 @@ protected:
   llvm::once_flag m_ir_gen_module_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;
-  /// A collection of (not necessarily fatal) error messages that
-  /// should be printed by Process::PrintWarningCantLoadSwift().
-  std::vector<std::string> m_module_import_warnings;
   swift::ModuleDecl *m_scratch_module = nullptr;
   std::unique_ptr<swift::Lowering::TypeConverter> m_sil_types_ap;
   std::unique_ptr<swift::SILModule> m_sil_module_ap;
