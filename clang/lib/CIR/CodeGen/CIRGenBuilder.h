@@ -321,6 +321,13 @@ public:
     auto flag = getBool(val, loc);
     return create<mlir::cir::StoreOp>(loc, flag, dst);
   }
+
+  mlir::Value createZExtOrBitCast(mlir::Location loc, mlir::Value src,
+                                  mlir::Type newTy) {
+    if (src.getType() == newTy)
+      return src;
+    llvm_unreachable("NYI");
+  }
 };
 
 } // namespace cir

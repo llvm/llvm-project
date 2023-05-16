@@ -526,8 +526,8 @@ public:
 #undef VISITCOMP
 
   mlir::Value VisitBinAssign(const BinaryOperator *E);
-  mlir::Value VisitBinLAnd(const BinaryOperator *E) { llvm_unreachable("NYI"); }
-  mlir::Value VisitBinLOr(const BinaryOperator *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitBinLAnd(const BinaryOperator *B);
+  mlir::Value VisitBinLOr(const BinaryOperator *B);
   mlir::Value VisitBinComma(const BinaryOperator *E) {
     CGF.buildIgnoredExpr(E->getLHS());
     // NOTE: We don't need to EnsureInsertPoint() like LLVM codegen.
@@ -1680,4 +1680,219 @@ mlir::Value CIRGenFunction::buildScalarPrePostIncDec(const UnaryOperator *E,
                                                      bool isPre) {
   return ScalarExprEmitter(*this, builder)
       .buildScalarPrePostIncDec(E, LV, isInc, isPre);
+}
+
+mlir::Value ScalarExprEmitter::VisitBinLAnd(const clang::BinaryOperator *E) {
+  if (E->getType()->isVectorType()) {
+    llvm_unreachable("NYI");
+  }
+
+  bool InstrumentRegions = CGF.CGM.getCodeGenOpts().hasProfileClangInstr();
+  mlir::Type ResTy = ConvertType(E->getType());
+  mlir::Location Loc = CGF.getLoc(E->getExprLoc());
+
+  // If we have 0 && RHS, see if we can elide RHS, if so, just return 0.
+  // If we have 1 && X, just emit X without inserting the control flow.
+  bool LHSCondVal;
+  if (CGF.ConstantFoldsToSimpleInteger(E->getLHS(), LHSCondVal)) {
+    if (LHSCondVal) { // If we have 1 && X, just emit X.
+
+      mlir::Value RHSCond = CGF.evaluateExprAsBool(E->getRHS());
+
+      if (InstrumentRegions) {
+        llvm_unreachable("NYI");
+      }
+      // ZExt result to int or bool.
+      return Builder.createZExtOrBitCast(RHSCond.getLoc(), RHSCond, ResTy);
+    }
+    // 0 && RHS: If it is safe, just elide the RHS, and return 0/false.
+    if (!CGF.ContainsLabel(E->getRHS()))
+      return Builder.getBool(false, Loc);
+  }
+
+  CIRGenFunction::ConditionalEvaluation eval(CGF);
+
+  mlir::Value LHSCondV = CGF.evaluateExprAsBool(E->getLHS());
+  auto ResOp = Builder.create<mlir::cir::TernaryOp>(
+      Loc, LHSCondV, /*trueBuilder=*/
+      [&](mlir::OpBuilder &B, mlir::Location Loc) {
+        CIRGenFunction::LexicalScopeContext LexScope{Loc, Loc,
+                                                     B.getInsertionBlock()};
+        CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &LexScope};
+        CGF.currLexScope->setAsTernary();
+        mlir::Value RHSCondV = CGF.evaluateExprAsBool(E->getRHS());
+        auto res = B.create<mlir::cir::TernaryOp>(
+            Loc, RHSCondV, /*trueBuilder*/
+            [&](mlir::OpBuilder &B, mlir::Location Loc) {
+              SmallVector<mlir::Location, 2> Locs;
+              if (Loc.isa<mlir::FileLineColLoc>()) {
+                Locs.push_back(Loc);
+                Locs.push_back(Loc);
+              } else if (Loc.isa<mlir::FusedLoc>()) {
+                auto fusedLoc = Loc.cast<mlir::FusedLoc>();
+                Locs.push_back(fusedLoc.getLocations()[0]);
+                Locs.push_back(fusedLoc.getLocations()[1]);
+              }
+              CIRGenFunction::LexicalScopeContext lexScope{
+                  Locs[0], Locs[1], B.getInsertionBlock()};
+              CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+              CGF.currLexScope->setAsTernary();
+              auto res = B.create<mlir::cir::ConstantOp>(
+                  Loc, Builder.getBoolTy(),
+                  Builder.getAttr<mlir::cir::BoolAttr>(Builder.getBoolTy(),
+                                                       true));
+              B.create<mlir::cir::YieldOp>(Loc, res.getRes());
+            },
+            /*falseBuilder*/
+            [&](mlir::OpBuilder &b, mlir::Location Loc) {
+              SmallVector<mlir::Location, 2> Locs;
+              if (Loc.isa<mlir::FileLineColLoc>()) {
+                Locs.push_back(Loc);
+                Locs.push_back(Loc);
+              } else if (Loc.isa<mlir::FusedLoc>()) {
+                auto fusedLoc = Loc.cast<mlir::FusedLoc>();
+                Locs.push_back(fusedLoc.getLocations()[0]);
+                Locs.push_back(fusedLoc.getLocations()[1]);
+              }
+              CIRGenFunction::LexicalScopeContext lexScope{
+                  Locs[0], Locs[1], b.getInsertionBlock()};
+              CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+              CGF.currLexScope->setAsTernary();
+              auto res = b.create<mlir::cir::ConstantOp>(
+                  Loc, Builder.getBoolTy(),
+                  Builder.getAttr<mlir::cir::BoolAttr>(Builder.getBoolTy(),
+                                                       false));
+              b.create<mlir::cir::YieldOp>(Loc, res.getRes());
+            });
+        B.create<mlir::cir::YieldOp>(Loc, res.getResult());
+      },
+      /*falseBuilder*/
+      [&](mlir::OpBuilder &B, mlir::Location Loc) {
+        SmallVector<mlir::Location, 2> Locs;
+        if (Loc.isa<mlir::FileLineColLoc>()) {
+          Locs.push_back(Loc);
+          Locs.push_back(Loc);
+        } else if (Loc.isa<mlir::FusedLoc>()) {
+          auto fusedLoc = Loc.cast<mlir::FusedLoc>();
+          Locs.push_back(fusedLoc.getLocations()[0]);
+          Locs.push_back(fusedLoc.getLocations()[1]);
+        }
+        CIRGenFunction::LexicalScopeContext lexScope{Loc, Loc,
+                                                     B.getInsertionBlock()};
+        CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+        CGF.currLexScope->setAsTernary();
+        auto res = B.create<mlir::cir::ConstantOp>(
+            Loc, Builder.getBoolTy(),
+            Builder.getAttr<mlir::cir::BoolAttr>(Builder.getBoolTy(), false));
+        B.create<mlir::cir::YieldOp>(Loc, res.getRes());
+      });
+  return Builder.createZExtOrBitCast(ResOp.getLoc(), ResOp, ResTy);
+}
+
+mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
+  if (E->getType()->isVectorType()) {
+    llvm_unreachable("NYI");
+  }
+
+  bool InstrumentRegions = CGF.CGM.getCodeGenOpts().hasProfileClangInstr();
+  mlir::Type ResTy = ConvertType(E->getType());
+  mlir::Location Loc = CGF.getLoc(E->getExprLoc());
+
+  // If we have 1 || RHS, see if we can elide RHS, if so, just return 1.
+  // If we have 0 || X, just emit X without inserting the control flow.
+  bool LHSCondVal;
+  if (CGF.ConstantFoldsToSimpleInteger(E->getLHS(), LHSCondVal)) {
+    if (!LHSCondVal) { // If we have 0 || X, just emit X.
+
+      mlir::Value RHSCond = CGF.evaluateExprAsBool(E->getRHS());
+
+      if (InstrumentRegions) {
+        llvm_unreachable("NYI");
+      }
+      // ZExt result to int or bool.
+      return Builder.createZExtOrBitCast(RHSCond.getLoc(), RHSCond, ResTy);
+    }
+    // 1 || RHS: If it is safe, just elide the RHS, and return 1/true.
+    if (!CGF.ContainsLabel(E->getRHS()))
+      return Builder.getBool(true, Loc);
+  }
+
+  CIRGenFunction::ConditionalEvaluation eval(CGF);
+
+  mlir::Value LHSCondV = CGF.evaluateExprAsBool(E->getLHS());
+  auto ResOp = Builder.create<mlir::cir::TernaryOp>(
+      Loc, LHSCondV, /*trueBuilder=*/
+      [&](mlir::OpBuilder &B, mlir::Location Loc) {
+        SmallVector<mlir::Location, 2> Locs;
+        if (Loc.isa<mlir::FileLineColLoc>()) {
+          Locs.push_back(Loc);
+          Locs.push_back(Loc);
+        } else if (Loc.isa<mlir::FusedLoc>()) {
+          auto fusedLoc = Loc.cast<mlir::FusedLoc>();
+          Locs.push_back(fusedLoc.getLocations()[0]);
+          Locs.push_back(fusedLoc.getLocations()[1]);
+        }
+        CIRGenFunction::LexicalScopeContext lexScope{Loc, Loc,
+                                                     B.getInsertionBlock()};
+        CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+        CGF.currLexScope->setAsTernary();
+        auto res = B.create<mlir::cir::ConstantOp>(
+            Loc, Builder.getBoolTy(),
+            Builder.getAttr<mlir::cir::BoolAttr>(Builder.getBoolTy(), true));
+        B.create<mlir::cir::YieldOp>(Loc, res.getRes());
+      },
+      /*falseBuilder*/
+      [&](mlir::OpBuilder &B, mlir::Location Loc) {
+        CIRGenFunction::LexicalScopeContext LexScope{Loc, Loc,
+                                                     B.getInsertionBlock()};
+        CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &LexScope};
+        CGF.currLexScope->setAsTernary();
+        mlir::Value RHSCondV = CGF.evaluateExprAsBool(E->getRHS());
+        auto res = B.create<mlir::cir::TernaryOp>(
+            Loc, RHSCondV, /*trueBuilder*/
+            [&](mlir::OpBuilder &B, mlir::Location Loc) {
+              SmallVector<mlir::Location, 2> Locs;
+              if (Loc.isa<mlir::FileLineColLoc>()) {
+                Locs.push_back(Loc);
+                Locs.push_back(Loc);
+              } else if (Loc.isa<mlir::FusedLoc>()) {
+                auto fusedLoc = Loc.cast<mlir::FusedLoc>();
+                Locs.push_back(fusedLoc.getLocations()[0]);
+                Locs.push_back(fusedLoc.getLocations()[1]);
+              }
+              CIRGenFunction::LexicalScopeContext lexScope{
+                  Loc, Loc, B.getInsertionBlock()};
+              CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+              CGF.currLexScope->setAsTernary();
+              auto res = B.create<mlir::cir::ConstantOp>(
+                  Loc, Builder.getBoolTy(),
+                  Builder.getAttr<mlir::cir::BoolAttr>(Builder.getBoolTy(),
+                                                       true));
+              B.create<mlir::cir::YieldOp>(Loc, res.getRes());
+            },
+            /*falseBuilder*/
+            [&](mlir::OpBuilder &b, mlir::Location Loc) {
+              SmallVector<mlir::Location, 2> Locs;
+              if (Loc.isa<mlir::FileLineColLoc>()) {
+                Locs.push_back(Loc);
+                Locs.push_back(Loc);
+              } else if (Loc.isa<mlir::FusedLoc>()) {
+                auto fusedLoc = Loc.cast<mlir::FusedLoc>();
+                Locs.push_back(fusedLoc.getLocations()[0]);
+                Locs.push_back(fusedLoc.getLocations()[1]);
+              }
+              CIRGenFunction::LexicalScopeContext lexScope{
+                  Loc, Loc, B.getInsertionBlock()};
+              CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+              CGF.currLexScope->setAsTernary();
+              auto res = b.create<mlir::cir::ConstantOp>(
+                  Loc, Builder.getBoolTy(),
+                  Builder.getAttr<mlir::cir::BoolAttr>(Builder.getBoolTy(),
+                                                       false));
+              b.create<mlir::cir::YieldOp>(Loc, res.getRes());
+            });
+        B.create<mlir::cir::YieldOp>(Loc, res.getResult());
+      });
+
+  return Builder.createZExtOrBitCast(ResOp.getLoc(), ResOp, ResTy);
 }
