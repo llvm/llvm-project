@@ -1,6 +1,3 @@
-// Failing on AIX due to D150282
-// XFAIL: target={{.*}}-aix{{.*}}
-
 // RUN: rm -rf %t && mkdir -p %t && cd %t
 // RUN: %clangxx -S -no-canonical-prefixes -ftime-trace -ftime-trace-granularity=0 -o out %s
 // RUN: cat out.json \
