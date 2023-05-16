@@ -4609,8 +4609,6 @@ bool CGOpenMPRuntimeGPU::mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X,
 std::pair<bool, RValue>
 CGOpenMPRuntimeGPU::emitAtomicCASLoop(CodeGenFunction &CGF, LValue X,
                                       RValue Update, BinaryOperatorKind BO) {
-
-  CGBuilderTy &Bld = CGF.Builder;
   ASTContext &Context = CGF.getContext();
   SmallVector<llvm::Value *> CASLoopArgs;
   CASLoopArgs.reserve(2);
@@ -4675,19 +4673,40 @@ CGOpenMPRuntimeGPU::emitAtomicCASLoop(CodeGenFunction &CGF, LValue X,
               CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMin_float),
           CASLoopArgs);
 
-    // TODO: what about unsigned? OpenMP RTL interface does not have unsigned
-    // types
     else if (Update.getScalarVal()->getType()->isIntegerTy()) {
-      if (Context.getTypeSize(X.getType()) == 32)
-        CallInst = CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(
-                CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMin_int32_t),
-            CASLoopArgs);
-      else if (Context.getTypeSize(X.getType()) == 64)
-        CallInst = CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(
-                CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMin_int64_t),
-            CASLoopArgs);
+      if (Context.getTypeSize(X.getType()) == 32) {
+        if (X.getType()->hasSignedIntegerRepresentation()) {
+          CallInst = CGF.EmitRuntimeCall(
+              OMPBuilder.getOrCreateRuntimeFunction(
+                  CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMin_int32_t),
+              CASLoopArgs);
+        } else {
+          const llvm::StringRef FunNameStr = "__kmpc_atomicCASLoopMin_uint32_t";
+          CallInst = CGF.EmitRuntimeCall(
+              OMPBuilder.unsignedGetOrCreateAtomicCASRuntimeFunction(
+                  CGM.getModule(), FunNameStr,
+                  /*RetType=*/CGF.Builder.getVoidTy(),
+                  X.getPointer(CGF)->getType(),
+                  Update.getScalarVal()->getType()),
+              CASLoopArgs);
+        }
+      } else if (Context.getTypeSize(X.getType()) == 64) {
+        if (X.getType()->hasSignedIntegerRepresentation()) {
+          CallInst = CGF.EmitRuntimeCall(
+              OMPBuilder.getOrCreateRuntimeFunction(
+                  CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMin_int64_t),
+              CASLoopArgs);
+        } else {
+          const llvm::StringRef FunNameStr = "__kmpc_atomicCASLoopMin_uint64_t";
+          CallInst = CGF.EmitRuntimeCall(
+              OMPBuilder.unsignedGetOrCreateAtomicCASRuntimeFunction(
+                  CGM.getModule(), FunNameStr,
+                  /*RetType=*/CGF.Builder.getVoidTy(),
+                  X.getPointer(CGF)->getType(),
+                  Update.getScalarVal()->getType()),
+              CASLoopArgs);
+        }
+      }
     }
     // other types (e.g., int8_t) are handled by backend directly
     return std::make_pair(true, RValue::get(CallInst));
@@ -4714,16 +4733,39 @@ CGOpenMPRuntimeGPU::emitAtomicCASLoop(CodeGenFunction &CGF, LValue X,
     // TODO: what about unsigned? OpenMP RTL interface does not have unsigned
     // types
     else if (Update.getScalarVal()->getType()->isIntegerTy()) {
-      if (Context.getTypeSize(X.getType()) == 32)
-        CallInst = CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(
-                CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMax_int32_t),
-            CASLoopArgs);
-      else if (Context.getTypeSize(X.getType()) == 64)
-        CallInst = CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(
-                CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMax_int64_t),
-            CASLoopArgs);
+      if (Context.getTypeSize(X.getType()) == 32) {
+        if (X.getType()->hasSignedIntegerRepresentation()) {
+          CallInst = CGF.EmitRuntimeCall(
+              OMPBuilder.getOrCreateRuntimeFunction(
+                  CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMax_int32_t),
+              CASLoopArgs);
+        } else {
+          const llvm::StringRef FunNameStr = "__kmpc_atomicCASLoopMax_uint32_t";
+          CallInst = CGF.EmitRuntimeCall(
+              OMPBuilder.unsignedGetOrCreateAtomicCASRuntimeFunction(
+                  CGM.getModule(), FunNameStr,
+                  /*RetType=*/CGF.Builder.getVoidTy(),
+                  X.getPointer(CGF)->getType(),
+                  Update.getScalarVal()->getType()),
+              CASLoopArgs);
+        }
+      } else if (Context.getTypeSize(X.getType()) == 64) {
+        if (X.getType()->hasSignedIntegerRepresentation()) {
+          CallInst = CGF.EmitRuntimeCall(
+              OMPBuilder.getOrCreateRuntimeFunction(
+                  CGM.getModule(), OMPRTL___kmpc_atomicCASLoopMax_int64_t),
+              CASLoopArgs);
+        } else {
+          const llvm::StringRef FunNameStr = "__kmpc_atomicCASLoopMax_uint64_t";
+          CallInst = CGF.EmitRuntimeCall(
+              OMPBuilder.unsignedGetOrCreateAtomicCASRuntimeFunction(
+                  CGM.getModule(), FunNameStr,
+                  /*RetType=*/CGF.Builder.getVoidTy(),
+                  X.getPointer(CGF)->getType(),
+                  Update.getScalarVal()->getType()),
+              CASLoopArgs);
+        }
+      }
     }
     return std::make_pair(true, RValue::get(CallInst));
   }

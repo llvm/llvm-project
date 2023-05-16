@@ -438,6 +438,27 @@ OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
   return {FnTy, C};
 }
 
+FunctionCallee OpenMPIRBuilder::unsignedGetOrCreateAtomicCASRuntimeFunction(
+    Module &M, const StringRef &FunName, Type *RetType, Type *AddrTy,
+    Type *UpdateTy) {
+  FunctionType *FnTy = nullptr;
+  Function *Fn = nullptr;
+
+  FnTy = FunctionType::get(RetType, ArrayRef<Type *>{AddrTy, UpdateTy},
+                           /*IsVarArg=*/false);
+  Fn = M.getFunction(FunName);
+
+  if (!Fn) {
+    Fn = Function::Create(FnTy, GlobalValue::ExternalLinkage, FunName, M);
+    // do we need to add attributes?
+  }
+
+  assert(Fn && "Failed to create custom OpenMP atomic CAS runtime function");
+  // Cast the function to the expected type if necessary
+  Constant *C = ConstantExpr::getBitCast(Fn, FnTy->getPointerTo());
+  return {FnTy, C};
+}
+
 Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
   FunctionCallee RTLFn = getOrCreateRuntimeFunction(M, FnID);
   auto *Fn = dyn_cast<llvm::Function>(RTLFn.getCallee());

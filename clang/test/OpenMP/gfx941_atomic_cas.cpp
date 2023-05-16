@@ -268,6 +268,26 @@ int main() {
     }
   }
 
+  { // compare min (ui32): cas loop via backend
+    unsigned int min_ui32 = 128;
+    unsigned int h_min_ui32 = 128;
+
+    // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
+    #pragma omp target teams distribute parallel for map(tofrom: min_ui32)
+    for(int i = 0; i < 64; i++) {
+      // CHECK1: __kmpc_atomicCASLoopMin_uint32_t(
+      #pragma omp atomic compare
+      min_ui32 = i < min_ui32 ? i : min_ui32;
+    }
+    for(int i = 0; i < 64; i++) {   
+      h_min_ui32 = i < h_min_ui32 ? i : h_min_ui32;
+    }
+    if (min_ui32 != h_min_ui32) {
+      printf("Err for uint32_t atomic min got %d, expected %d\n", min_ui32, h_min_ui32);
+      return 1;
+    }
+  }
+  
   { // compare min (i64): cas loop via runtime
     int64_t min_i64 = 123456;
     int64_t h_min_i64 = 123456;
@@ -284,6 +304,26 @@ int main() {
     }
     if (min_i64 != h_min_i64) {
       printf("Err for int64_t atomic min got %ld, expected %ld\n", min_i64, h_min_i64);
+      return 1;
+    }
+  }
+
+  { // compare min (ui64): cas loop via backend
+    uint64_t min_ui64 = 128;
+    uint64_t h_min_ui64 = 128;
+
+    // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
+    #pragma omp target teams distribute parallel for map(tofrom: min_ui64)
+    for(uint64_t i = 0; i < 64; i++) {
+      // CHECK1: __kmpc_atomicCASLoopMin_uint64_t(
+      #pragma omp atomic compare
+      min_ui64 = i < min_ui64 ? i : min_ui64;
+    }
+    for(int i = 0; i < 64; i++) {   
+      h_min_ui64 = i < h_min_ui64 ? i : h_min_ui64;
+    }
+    if (min_ui64 != h_min_ui64) {
+      printf("Err for uint64_t atomic min got %d, expected %d\n", min_ui64, h_min_ui64);
       return 1;
     }
   }
@@ -348,7 +388,27 @@ int main() {
     }
   }
 
-  { // compare max: cas loop via runtime
+  { // compare max (ui32): cas loop via backend
+    uint32_t max_ui32 = 128;
+    uint32_t h_max_ui32 = 128;
+
+    // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
+    #pragma omp target teams distribute parallel for map(tofrom: max_ui32)
+    for(int i = 0; i < 64; i++) {
+      // CHECK1: __kmpc_atomicCASLoopMax_uint32_t(
+      #pragma omp atomic compare
+      max_ui32 = i > max_ui32 ? i : max_ui32;
+    }
+    for(int i = 0; i < 64; i++) {   
+      h_max_ui32 = i > h_max_ui32 ? i : h_max_ui32;
+    }
+    if (max_ui32 != h_max_ui32) {
+      printf("Err for uint32_t atomic max got %d, expected %d\n", max_ui32, h_max_ui32);
+      return 1;
+    }
+  }
+
+  { // compare max (i64): cas loop via runtime
     int64_t max_i64 = -1;
     int64_t h_max_i64 = -1;
 
@@ -364,6 +424,26 @@ int main() {
     }
     if (max_i64 != h_max_i64) {
       printf("Err for int64_t atomic max got %ld, expected %ld\n", max_i64, h_max_i64);
+      return 1;
+    }
+  }
+
+  { // compare max (ui64): cas loop via backend
+    uint64_t max_ui64 = 128;
+    uint64_t h_max_ui64 = 128;
+
+    // CHECK1-LABEL: define {{.+}}_offloading_{{.+}}_l
+    #pragma omp target teams distribute parallel for map(tofrom: max_ui64)
+    for(uint64_t i = 0; i < 64; i++) {
+      // CHECK1: __kmpc_atomicCASLoopMax_uint64_t(
+      #pragma omp atomic compare
+      max_ui64 = i > max_ui64 ? i : max_ui64;
+    }
+    for(int i = 0; i < 64; i++) {   
+      h_max_ui64 = i > h_max_ui64 ? i : h_max_ui64;
+    }
+    if (max_ui64 != h_max_ui64) {
+      printf("Err for uint64_t atomic max got %d, expected %d\n", max_ui64, h_max_ui64);
       return 1;
     }
   }

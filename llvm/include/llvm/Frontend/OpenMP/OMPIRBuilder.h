@@ -1168,6 +1168,17 @@ public:
   FunctionCallee getOrCreateRuntimeFunction(Module &M,
                                             omp::RuntimeFunction FnID);
 
+  /// Return the function declaration for atomic CAS runtime function
+  /// with name \p FunName. Used for unsigned types as basic .def machinery
+  /// does not support unsigned integer types in the API.
+  /// \param FunName Name of the function to get or create
+  /// \param RetType Type of function return parameter
+  /// \param AddrTy Type of atomic target pointer
+  /// \param UpdateTy Type of atomic update expression
+  FunctionCallee unsignedGetOrCreateAtomicCASRuntimeFunction(
+      Module &M, const StringRef &FunName, Type *RetType, Type *AddrTy,
+      Type *UpdateTy);
+
   Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.

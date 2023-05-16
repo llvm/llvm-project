@@ -165,7 +165,9 @@ ATOMIC_CAS_LOOP_SUB(int64_t);
 #define ATOMIC_CAS_LOOP_MIN(TY) void atomicCASLoopMin(TY *addr, TY val);
 
 ATOMIC_CAS_LOOP_MIN(int32_t)
+ATOMIC_CAS_LOOP_MIN(uint32_t)
 ATOMIC_CAS_LOOP_MIN(int64_t)
+ATOMIC_CAS_LOOP_MIN(uint64_t)
 ATOMIC_CAS_LOOP_MIN(float);
 ATOMIC_CAS_LOOP_MIN(double);
 
@@ -174,7 +176,9 @@ ATOMIC_CAS_LOOP_MIN(double);
 #define ATOMIC_CAS_LOOP_MAX(TY) void atomicCASLoopMax(TY *addr, TY val);
 
 ATOMIC_CAS_LOOP_MAX(int32_t)
+ATOMIC_CAS_LOOP_MAX(uint32_t)
 ATOMIC_CAS_LOOP_MAX(int64_t)
+ATOMIC_CAS_LOOP_MAX(uint64_t)
 ATOMIC_CAS_LOOP_MAX(float);
 ATOMIC_CAS_LOOP_MAX(double);
 
@@ -440,7 +444,7 @@ void setCriticalLock(omp_lock_t *Lock) {
 }
 
 // atomicCAS-based implementation for certain atomic operations on gfx941
-//#if defined(__gfx941__)
+#if defined(__gfx941__)
 template <typename T> void atomicCASLoopAdd(T *addr, T val) {
   unsigned long long assumed;
   unsigned long long *addr_as_ull = (unsigned long long *)addr;
@@ -516,7 +520,9 @@ template <typename T> void atomicCASLoopMin(T *addr, T val) {
   void atomicCASLoopMin(TY *addr, TY val) { atomicCASLoopMin<TY>(addr, val); }
 
 ATOMIC_CAS_LOOP_MIN(int32_t)
+ATOMIC_CAS_LOOP_MIN(uint32_t)
 ATOMIC_CAS_LOOP_MIN(int64_t)
+ATOMIC_CAS_LOOP_MIN(uint64_t)
 ATOMIC_CAS_LOOP_MIN(float);
 ATOMIC_CAS_LOOP_MIN(double);
 
@@ -545,7 +551,9 @@ template <typename T> void atomicCASLoopMax(T *addr, T val) {
   void atomicCASLoopMax(TY *addr, TY val) { atomicCASLoopMax<TY>(addr, val); }
 
 ATOMIC_CAS_LOOP_MAX(int32_t)
+ATOMIC_CAS_LOOP_MAX(uint32_t)
 ATOMIC_CAS_LOOP_MAX(int64_t)
+ATOMIC_CAS_LOOP_MAX(uint64_t)
 ATOMIC_CAS_LOOP_MAX(float);
 ATOMIC_CAS_LOOP_MAX(double);
 
@@ -629,7 +637,7 @@ ATOMIC_CAS_LOOP_XOR(int64_t);
 
 #undef ATOMIC_CAS_LOOP_XOR
 
-//#endif
+#endif /// if defined(__gfx941__)
 
 #pragma omp end declare variant
 ///}
@@ -968,7 +976,9 @@ KMPC_ATOMIC_CAS_LOOP_SUB(int64_t);
   }
 
 KMPC_ATOMIC_CAS_LOOP_MIN(int32_t)
+KMPC_ATOMIC_CAS_LOOP_MIN(uint32_t)
 KMPC_ATOMIC_CAS_LOOP_MIN(int64_t)
+KMPC_ATOMIC_CAS_LOOP_MIN(uint64_t)
 KMPC_ATOMIC_CAS_LOOP_MIN(float);
 KMPC_ATOMIC_CAS_LOOP_MIN(double);
 
@@ -980,7 +990,9 @@ KMPC_ATOMIC_CAS_LOOP_MIN(double);
   }
 
 KMPC_ATOMIC_CAS_LOOP_MAX(int32_t)
+KMPC_ATOMIC_CAS_LOOP_MAX(uint32_t)
 KMPC_ATOMIC_CAS_LOOP_MAX(int64_t)
+KMPC_ATOMIC_CAS_LOOP_MAX(uint64_t)
 KMPC_ATOMIC_CAS_LOOP_MAX(float);
 KMPC_ATOMIC_CAS_LOOP_MAX(double);
 

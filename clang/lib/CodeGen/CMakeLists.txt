@@ -100,7 +100,3 @@ add_clang_library(clangCodeGen
   clangLex
   clangSerialization
   )
-
-set_source_files_properties(CGStmtOpenMP.cpp PROPERTIES COMPILE_FLAGS "-O0 -g")
-set_source_files_properties(CGOpenMPRuntimeGPU.cpp PROPERTIES COMPILE_FLAGS "-O0 -g")
-set_source_files_properties(CGBuiltin.cpp PROPERTIES COMPILE_FLAGS "-O0 -g")
