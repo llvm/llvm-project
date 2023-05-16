@@ -1884,7 +1884,7 @@ private:
           C.SemaResult->Kind == CodeCompletionResult::RK_Macro) ||
          (C.IndexResult &&
           C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro)) &&
-        !C.Name.startswith_insensitive(Filter->pattern()))
+        !C.Name.starts_with_insensitive(Filter->pattern()))
       return std::nullopt;
     return Filter->match(C.Name);
   }

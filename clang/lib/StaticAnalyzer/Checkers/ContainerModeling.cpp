@@ -749,14 +749,14 @@ bool isBeginCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_insensitive("begin");
+  return IdInfo->getName().ends_with_insensitive("begin");
 }
 
 bool isEndCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_insensitive("end");
+  return IdInfo->getName().ends_with_insensitive("end");
 }
 
 const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,

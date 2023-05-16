@@ -437,7 +437,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   for (auto *a : args) {
     switch (a->getOption().getID()) {
     case OPT_INPUT:
-      if (StringRef(a->getValue()).endswith_insensitive(".def"))
+      if (StringRef(a->getValue()).ends_with_insensitive(".def"))
         add("-def:" + StringRef(a->getValue()));
       else
         add(prefix + StringRef(a->getValue()));
