@@ -3052,6 +3052,7 @@ TEST(Hover, UsedSymbols) {
   } Cases[] = {{R"cpp(
                   #include ^"bar.h"
                   int fstBar = bar1();
+                  int another= bar1(0);
                   int sndBar = bar2();
                   Bar bar;
                   int macroBar = BAR;
@@ -3075,6 +3076,7 @@ TEST(Hover, UsedSymbols) {
                                           #define BAR 5
                                           int bar1();
                                           int bar2();
+                                          int bar1(double);
                                           class Bar {};
                                         )cpp");
     TU.AdditionalFiles["system/vector"] = guard(R"cpp(
@@ -3487,11 +3489,11 @@ int foo = 3)",
       },
       {[](HoverInfo &HI) {
          HI.Name = "foo.h";
-         HI.UsedSymbolNames = {"Foo", "Bar", "Baz"};
+         HI.UsedSymbolNames = {"Foo", "Bar", "Bar"};
        },
        R"(foo.h
 
-provides Foo, Bar, Baz)"},
+provides Foo, Bar, Bar)"},
       {[](HoverInfo &HI) {
          HI.Name = "foo.h";
          HI.UsedSymbolNames = {"Foo", "Bar", "Baz", "Foobar", "Qux", "Quux"};
