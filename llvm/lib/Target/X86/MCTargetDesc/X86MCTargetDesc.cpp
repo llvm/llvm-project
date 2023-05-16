@@ -577,8 +577,11 @@ findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
     if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0xa3) {
       // The jmp instruction at the beginning of each PLT entry jumps to the
       // address of the base of the .got.plt section plus the immediate.
+      // Set the 1 << 32 bit to let ELFObjectFileBase::getPltEntries convert the
+      // offset to an address. Imm may be a negative int32_t if the GOT entry is
+      // in .got.
       uint32_t Imm = support::endian::read32le(PltContents.data() + Byte + 2);
-      Result.emplace_back(PltSectionVA + Byte, ~static_cast<uint64_t>(Imm));
+      Result.emplace_back(PltSectionVA + Byte, Imm | (uint64_t(1) << 32));
       Byte += 6;
     } else if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0x25) {
       // The jmp instruction at the beginning of each PLT entry jumps to the
