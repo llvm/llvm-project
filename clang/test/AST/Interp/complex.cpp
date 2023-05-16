@@ -66,4 +66,11 @@ namespace CastToBool {
   static_assert(F5, "");
   constexpr _Complex unsigned char F6 = {0, 0};
   static_assert(!F6, "");
+
+  constexpr _Complex float F7 = {0, 1};
+  static_assert(F7, "");
+  constexpr _Complex float F8 = {1, 0};
+  static_assert(F8, "");
+  constexpr _Complex double F9 = {0, 0};
+  static_assert(!F9, "");
 }
