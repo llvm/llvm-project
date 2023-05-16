@@ -468,11 +468,6 @@ template <size_t Bits> struct UInt {
     return result;
   }
 
-  constexpr UInt<Bits> operator/=(const UInt<Bits> &other) {
-    *this = *this / other;
-    return *this;
-  }
-
   constexpr UInt<Bits> operator%(const UInt<Bits> &other) const {
     UInt<Bits> result(*this);
     return *result.div(other);
@@ -719,12 +714,8 @@ template <size_t Bits> struct UInt {
   }
 
   constexpr UInt<Bits> &operator++() {
-    *this = *this + 1;
-    return *this;
-  }
-
-  constexpr UInt<Bits> &operator--() {
-    *this = *this - 1;
+    UInt<Bits> one(1);
+    add(one);
     return *this;
   }
 
