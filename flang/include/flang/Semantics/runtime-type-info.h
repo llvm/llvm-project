@@ -55,7 +55,15 @@ struct NonTbpDefinedIo {
 };
 
 std::multimap<const Symbol *, NonTbpDefinedIo>
-CollectNonTbpDefinedIoGenericInterfaces(const Scope &scope);
+CollectNonTbpDefinedIoGenericInterfaces(
+    const Scope &, bool useRuntimeTypeInfoEntries);
+
+bool ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces(
+    const Scope &, const DerivedTypeSpec *);
+bool ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces(
+    const Scope &, const DeclTypeSpec *);
+bool ShouldIgnoreRuntimeTypeInfoNonTbpGenericInterfaces(
+    const Scope &, const Symbol *);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
