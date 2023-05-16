@@ -8,7 +8,7 @@
 // RUN:            --convert-arith-to-llvm --gpu-to-llvm --reconcile-unrealized-casts \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
-// RUN:   --shared-libs=%mlir_runner_utils \
+// RUN:   --shared-libs=%mlir_c_runner_utils \
 // RUN:   --e main --entry-point-result=void \
 // RUN: | FileCheck %s
 

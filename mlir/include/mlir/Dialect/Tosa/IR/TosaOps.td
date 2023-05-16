@@ -1101,6 +1101,8 @@ def Tosa_NegateOp : Tosa_Op<"negate", [
   );
 
   let builders = [Tosa_UnaryOpQuantInfoBuilder];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
