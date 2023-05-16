@@ -25,7 +25,6 @@ class DWARFExpression;
 class DWARFUnit;
 class DataExtractor;
 class DeclContextTree;
-struct MCDwarfLineTableParams;
 template <typename T> class SmallVectorImpl;
 
 enum class DwarfLinkerClient { Dsymutil, LLD, General };
@@ -100,8 +99,11 @@ public:
   emitAbbrevs(const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs,
               unsigned DwarfVersion) = 0;
 
-  /// Emit the string table described by \p Pool.
+  /// Emit the string table described by \p Pool into .debug_str table.
   virtual void emitStrings(const NonRelocatableStringpool &Pool) = 0;
+
+  /// Emit the string table described by \p Pool into .debug_line_str table.
+  virtual void emitLineStrings(const NonRelocatableStringpool &Pool) = 0;
 
   /// Emit DWARF debug names.
   virtual void
@@ -154,16 +156,11 @@ public:
   emitDwarfDebugArangesTable(const CompileUnit &Unit,
                              const AddressRanges &LinkedRanges) = 0;
 
-  /// Copy the .debug_line over to the updated binary while unobfuscating the
-  /// file names and directories.
-  virtual void translateLineTable(DataExtractor LineData, uint64_t Offset) = 0;
-
-  /// Emit the line table described in \p Rows into the .debug_line section.
-  virtual void emitLineTableForUnit(MCDwarfLineTableParams Params,
-                                    StringRef PrologueBytes,
-                                    unsigned MinInstLength,
-                                    std::vector<DWARFDebugLine::Row> &Rows,
-                                    unsigned AdddressSize) = 0;
+  /// Emit specified \p LineTable into .debug_line table.
+  virtual void emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
+                                    const CompileUnit &Unit,
+                                    OffsetsStringPool &DebugStrPool,
+                                    OffsetsStringPool &DebugLineStrPool) = 0;
 
   /// Emit the .debug_pubnames contribution for \p Unit.
   virtual void emitPubNamesForUnit(const CompileUnit &Unit) = 0;
@@ -559,7 +556,8 @@ private:
   /// Clone specified Clang module unit \p Unit.
   Error cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,
                         DeclContextTree &ODRContexts,
-                        OffsetsStringPool &OffsetsStringPool,
+                        OffsetsStringPool &DebugStrPool,
+                        OffsetsStringPool &DebugLineStrPool,
                         unsigned Indent = 0);
 
   /// Mark the passed DIE as well as all the ones it depends on as kept.
@@ -605,6 +603,8 @@ private:
     DWARFLinker &Linker;
     DwarfEmitter *Emitter;
     DWARFFile &ObjFile;
+    OffsetsStringPool &DebugStrPool;
+    OffsetsStringPool &DebugLineStrPool;
 
     /// Allocator used for all the DIEValue objects.
     BumpPtrAllocator &DIEAlloc;
@@ -621,8 +621,10 @@ private:
     DIECloner(DWARFLinker &Linker, DwarfEmitter *Emitter, DWARFFile &ObjFile,
               BumpPtrAllocator &DIEAlloc,
               std::vector<std::unique_ptr<CompileUnit>> &CompileUnits,
-              bool Update)
+              bool Update, OffsetsStringPool &DebugStrPool,
+              OffsetsStringPool &DebugLineStrPool)
         : Linker(Linker), Emitter(Emitter), ObjFile(ObjFile),
+          DebugStrPool(DebugStrPool), DebugLineStrPool(DebugLineStrPool),
           DIEAlloc(DIEAlloc), CompileUnits(CompileUnits), Update(Update) {}
 
     /// Recursively clone \p InputDIE into an tree of DIE objects
@@ -637,17 +639,14 @@ private:
     /// \param Die the output DIE to use, pass NULL to create one.
     /// \returns the root of the cloned tree or null if nothing was selected.
     DIE *cloneDIE(const DWARFDie &InputDIE, const DWARFFile &File,
-                  CompileUnit &U, OffsetsStringPool &StringPool,
-                  int64_t PCOffset, uint32_t OutOffset, unsigned Flags,
-                  bool IsLittleEndian, DIE *Die = nullptr);
+                  CompileUnit &U, int64_t PCOffset, uint32_t OutOffset,
+                  unsigned Flags, bool IsLittleEndian, DIE *Die = nullptr);
 
     /// Construct the output DIE tree by cloning the DIEs we
     /// chose to keep above. If there are no valid relocs, then there's
     /// nothing to clone/emit.
     uint64_t cloneAllCompileUnits(DWARFContext &DwarfContext,
-                                  const DWARFFile &File,
-                                  OffsetsStringPool &StringPool,
-                                  bool IsLittleEndian);
+                                  const DWARFFile &File, bool IsLittleEndian);
 
   private:
     using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
@@ -680,7 +679,6 @@ private:
     /// Helper for cloneDIE.
     unsigned cloneAttribute(DIE &Die, const DWARFDie &InputDIE,
                             const DWARFFile &File, CompileUnit &U,
-                            OffsetsStringPool &StringPool,
                             const DWARFFormValue &Val,
                             const AttributeSpec AttrSpec, unsigned AttrSize,
                             AttributesInfo &AttrInfo, bool IsLittleEndian);
@@ -690,7 +688,6 @@ private:
     /// \returns the size of the new attribute.
     unsigned cloneStringAttribute(DIE &Die, AttributeSpec AttrSpec,
                                   const DWARFFormValue &Val, const DWARFUnit &U,
-                                  OffsetsStringPool &StringPool,
                                   AttributesInfo &Info);
 
     /// Clone an attribute referencing another DIE and add
@@ -750,6 +747,11 @@ private:
                             OffsetsStringPool &StringPool, bool SkipPubSection);
 
     void rememberUnitForMacroOffset(CompileUnit &Unit);
+
+    /// Clone and emit the line table for the specified \p Unit.
+    /// Translate directories and file names if necessary.
+    /// Relocate address ranges.
+    void generateLineTableForUnit(CompileUnit &Unit);
   };
 
   /// Assign an abbreviation number to \p Abbrev
@@ -766,12 +768,6 @@ private:
   /// for \p Unit, patch the attributes referencing it.
   void generateUnitLocations(CompileUnit &Unit, const DWARFFile &File,
                              ExpressionHandlerRef ExprHandler) const;
-
-  /// Extract the line tables from the original dwarf, extract the relevant
-  /// parts according to the linked function ranges and emit the result in the
-  /// .debug_line section.
-  void patchLineTableForUnit(CompileUnit &Unit, DWARFContext &OrigDwarf,
-                             const DWARFFile &File);
 
   /// Emit the accelerator entries for \p Unit.
   void emitAcceleratorEntriesForUnit(CompileUnit &Unit);
