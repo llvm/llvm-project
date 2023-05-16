@@ -83,8 +83,7 @@ define i64 @sqshl_scalar(ptr %A, ptr %B) nounwind {
 define i64 @sqshl_scalar_constant(ptr %A) nounwind {
 ; CHECK-LABEL: sqshl_scalar_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    sqshl d0, d0, #1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -279,8 +278,7 @@ define i64 @uqshl_scalar(ptr %A, ptr %B) nounwind {
 define i64 @uqshl_scalar_constant(ptr %A) nounwind {
 ; CHECK-LABEL: uqshl_scalar_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    uqshl d0, d0, #1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -1039,8 +1037,7 @@ define <1 x i64> @urshr1d(ptr %A) nounwind {
 define i64 @urshr_scalar(ptr %A) nounwind {
 ; CHECK-LABEL: urshr_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    urshr d0, d0, #1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -1140,8 +1137,7 @@ define <1 x i64> @srshr1d(ptr %A) nounwind {
 define i64 @srshr_scalar(ptr %A) nounwind {
 ; CHECK-LABEL: srshr_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    srshr d0, d0, #1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -1241,8 +1237,7 @@ define <1 x i64> @sqshlu1d_constant(ptr %A) nounwind {
 define i64 @sqshlu_i64_constant(ptr %A) nounwind {
 ; CHECK-LABEL: sqshlu_i64_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    sqshlu d0, d0, #1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -2737,12 +2732,11 @@ define <1 x i64> @ursra1d(ptr %A, ptr %B) nounwind {
 define i64 @ursra_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: ursra_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    ursra d0, d1, #1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    urshr d0, d0, #1
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    add x0, x8, x9
 ; CHECK-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.urshl.i64(i64 %tmp1, i64 -1)
@@ -2866,12 +2860,11 @@ define <1 x i64> @srsra1d(ptr %A, ptr %B) nounwind {
 define i64 @srsra_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: srsra_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fmov d0, x9
-; CHECK-NEXT:    srsra d0, d1, #1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    srshr d0, d0, #1
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    add x0, x8, x9
 ; CHECK-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.srshl.i64(i64 %tmp1, i64 -1)

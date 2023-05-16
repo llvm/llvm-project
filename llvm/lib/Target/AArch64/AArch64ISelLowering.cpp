@@ -18384,14 +18384,28 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
     break;
   }
 
+  EVT VT = N->getValueType(0);
+  SDValue Op = N->getOperand(1);
+  SDLoc dl(N);
+  if (VT == MVT::i64) {
+    Op = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v1i64, Op);
+    VT = MVT::v1i64;
+  }
+
   if (IsRightShift && ShiftAmount <= -1 && ShiftAmount >= -(int)ElemBits) {
-    SDLoc dl(N);
-    return DAG.getNode(Opcode, dl, N->getValueType(0), N->getOperand(1),
-                       DAG.getConstant(-ShiftAmount, dl, MVT::i32));
+    Op = DAG.getNode(Opcode, dl, VT, Op,
+                     DAG.getConstant(-ShiftAmount, dl, MVT::i32));
+    if (N->getValueType(0) == MVT::i64)
+      Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Op,
+                       DAG.getConstant(0, dl, MVT::i64));
+    return Op;
   } else if (!IsRightShift && ShiftAmount >= 0 && ShiftAmount < ElemBits) {
-    SDLoc dl(N);
-    return DAG.getNode(Opcode, dl, N->getValueType(0), N->getOperand(1),
-                       DAG.getConstant(ShiftAmount, dl, MVT::i32));
+    Op = DAG.getNode(Opcode, dl, VT, Op,
+                     DAG.getConstant(ShiftAmount, dl, MVT::i32));
+    if (N->getValueType(0) == MVT::i64)
+      Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Op,
+                       DAG.getConstant(0, dl, MVT::i64));
+    return Op;
   }
 
   return SDValue();
