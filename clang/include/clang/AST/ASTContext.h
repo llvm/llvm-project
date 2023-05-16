@@ -447,8 +447,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   };
   llvm::DenseMap<Module*, PerModuleInitializers*> ModuleInitializers;
 
-  /// This is the top-level (C++20) Named module we are building.
-  Module *CurrentCXXNamedModule = nullptr;
+  /// For module code-gen cases, this is the top-level (C++20) Named module
+  /// we are building.
+  Module *TopLevelCXXNamedModule = nullptr;
 
   /// The include tree that is being built, if any.
   /// See \c FrontendOptions::CASIncludeTreeID.
@@ -1059,10 +1060,10 @@ public:
   ArrayRef<Decl*> getModuleInitializers(Module *M);
 
   /// Set the (C++20) module we are building.
-  void setCurrentNamedModule(Module *M);
+  void setNamedModuleForCodeGen(Module *M) { TopLevelCXXNamedModule = M; }
 
   /// Get module under construction, nullptr if this is not a C++20 module.
-  Module *getCurrentNamedModule() const { return CurrentCXXNamedModule; }
+  Module *getNamedModuleForCodeGen() const { return TopLevelCXXNamedModule; }
 
   std::optional<std::string> getCASIncludeTreeID() const {
     return CASIncludeTreeID;
