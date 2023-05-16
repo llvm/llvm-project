@@ -6,7 +6,7 @@ add_mlir_translation_library(MLIRGPUToLLVMIRTranslation
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRLLVMDialect
   MLIRSupport
   MLIRTargetLLVMIRExport

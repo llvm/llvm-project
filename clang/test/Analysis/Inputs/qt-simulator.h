@@ -6,6 +6,7 @@ struct QSlotObjectBase {};
 
 namespace Qt {
 enum ConnectionType {};
+enum TimerType {};
 }
 
 struct QMetaObject {
@@ -31,3 +32,8 @@ struct QCoreApplication : public QObject {
 };
 
 struct QApplication : public QCoreApplication {};
+
+struct QTimer {
+  static void singleShotImpl(int, Qt::TimerType, const QObject *,
+                             QtPrivate::QSlotObjectBase *);
+};

@@ -20,7 +20,7 @@ if (MLIR_ENABLE_SPIRV_CPU_RUNNER)
     MLIRBuiltinToLLVMIRTranslation
     MLIRExecutionEngine
     MLIRFuncDialect
-    MLIRGPUOps
+    MLIRGPUDialect
     MLIRIR
     MLIRJitRunner
     MLIRLLVMDialect

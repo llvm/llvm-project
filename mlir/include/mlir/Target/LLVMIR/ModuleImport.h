@@ -136,6 +136,9 @@ public:
   /// Converts `value` to an integer attribute. Asserts if the matching fails.
   IntegerAttr matchIntegerAttr(llvm::Value *value);
 
+  /// Converts `value` to a float attribute. Asserts if the matching fails.
+  FloatAttr matchFloatAttr(llvm::Value *value);
+
   /// Converts `value` to a local variable attribute. Asserts if the matching
   /// fails.
   DILocalVariableAttr matchLocalVariableAttr(llvm::Value *value);

@@ -535,13 +535,19 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       return LeavingSubmodule;
     }
   }
-
   // If this is the end of the main file, form an EOF token.
   assert(CurLexer && "Got EOF but no current lexer set!");
   const char *EndPos = getCurLexerEndPos();
   Result.startToken();
   CurLexer->BufferPtr = EndPos;
-  CurLexer->FormTokenWithChars(Result, EndPos, tok::eof);
+
+  if (isIncrementalProcessingEnabled()) {
+    CurLexer->FormTokenWithChars(Result, EndPos, tok::annot_repl_input_end);
+    Result.setAnnotationEndLoc(Result.getLocation());
+    Result.setAnnotationValue(nullptr);
+  } else {
+    CurLexer->FormTokenWithChars(Result, EndPos, tok::eof);
+  }
 
   if (isCodeCompletionEnabled()) {
     // Inserting the code-completion point increases the source buffer by 1,
