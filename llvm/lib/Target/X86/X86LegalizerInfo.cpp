@@ -465,6 +465,9 @@ void X86LegalizerInfo::setLegalizerInfoAVX2() {
                          LegacyLegalizeActions::Legal);
     LegacyInfo.setAction({G_UNMERGE_VALUES, Ty}, LegacyLegalizeActions::Legal);
   }
+
+  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
+    .legalFor({v8s32, v4s64});
 }
 
 void X86LegalizerInfo::setLegalizerInfoAVX512() {
