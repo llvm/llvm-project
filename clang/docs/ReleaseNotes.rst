@@ -543,6 +543,12 @@ AIX Support
   This option is an alternative to the `--build-id=0xHEXSTRING` GNU linker option
   which is currently not supported by the AIX linker.
 
+- Introduced the ``-mxcoff-roptr`` option to place constant objects with
+  relocatable address values in the read-only data section. This option should
+  be used with the ``-fdata-sections`` option, and is not supported with
+  ``-fno-data-sections``. When ``-mxcoff-roptr`` is in effect at link time,
+  read-only data sections with relocatable address values that resolve to
+  imported symbols are made writable.
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
