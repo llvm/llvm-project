@@ -57,6 +57,7 @@ static int import(ObjectStore &CAS, ObjectStore &UpstreamCAS,
                   ArrayRef<std::string> Objects);
 static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
                        ArrayRef<std::string> Objects);
+static int getCacheResult(ObjectStore &CAS, ActionCache &AC, const CASID &ID);
 static int validateObject(ObjectStore &CAS, const CASID &ID);
 
 int main(int Argc, char **Argv) {
@@ -90,6 +91,7 @@ int main(int Argc, char **Argv) {
     GetCASIDForFile,
     Import,
     PutCacheKey,
+    GetCacheResult,
     Validate,
   };
   cl::opt<CommandKind> Command(
@@ -113,6 +115,8 @@ int main(int Argc, char **Argv) {
           clEnumValN(Import, "import", "import objects from another CAS"),
           clEnumValN(PutCacheKey, "put-cache-key",
                      "set a value for a cache key"),
+          clEnumValN(GetCacheResult, "get-cache-result",
+                     "get the result value from a cache key"),
           clEnumValN(Validate, "validate", "validate the object for CASID")),
       cl::init(CommandKind::Invalid));
 
@@ -181,18 +185,23 @@ int main(int Argc, char **Argv) {
     return import(*CAS, *UpstreamCAS, Objects);
   }
 
-  if (Command == PutCacheKey) {
+  if (Command == PutCacheKey || Command == GetCacheResult) {
     if (!AC)
       ExitOnErr(createStringError(inconvertibleErrorCode(),
                                   "no action-cache available"));
-    return putCacheKey(*CAS, *AC, Objects);
   }
+
+  if (Command == PutCacheKey)
+    return putCacheKey(*CAS, *AC, Objects);
 
   // Remaining commands need exactly one CAS object.
   if (Objects.size() > 1)
     ExitOnErr(createStringError(inconvertibleErrorCode(),
                                 "too many <object>s, expected 1"));
   CASID ID = ExitOnErr(CAS->parseID(Objects.front()));
+
+  if (Command == GetCacheResult)
+    return getCacheResult(*CAS, *AC, ID);
 
   if (Command == TraverseGraph)
     return traverseGraph(*CAS, ID);
@@ -574,6 +583,18 @@ static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
     Objects = Objects.drop_front(2);
     ExitOnErr(AC.put(Key, Result));
   }
+  return 0;
+}
+
+static int getCacheResult(ObjectStore &CAS, ActionCache &AC, const CASID &ID) {
+  ExitOnError ExitOnErr("llvm-cas: get-cache-result: ");
+
+  auto Result = ExitOnErr(AC.get(ID));
+  if (!Result) {
+    outs() << "result not found\n";
+    return 1;
+  }
+  outs() << *Result << "\n";
   return 0;
 }
 
