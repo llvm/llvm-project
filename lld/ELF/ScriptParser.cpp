@@ -898,6 +898,7 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
     osd->osec.commands.push_back(
         readInputSectionRules(next(), withFlags, withoutFlags));
   }
+  osd->osec.phdrs = readOutputSectionPhdrs();
   return osd;
 }
 
