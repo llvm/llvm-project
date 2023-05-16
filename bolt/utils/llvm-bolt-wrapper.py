@@ -246,7 +246,7 @@ def find_section(offset, readelf_hdr):
         file_offset = int(cols[5], 16)
         # section size
         size = int(cols[2], 16)
-        if offset >= file_offset and offset <= file_offset + size:
+        if offset >= file_offset and offset < file_offset + size:
             if sys.stdout.isatty(): # terminal supports colors
                 print(f"\033[1m{line}\033[0m")
             else:

@@ -101,10 +101,12 @@ H:
 ; CHECK: DIVERGENT: br i1 %div.exitx,
 
 X:
+; CHECK: DIVERGENT: %div.user =
   %div.user = add i32 %uni.inc, 5
   br i1 %uni.cond, label %G, label %Y
 
 Y:
+; CHECK: DIVERGENT: %div.alsouser =
   %div.alsouser = add i32 %uni.inc, 5
   ret void
 }
@@ -128,7 +130,7 @@ G:
 H:
   %uni.merge.h = phi i32 [ 0, %G ], [ %uni.inc, %H ]
   %uni.inc = add i32 %uni.merge.h, 1
-  br i1 %uni.cond, label %X, label %H ; divergent branch
+  br i1 %uni.cond, label %X, label %H
 
 X:
   %uni.user = add i32 %uni.inc, 5
@@ -167,6 +169,7 @@ X:
   br label %G
 
 G:
+; C HECK: DIVERGENT: %div.user =
   %div.user = add i32 %uni.inc, 5
   br i1 %uni.cond, label %G, label %Y
 ; CHECK: DIVERGENT: %div.user =
@@ -175,7 +178,8 @@ Y:
   ret void
 }
 
-; temporal-divergent use of value carried by divergent loop, user is inside sibling loop, defs and use are carried by a uniform loop
+; temporal-divergent use of value carried by divergent loop, user is inside
+; sibling loop, defs and use are carried by a uniform loop
 define amdgpu_kernel void @temporal_diverge_loopuser_nested(i32 %n, i32 %a, i32 %b) #0 {
 ; CHECK-LABEL: for function 'temporal_diverge_loopuser_nested':
 ; CHECK-NOT: DIVERGENT: %uni.

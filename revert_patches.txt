@@ -39,3 +39,6 @@ reverted
 [ADT] Allow `llvm::enumerate` to enumerate over 
 [ADT] Work around `enumerate` compilation error with modules
 
+Revert "[SLP][NFC]Add missing finalize params in the CostEstimator, NFC."
+        seeing rocThrust SLP aborts in merges, try avoiding
+

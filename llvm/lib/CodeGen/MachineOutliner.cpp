@@ -688,6 +688,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   if (OutlineRepeatedNum > 0)
     FunctionName += std::to_string(OutlineRepeatedNum + 1) + "_";
   FunctionName += std::to_string(Name);
+  LLVM_DEBUG(dbgs() << "NEW FUNCTION: " << FunctionName << "\n");
 
   // Create the function using an IR-level function.
   LLVMContext &C = M.getContext();
@@ -823,7 +824,9 @@ bool MachineOutliner::outline(Module &M,
                               std::vector<OutlinedFunction> &FunctionList,
                               InstructionMapper &Mapper,
                               unsigned &OutlinedFunctionNum) {
-
+  LLVM_DEBUG(dbgs() << "*** Outlining ***\n");
+  LLVM_DEBUG(dbgs() << "NUMBER OF POTENTIAL FUNCTIONS: " << FunctionList.size()
+                    << "\n");
   bool OutlinedSomething = false;
 
   // Sort by benefit. The most beneficial functions should be outlined first.
@@ -835,7 +838,11 @@ bool MachineOutliner::outline(Module &M,
   // Walk over each function, outlining them as we go along. Functions are
   // outlined greedily, based off the sort above.
   auto *UnsignedVecBegin = Mapper.UnsignedVec.begin();
+  LLVM_DEBUG(dbgs() << "WALKING FUNCTION LIST\n");
   for (OutlinedFunction &OF : FunctionList) {
+#ifndef NDEBUG
+    auto NumCandidatesBefore = OF.Candidates.size();
+#endif
     // If we outlined something that overlapped with a candidate in a previous
     // step, then we can't outline from it.
     erase_if(OF.Candidates, [&UnsignedVecBegin](Candidate &C) {
@@ -845,9 +852,23 @@ bool MachineOutliner::outline(Module &M,
                          });
     });
 
+#ifndef NDEBUG
+    auto NumCandidatesAfter = OF.Candidates.size();
+    LLVM_DEBUG(dbgs() << "PRUNED: " << NumCandidatesBefore - NumCandidatesAfter
+                      << "/" << NumCandidatesBefore << " candidates\n");
+#endif
+
     // If we made it unbeneficial to outline this function, skip it.
-    if (OF.getBenefit() < OutlinerBenefitThreshold)
+    if (OF.getBenefit() < OutlinerBenefitThreshold) {
+      LLVM_DEBUG(dbgs() << "SKIP: Expected benefit (" << OF.getBenefit()
+                        << " B) < threshold (" << OutlinerBenefitThreshold
+                        << " B)\n");
       continue;
+    }
+
+    LLVM_DEBUG(dbgs() << "OUTLINE: Expected benefit (" << OF.getBenefit()
+                      << " B) > threshold (" << OutlinerBenefitThreshold
+                      << " B)\n");
 
     // It's beneficial. Create the function and outline its sequence's
     // occurrences.
@@ -860,6 +881,7 @@ bool MachineOutliner::outline(Module &M,
     const TargetInstrInfo &TII = *STI.getInstrInfo();
 
     // Replace occurrences of the sequence with calls to the new function.
+    LLVM_DEBUG(dbgs() << "CREATE OUTLINED CALLS\n");
     for (Candidate &C : OF.Candidates) {
       MachineBasicBlock &MBB = *C.getMBB();
       MachineBasicBlock::iterator StartIt = C.front();
@@ -867,6 +889,18 @@ bool MachineOutliner::outline(Module &M,
 
       // Insert the call.
       auto CallInst = TII.insertOutlinedCall(M, MBB, StartIt, *MF, C);
+// Insert the call.
+#ifndef NDEBUG
+      auto MBBBeingOutlinedFromName =
+          MBB.getName().empty() ? "<unknown>" : MBB.getName().str();
+      auto MFBeingOutlinedFromName = MBB.getParent()->getName().empty()
+                                         ? "<unknown>"
+                                         : MBB.getParent()->getName().str();
+      LLVM_DEBUG(dbgs() << "  CALL: " << MF->getName() << " in "
+                        << MFBeingOutlinedFromName << ":"
+                        << MBBBeingOutlinedFromName << "\n");
+      LLVM_DEBUG(dbgs() << "   .. " << *CallInst);
+#endif
 
       // If the caller tracks liveness, then we need to make sure that
       // anything we outline doesn't break liveness assumptions. The outlined

@@ -66,6 +66,9 @@ struct PropertiesWithCustomPrint {
   /// offloaded to the client.
   std::shared_ptr<const std::string> label;
   int value;
+  bool operator==(const PropertiesWithCustomPrint &rhs) const {
+    return value == rhs.value && *label == *rhs.label;
+  }
 };
 class MyPropStruct {
 public:
@@ -77,6 +80,9 @@ public:
                                          mlir::Attribute attr,
                                          mlir::InFlightDiagnostic *diag);
   llvm::hash_code hash() const;
+  bool operator==(const MyPropStruct &rhs) const {
+    return content == rhs.content;
+  }
 };
 } // namespace test
 

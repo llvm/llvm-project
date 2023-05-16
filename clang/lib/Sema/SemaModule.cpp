@@ -1021,3 +1021,16 @@ void Sema::PopImplicitGlobalModuleFragment() {
          "left the wrong module scope, which is not global module fragment");
   ModuleScopes.pop_back();
 }
+
+bool Sema::isModuleUnitOfCurrentTU(const Module *M) const {
+  assert(M);
+
+  Module *CurrentModuleUnit = getCurrentModule();
+
+  // If we are not in a module currently, M must not be the module unit of
+  // current TU.
+  if (!CurrentModuleUnit)
+    return false;
+
+  return M->isSubModuleOf(CurrentModuleUnit->getTopLevelModule());
+}
