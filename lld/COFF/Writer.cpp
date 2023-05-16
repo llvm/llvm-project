@@ -1733,20 +1733,22 @@ void Writer::createGuardCFTables() {
   SymbolRVASet ehContTargets;
   for (ObjFile *file : ctx.objFileInstances) {
     // If the object was compiled with /guard:cf, the address taken symbols
-    // are in .gfids$y sections, the longjmp targets are in .gljmp$y sections,
-    // and ehcont targets are in .gehcont$y sections. If the object was not
-    // compiled with /guard:cf, we assume there were no setjmp and ehcont
-    // targets, and that all code symbols with relocations are possibly
-    // address-taken.
+    // are in .gfids$y sections, and the longjmp targets are in .gljmp$y
+    // sections. If the object was not compiled with /guard:cf, we assume there
+    // were no setjmp targets, and that all code symbols with relocations are
+    // possibly address-taken.
     if (file->hasGuardCF()) {
       markSymbolsForRVATable(file, file->getGuardFidChunks(), addressTakenSyms);
       markSymbolsForRVATable(file, file->getGuardIATChunks(), giatsRVASet);
       getSymbolsFromSections(file, file->getGuardIATChunks(), giatsSymbols);
       markSymbolsForRVATable(file, file->getGuardLJmpChunks(), longJmpTargets);
-      markSymbolsForRVATable(file, file->getGuardEHContChunks(), ehContTargets);
     } else {
       markSymbolsWithRelocations(file, addressTakenSyms);
     }
+    // If the object was compiled with /guard:ehcont, the ehcont targets are in
+    // .gehcont$y sections.
+    if (file->hasGuardEHCont())
+      markSymbolsForRVATable(file, file->getGuardEHContChunks(), ehContTargets);
   }
 
   // Mark the image entry as address-taken.
