@@ -4002,6 +4002,19 @@ TEST(SignatureHelp, TemplateArguments) {
   EXPECT_EQ(Second.activeParameter, 1);
 }
 
+TEST(CompletionTest, DoNotCrash) {
+  llvm::StringLiteral Cases[] = {
+      R"cpp(
+    template <typename = int> struct Foo {};
+    auto a = [x(3)](Foo<^>){};
+    )cpp",
+  };
+  for (auto Case : Cases) {
+    SCOPED_TRACE(Case);
+    auto Completions = completions(Case);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

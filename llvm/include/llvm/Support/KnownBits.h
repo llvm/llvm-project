@@ -457,6 +457,11 @@ inline KnownBits operator^(const KnownBits &LHS, KnownBits &&RHS) {
   return std::move(RHS);
 }
 
+inline raw_ostream &operator<<(raw_ostream &OS, const KnownBits &Known) {
+  Known.print(OS);
+  return OS;
+}
+
 } // end namespace llvm
 
 #endif

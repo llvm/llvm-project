@@ -451,9 +451,11 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
       Builder.defineMacro("__STDC_VERSION__", "199409L");
   } else {
     //   -- __cplusplus
-    // FIXME: Use correct value for C++23.
-    if (LangOpts.CPlusPlus23)
-      Builder.defineMacro("__cplusplus", "202101L");
+    if (LangOpts.CPlusPlus26)
+      // FIXME: Use correct value for C++26.
+      Builder.defineMacro("__cplusplus", "202400L");
+    else if (LangOpts.CPlusPlus23)
+      Builder.defineMacro("__cplusplus", "202302L");
     //      [C++20] The integer literal 202002L.
     else if (LangOpts.CPlusPlus20)
       Builder.defineMacro("__cplusplus", "202002L");

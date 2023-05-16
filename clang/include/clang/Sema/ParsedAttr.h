@@ -702,7 +702,6 @@ public:
 
   /// Move the given pool's allocations to this pool.
   AttributePool(AttributePool &&pool) = default;
-  AttributePool &operator=(AttributePool &&pool) = default;
 
   AttributeFactory &getFactory() const { return Factory; }
 

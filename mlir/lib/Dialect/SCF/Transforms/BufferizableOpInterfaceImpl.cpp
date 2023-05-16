@@ -902,10 +902,12 @@ struct WhileOpInterface
 
     auto conditionOp = whileOp.getConditionOp();
     for (const auto &it : llvm::enumerate(conditionOp.getArgs())) {
+      Block *block = conditionOp->getBlock();
       if (!isa<TensorType>(it.value().getType()))
         continue;
-      if (!state.areEquivalentBufferizedValues(
-              it.value(), conditionOp->getBlock()->getArgument(it.index())))
+      if (it.index() >= block->getNumArguments() ||
+          !state.areEquivalentBufferizedValues(it.value(),
+                                               block->getArgument(it.index())))
         return conditionOp->emitError()
                << "Condition arg #" << it.index()
                << " is not equivalent to the corresponding iter bbArg";
@@ -913,10 +915,12 @@ struct WhileOpInterface
 
     auto yieldOp = whileOp.getYieldOp();
     for (const auto &it : llvm::enumerate(yieldOp.getResults())) {
+      Block *block = yieldOp->getBlock();
       if (!isa<TensorType>(it.value().getType()))
         continue;
-      if (!state.areEquivalentBufferizedValues(
-              it.value(), yieldOp->getBlock()->getArgument(it.index())))
+      if (it.index() >= block->getNumArguments() ||
+          !state.areEquivalentBufferizedValues(it.value(),
+                                               block->getArgument(it.index())))
         return yieldOp->emitError()
                << "Yield operand #" << it.index()
                << " is not equivalent to the corresponding iter bbArg";
