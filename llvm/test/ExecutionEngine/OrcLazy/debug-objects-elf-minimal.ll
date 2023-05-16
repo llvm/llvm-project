@@ -10,7 +10,7 @@
 ;
 ; CHECK: -:	file format elf64-x86-64
 ; CHECK: .debug_info contents:
-; CHECK: 0x00000000: Compile Unit: length = 0x00000047, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x0000004b)
+; CHECK: 0x00000000: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x0000004e)
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:               DW_AT_producer	("compiler version")
 ; CHECK:               DW_AT_language	(DW_LANG_C99)
@@ -22,7 +22,7 @@
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:                 DW_AT_low_pc	()
 ; CHECK:                 DW_AT_high_pc	()
-; CHECK:                 DW_AT_frame_base	(DW_OP_reg7 RSP)
+; CHECK:                 DW_AT_frame_base	(DW_OP_call_frame_cfa, DW_OP_consts -16, DW_OP_plus)
 ; CHECK:                 DW_AT_name	("main")
 ; CHECK:                 DW_AT_decl_file	("/workspace/source-file.c")
 ; CHECK:                 DW_AT_decl_line	(4)
