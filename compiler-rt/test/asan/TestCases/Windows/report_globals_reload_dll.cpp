@@ -1,8 +1,6 @@
-// UNSUPPORTED: target={{.*-windows-gnu}}
-
 // Make sure we can handle reloading the same DLL multiple times.
-// RUN: %clang_cl_asan -LD -Od -DDLL %s -Fe%t.dll
-// RUN: %clang_cl_asan -Od -DEXE %s -Fe%te.exe
+// RUN: %clang_cl_asan %LD %Od -DDLL %s %Fe%t.dll
+// RUN: %clang_cl_asan %Od -DEXE %s %Fe%te.exe
 // RUN: %env_asan_opts=report_globals=1 %run %te.exe %t.dll 2>&1 | FileCheck %s
 
 #include <windows.h>
