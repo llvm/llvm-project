@@ -3294,8 +3294,7 @@ Controlling implementation limits
 
 .. option:: -fconstexpr-depth=N
 
-  Sets the limit for recursive constexpr function invocations to N.  The
-  default is 512.
+  Sets the limit for constexpr function invocations to N. The default is 512.
 
 .. option:: -fconstexpr-steps=N
 
