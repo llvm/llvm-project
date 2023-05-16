@@ -102,6 +102,7 @@ static char getRightDelimiter(AsmParser::Delimiter delimiter) {
 void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
+                                 TypeRange valueTypes,
                                  AsmParser::Delimiter delimiter) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);
@@ -112,10 +113,14 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
   }
   unsigned idx = 0;
   llvm::interleaveComma(integers, printer, [&](int64_t integer) {
-    if (ShapedType::isDynamic(integer))
-      printer << values[idx++];
-    else
+    if (ShapedType::isDynamic(integer)) {
+      printer << values[idx];
+      if (!valueTypes.empty())
+        printer << " : " << valueTypes[idx];
+      ++idx;
+    } else {
       printer << integer;
+    }
   });
   printer << rightDelimiter;
 }
@@ -123,7 +128,8 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 ParseResult mlir::parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, AsmParser::Delimiter delimiter) {
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes,
+    AsmParser::Delimiter delimiter) {
 
   SmallVector<int64_t, 4> integerVals;
   auto parseIntegerOrValue = [&]() {
@@ -132,6 +138,8 @@ ParseResult mlir::parseDynamicIndexList(
     if (res.has_value() && succeeded(res.value())) {
       values.push_back(operand);
       integerVals.push_back(ShapedType::kDynamic);
+      if (valueTypes && parser.parseColonType(valueTypes->emplace_back()))
+        return failure();
     } else {
       int64_t integer;
       if (failed(parser.parseInteger(integer)))

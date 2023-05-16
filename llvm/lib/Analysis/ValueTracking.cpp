@@ -668,8 +668,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
     if (match(Cmp, m_c_ICmp(Pred, m_V, m_Value(A)))) {
       KnownBits RHSKnown =
           computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
-      Known.Zero |= RHSKnown.Zero;
-      Known.One |= RHSKnown.One;
+      Known = Known.unionWith(RHSKnown);
       // assume(v & b = a)
     } else if (match(Cmp,
                      m_c_ICmp(Pred, m_c_And(m_V, m_Value(B)), m_Value(A)))) {
@@ -758,9 +757,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
       RHSKnown.Zero.lshrInPlace(C);
-      Known.Zero |= RHSKnown.Zero;
       RHSKnown.One.lshrInPlace(C);
-      Known.One |= RHSKnown.One;
+      Known = Known.unionWith(RHSKnown);
       // assume(~(v << c) = a)
     } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_Shl(m_V, m_ConstantInt(C))),
                                    m_Value(A))) &&
@@ -1053,8 +1051,8 @@ static void computeKnownBitsFromShiftOperator(
         continue;
     }
 
-    Known = KnownBits::commonBits(
-        Known, KF(Known2, KnownBits::makeConstant(APInt(32, ShiftAmt))));
+    Known = Known.intersectWith(
+        KF(Known2, KnownBits::makeConstant(APInt(32, ShiftAmt))));
   }
 
   // If the known bits conflict, the result is poison. Return a 0 and hope the
@@ -1242,7 +1240,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
 
     // Only known if known in both the LHS and RHS.
-    Known = KnownBits::commonBits(Known, Known2);
+    Known = Known.intersectWith(Known2);
 
     if (SPF == SPF_ABS) {
       // RHS from matchSelectPattern returns the negation part of abs pattern.
@@ -1621,7 +1619,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
     // Otherwise take the unions of the known bit sets of the operands,
     // taking conservative care to avoid excessive recursion.
-    if (Depth < MaxAnalysisRecursionDepth - 1 && !Known.Zero && !Known.One) {
+    if (Depth < MaxAnalysisRecursionDepth - 1 && Known.isUnknown()) {
       // Skip if every incoming value references to ourself.
       if (isa_and_nonnull<UndefValue>(P->hasConstantValue()))
         break;
@@ -1680,7 +1678,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
           }
         }
 
-        Known = KnownBits::commonBits(Known, Known2);
+        Known = Known.intersectWith(Known2);
         // If all bits have been ruled out, there's no need to check
         // more operands.
         if (Known.isUnknown())
@@ -1699,8 +1697,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       computeKnownBitsFromRangeMetadata(*MD, Known);
     if (const Value *RV = cast<CallBase>(I)->getReturnedArgOperand()) {
       computeKnownBits(RV, Known2, Depth + 1, Q);
-      Known.Zero |= Known2.Zero;
-      Known.One |= Known2.One;
+      Known = Known.unionWith(Known2);
     }
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
@@ -1872,7 +1869,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (!!DemandedRHS) {
       const Value *RHS = Shuf->getOperand(1);
       computeKnownBits(RHS, DemandedRHS, Known2, Depth + 1, Q);
-      Known = KnownBits::commonBits(Known, Known2);
+      Known = Known.intersectWith(Known2);
     }
     break;
   }
@@ -1905,7 +1902,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     DemandedVecElts.clearBit(EltIdx);
     if (!!DemandedVecElts) {
       computeKnownBits(Vec, DemandedVecElts, Known2, Depth + 1, Q);
-      Known = KnownBits::commonBits(Known, Known2);
+      Known = Known.intersectWith(Known2);
     }
     break;
   }

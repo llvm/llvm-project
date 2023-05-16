@@ -806,8 +806,9 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
       continue;
 
     // Don't handle physical register.
-    if (Reg.isPhysical())
+    if (Reg.isPhysical()) {
       return false;
+    }
 
     // Users for the defs are all dominated by SuccToSinkTo.
     if (MO.isDef()) {

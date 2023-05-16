@@ -129,7 +129,7 @@ KnownBits KnownBits::umax(const KnownBits &LHS, const KnownBits &RHS) {
   // are common to these two values are also known in the result.
   KnownBits L = LHS.makeGE(RHS.getMinValue());
   KnownBits R = RHS.makeGE(LHS.getMinValue());
-  return KnownBits::commonBits(L, R);
+  return L.intersectWith(R);
 }
 
 KnownBits KnownBits::umin(const KnownBits &LHS, const KnownBits &RHS) {
@@ -195,8 +195,8 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
   // possible shifts.
   APInt MaxShiftAmount = RHS.getMaxValue();
   if (!LHS.isUnknown()) {
-    uint64_t ShiftAmtZeroMask = (~RHS.Zero).getZExtValue();
-    uint64_t ShiftAmtOneMask = RHS.One.getZExtValue();
+    uint64_t ShiftAmtZeroMask = (~RHS.Zero).zextOrTrunc(64).getZExtValue();
+    uint64_t ShiftAmtOneMask = RHS.One.zextOrTrunc(64).getZExtValue();
     assert(MinShiftAmount.ult(MaxShiftAmount) && "Illegal shift range");
     Known.Zero.setAllBits();
     Known.One.setAllBits();
@@ -211,7 +211,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
       SpecificShift.Zero = LHS.Zero << ShiftAmt;
       SpecificShift.Zero.setLowBits(ShiftAmt);
       SpecificShift.One = LHS.One << ShiftAmt;
-      Known = KnownBits::commonBits(Known, SpecificShift);
+      Known = Known.intersectWith(SpecificShift);
       if (Known.isUnknown())
         break;
     }
@@ -251,8 +251,8 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
   // possible shifts.
   APInt MaxShiftAmount = RHS.getMaxValue();
   if (!LHS.isUnknown()) {
-    uint64_t ShiftAmtZeroMask = (~RHS.Zero).getZExtValue();
-    uint64_t ShiftAmtOneMask = RHS.One.getZExtValue();
+    uint64_t ShiftAmtZeroMask = (~RHS.Zero).zextOrTrunc(64).getZExtValue();
+    uint64_t ShiftAmtOneMask = RHS.One.zextOrTrunc(64).getZExtValue();
     assert(MinShiftAmount.ult(MaxShiftAmount) && "Illegal shift range");
     Known.Zero.setAllBits();
     Known.One.setAllBits();
@@ -267,7 +267,7 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
       SpecificShift.Zero.lshrInPlace(ShiftAmt);
       SpecificShift.Zero.setHighBits(ShiftAmt);
       SpecificShift.One.lshrInPlace(ShiftAmt);
-      Known = KnownBits::commonBits(Known, SpecificShift);
+      Known = Known.intersectWith(SpecificShift);
       if (Known.isUnknown())
         break;
     }
@@ -312,8 +312,8 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
   // possible shifts.
   APInt MaxShiftAmount = RHS.getMaxValue();
   if (!LHS.isUnknown()) {
-    uint64_t ShiftAmtZeroMask = (~RHS.Zero).getZExtValue();
-    uint64_t ShiftAmtOneMask = RHS.One.getZExtValue();
+    uint64_t ShiftAmtZeroMask = (~RHS.Zero).zextOrTrunc(64).getZExtValue();
+    uint64_t ShiftAmtOneMask = RHS.One.zextOrTrunc(64).getZExtValue();
     assert(MinShiftAmount.ult(MaxShiftAmount) && "Illegal shift range");
     Known.Zero.setAllBits();
     Known.One.setAllBits();
@@ -327,7 +327,7 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
       KnownBits SpecificShift = LHS;
       SpecificShift.Zero.ashrInPlace(ShiftAmt);
       SpecificShift.One.ashrInPlace(ShiftAmt);
-      Known = KnownBits::commonBits(Known, SpecificShift);
+      Known = Known.intersectWith(SpecificShift);
       if (Known.isUnknown())
         break;
     }
