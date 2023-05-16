@@ -533,8 +533,8 @@ void mlir::affine::getEnclosingAffineOps(Operation &op,
 
 // Populates 'cst' with FlatAffineValueConstraints which represent original
 // domain of the loop bounds that define 'ivs'.
-LogicalResult
-ComputationSliceState::getSourceAsConstraints(FlatAffineValueConstraints &cst) {
+LogicalResult ComputationSliceState::getSourceAsConstraints(
+    FlatAffineValueConstraints &cst) const {
   assert(!ivs.empty() && "Cannot have a slice without its IVs");
   cst = FlatAffineValueConstraints(/*numDims=*/ivs.size(), /*numSymbols=*/0,
                                    /*numLocals=*/0, ivs);
@@ -549,7 +549,7 @@ ComputationSliceState::getSourceAsConstraints(FlatAffineValueConstraints &cst) {
 
 // Populates 'cst' with FlatAffineValueConstraints which represent slice bounds.
 LogicalResult
-ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) {
+ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) const {
   assert(!lbOperands.empty());
   // Adds src 'ivs' as dimension variables in 'cst'.
   unsigned numDims = ivs.size();
