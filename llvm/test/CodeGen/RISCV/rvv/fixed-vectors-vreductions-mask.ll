@@ -11,7 +11,7 @@ define zeroext i1 @vreduce_or_v1i1(<1 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> %v)
   ret i1 %red
@@ -24,7 +24,7 @@ define zeroext i1 @vreduce_xor_v1i1(<1 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.xor.v1i1(<1 x i1> %v)
   ret i1 %red
@@ -37,7 +37,7 @@ define zeroext i1 @vreduce_and_v1i1(<1 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> %v)
   ret i1 %red
@@ -50,7 +50,7 @@ define zeroext i1 @vreduce_umax_v1i1(<1 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umax.v1i1(<1 x i1> %v)
   ret i1 %red
@@ -63,7 +63,7 @@ define zeroext i1 @vreduce_smax_v1i1(<1 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.v1i1(<1 x i1> %v)
   ret i1 %red
@@ -76,7 +76,7 @@ define zeroext i1 @vreduce_umin_v1i1(<1 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.v1i1(<1 x i1> %v)
   ret i1 %red
@@ -89,7 +89,7 @@ define zeroext i1 @vreduce_smin_v1i1(<1 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smin.v1i1(<1 x i1> %v)
   ret i1 %red
@@ -806,7 +806,7 @@ define zeroext i1 @vreduce_add_v1i1(<1 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.v1i1(<1 x i1> %v)
   ret i1 %red

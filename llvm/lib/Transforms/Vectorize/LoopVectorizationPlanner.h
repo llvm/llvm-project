@@ -25,6 +25,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
@@ -217,6 +218,16 @@ struct VectorizationFactor {
   }
 };
 
+/// ElementCountComparator creates a total ordering for ElementCount
+/// for the purposes of using it in a set structure.
+struct ElementCountComparator {
+  bool operator()(const ElementCount &LHS, const ElementCount &RHS) const {
+    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
+           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
+  }
+};
+using ElementCountSet = SmallSet<ElementCount, 16, ElementCountComparator>;
+
 /// A class that represents two vectorization factors (initialized with 0 by
 /// default). One for fixed-width vectorization and one for scalable
 /// vectorization. This can be used by the vectorizer to choose from a range of
@@ -261,7 +272,7 @@ class LoopVectorizationPlanner {
   const TargetLibraryInfo *TLI;
 
   /// Target Transform Info.
-  const TargetTransformInfo *TTI;
+  const TargetTransformInfo &TTI;
 
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
@@ -280,12 +291,15 @@ class LoopVectorizationPlanner {
 
   SmallVector<VPlanPtr, 4> VPlans;
 
+  /// Profitable vector factors.
+  SmallVector<VectorizationFactor, 8> ProfitableVFs;
+
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
 public:
   LoopVectorizationPlanner(Loop *L, LoopInfo *LI, const TargetLibraryInfo *TLI,
-                           const TargetTransformInfo *TTI,
+                           const TargetTransformInfo &TTI,
                            LoopVectorizationLegality *Legal,
                            LoopVectorizationCostModel &CM,
                            InterleavedAccessInfo &IAI,
@@ -311,9 +325,15 @@ public:
   /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
   /// vectorization re-using plans for both the main and epilogue vector loops.
   /// It should be removed once the re-use issue has been fixed.
-  void executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-                   InnerLoopVectorizer &LB, DominatorTree *DT,
-                   bool IsEpilogueVectorization);
+  /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
+  /// to re-use expansion results generated during main plan execution. Returns
+  /// a mapping of SCEVs to their expanded IR values. Note that this is a
+  /// temporary workaround needed due to the current epilogue handling.
+  DenseMap<const SCEV *, Value *>
+  executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
+              InnerLoopVectorizer &LB, DominatorTree *DT,
+              bool IsEpilogueVectorization,
+              DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -335,6 +355,12 @@ public:
 
   /// Check if the number of runtime checks exceeds the threshold.
   bool requiresTooManyRuntimeChecks() const;
+
+  /// \return The most profitable vectorization factor and the cost of that VF
+  /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
+  /// epilogue vectorization is not supported for the loop.
+  VectorizationFactor
+  selectEpilogueVectorizationFactor(const ElementCount MaxVF);
 
 protected:
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
@@ -370,6 +396,20 @@ private:
   void adjustRecipesForReductions(VPBasicBlock *LatchVPBB, VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
+
+  /// \return The most profitable vectorization factor and the cost of that VF.
+  /// This method checks every VF in \p CandidateVFs.
+  VectorizationFactor
+  selectVectorizationFactor(const ElementCountSet &CandidateVFs);
+
+  /// Returns true if the per-lane cost of VectorizationFactor A is lower than
+  /// that of B.
+  bool isMoreProfitable(const VectorizationFactor &A,
+                        const VectorizationFactor &B) const;
+
+  /// Determines if we have the infrastructure to vectorize the loop and its
+  /// epilogue, assuming the main loop is vectorized by \p VF.
+  bool isCandidateForEpilogueVectorization(const ElementCount VF) const;
 };
 
 } // namespace llvm

@@ -116,7 +116,7 @@ bool OpTrait::util::getBroadcastedShape(ArrayRef<int64_t> shape1,
 /// Returns the shape of the given type. Scalars will be considered as having a
 /// shape with zero dimensions.
 static ArrayRef<int64_t> getShape(Type type) {
-  if (auto sType = type.dyn_cast<ShapedType>())
+  if (auto sType = dyn_cast<ShapedType>(type))
     return sType.getShape();
   return {};
 }
@@ -142,8 +142,8 @@ Type OpTrait::util::getBroadcastedType(Type type1, Type type2,
 
   // If one of the types is unranked tensor, then the other type shouldn't be
   // vector and the result should have unranked tensor type.
-  if (type1.isa<UnrankedTensorType>() || type2.isa<UnrankedTensorType>()) {
-    if (type1.isa<VectorType>() || type2.isa<VectorType>())
+  if (isa<UnrankedTensorType>(type1) || isa<UnrankedTensorType>(type2)) {
+    if (isa<VectorType>(type1) || isa<VectorType>(type2))
       return {};
     return UnrankedTensorType::get(elementType);
   }
@@ -151,7 +151,7 @@ Type OpTrait::util::getBroadcastedType(Type type1, Type type2,
   // Returns the type kind if the given type is a vector or ranked tensor type.
   // Returns std::nullopt otherwise.
   auto getCompositeTypeKind = [](Type type) -> std::optional<TypeID> {
-    if (type.isa<VectorType, RankedTensorType>())
+    if (isa<VectorType, RankedTensorType>(type))
       return type.getTypeID();
     return std::nullopt;
   };
@@ -189,8 +189,8 @@ Type OpTrait::util::getBroadcastedType(Type type1, Type type2,
 template <typename iterator_range>
 static std::tuple<bool, bool> hasTensorOrVectorType(iterator_range types) {
   return std::make_tuple(
-      llvm::any_of(types, [](Type t) { return t.isa<TensorType>(); }),
-      llvm::any_of(types, [](Type t) { return t.isa<VectorType>(); }));
+      llvm::any_of(types, [](Type t) { return isa<TensorType>(t); }),
+      llvm::any_of(types, [](Type t) { return isa<VectorType>(t); }));
 }
 
 static bool isCompatibleInferredReturnShape(ArrayRef<int64_t> inferred,
@@ -242,7 +242,7 @@ LogicalResult OpTrait::impl::verifyCompatibleOperandBroadcast(Operation *op) {
     return op->emitError("cannot broadcast vector with tensor");
 
   auto rankedOperands = make_filter_range(
-      op->getOperandTypes(), [](Type t) { return t.isa<RankedTensorType>(); });
+      op->getOperandTypes(), [](Type t) { return isa<RankedTensorType>(t); });
 
   // If all operands are unranked, then all result shapes are possible.
   if (rankedOperands.empty())
@@ -261,7 +261,7 @@ LogicalResult OpTrait::impl::verifyCompatibleOperandBroadcast(Operation *op) {
   }
 
   auto rankedResults = make_filter_range(
-      op->getResultTypes(), [](Type t) { return t.isa<RankedTensorType>(); });
+      op->getResultTypes(), [](Type t) { return isa<RankedTensorType>(t); });
 
   // If all of the results are unranked then no further verification.
   if (rankedResults.empty())

@@ -261,10 +261,10 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
     if (attrName == "dimLevelType") {
       Attribute attr;
       RETURN_ON_FAIL(parser.parseAttribute(attr));
-      auto arrayAttr = attr.dyn_cast<ArrayAttr>();
+      auto arrayAttr = llvm::dyn_cast<ArrayAttr>(attr);
       ERROR_IF(!arrayAttr, "expected an array for dimension level types")
       for (auto i : arrayAttr) {
-        auto strAttr = i.dyn_cast<StringAttr>();
+        auto strAttr = llvm::dyn_cast<StringAttr>(i);
         ERROR_IF(!strAttr, "expected a string value in dimension level types")
         auto strVal = strAttr.getValue();
         if (auto optDLT = parseDLT(strVal)) {
@@ -279,25 +279,25 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
     } else if (attrName == "dimOrdering") {
       Attribute attr;
       RETURN_ON_FAIL(parser.parseAttribute(attr))
-      auto affineAttr = attr.dyn_cast<AffineMapAttr>();
+      auto affineAttr = llvm::dyn_cast<AffineMapAttr>(attr);
       ERROR_IF(!affineAttr, "expected an affine map for dimension ordering")
       dimOrd = affineAttr.getValue();
     } else if (attrName == "higherOrdering") {
       Attribute attr;
       RETURN_ON_FAIL(parser.parseAttribute(attr))
-      auto affineAttr = attr.dyn_cast<AffineMapAttr>();
+      auto affineAttr = llvm::dyn_cast<AffineMapAttr>(attr);
       ERROR_IF(!affineAttr, "expected an affine map for higher ordering")
       higherOrd = affineAttr.getValue();
     } else if (attrName == "posWidth") {
       Attribute attr;
       RETURN_ON_FAIL(parser.parseAttribute(attr))
-      auto intAttr = attr.dyn_cast<IntegerAttr>();
+      auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
       ERROR_IF(!intAttr, "expected an integral position bitwidth")
       posWidth = intAttr.getInt();
     } else if (attrName == "crdWidth") {
       Attribute attr;
       RETURN_ON_FAIL(parser.parseAttribute(attr))
-      auto intAttr = attr.dyn_cast<IntegerAttr>();
+      auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
       ERROR_IF(!intAttr, "expected an integral index bitwidth")
       crdWidth = intAttr.getInt();
     } else if (attrName == "slice") {
@@ -305,7 +305,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       // Dispatches to DimSliceAttr to skip mnemonic
       bool finished = false;
       while (auto attr = SparseTensorDimSliceAttr::parse(parser, nullptr)) {
-        auto sliceAttr = attr.cast<SparseTensorDimSliceAttr>();
+        auto sliceAttr = llvm::cast<SparseTensorDimSliceAttr>(attr);
         slices.push_back(sliceAttr);
         if (parser.parseOptionalComma().failed()) {
           finished = true;
@@ -442,9 +442,9 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
 
 SparseTensorEncodingAttr
 mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
-  if (auto ttp = type.dyn_cast<RankedTensorType>())
-    return ttp.getEncoding().dyn_cast_or_null<SparseTensorEncodingAttr>();
-  if (auto mdtp = type.dyn_cast<StorageSpecifierType>())
+  if (auto ttp = llvm::dyn_cast<RankedTensorType>(type))
+    return llvm::dyn_cast_or_null<SparseTensorEncodingAttr>(ttp.getEncoding());
+  if (auto mdtp = llvm::dyn_cast<StorageSpecifierType>(type))
     return mdtp.getEncoding();
   return nullptr;
 }
@@ -725,12 +725,12 @@ unsigned UnpackOp::getNumBatchedLvls() {
 }
 
 LogicalResult ConvertOp::verify() {
-  if (auto tp1 = getSource().getType().dyn_cast<RankedTensorType>()) {
-    if (auto tp2 = getDest().getType().dyn_cast<RankedTensorType>()) {
+  if (auto tp1 = llvm::dyn_cast<RankedTensorType>(getSource().getType())) {
+    if (auto tp2 = llvm::dyn_cast<RankedTensorType>(getDest().getType())) {
       if (tp1.getRank() != tp2.getRank())
         return emitError("unexpected conversion mismatch in rank");
       auto dstEnc =
-          tp2.getEncoding().dyn_cast_or_null<SparseTensorEncodingAttr>();
+          llvm::dyn_cast_or_null<SparseTensorEncodingAttr>(tp2.getEncoding());
       if (dstEnc && dstEnc.isSlice())
         return emitError("cannot convert to a sparse tensor slice");
 

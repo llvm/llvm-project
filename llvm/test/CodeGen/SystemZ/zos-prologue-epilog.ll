@@ -319,9 +319,54 @@ define i64 @func5(i64 %n) {
 ; CHECK64: lg  3, 72(3)
 ; CHECK64: basr  3, 3
 ; CHECK64: stmg  6, 7, 2064(4)
-define void @large_stack() {
+define void @large_stack0() {
   %arr = alloca [131072 x i64], align 8
   call i64 (ptr) @fun1(ptr %arr)
+  ret void
+}
+
+; CHECK-LABEL: large_stack1
+; CHECK64: agfi  4, -1048768
+; CHECK64: lgr 0, 3
+; CHECK64: llgt  3, 1208
+; CHECK64: cg  4, 64(3)
+; CHECK64: jhe @BB7_2
+; CHECK64: %bb.1:
+; CHECK64: lg  3, 72(3)
+; CHECK64: basr  3, 3
+; CHECK64: bcr 0, 7
+; CHECK64: @BB7_2:
+; CHECK64: stmg  6, 7, 2064(4)
+; CHECK64: lgr 3, 0
+define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
+  %arr = alloca [131072 x i64], align 8
+  call i64 (ptr, i64, i64, i64) @fun3(ptr %arr,
+            i64 %n1, i64 %n2, i64 %n3)
+  ret void
+}
+
+
+; CHECK-LABEL: large_stack2
+; CHECK64: lgr 0, 4
+; CHECK64: stg 3, 2192(4)
+; CHECK64: agfi  4, -1048768
+; CHECK64: llgt  3, 1208
+; CHECK64: cg  4, 64(3)
+; CHECK64: jhe @BB8_2
+; CHECK64: %bb.1:
+; CHECK64: lg  3, 72(3)
+; CHECK64: basr  3, 3
+; CHECK64: bcr 0, 7
+; CHECK64: @BB8_2:
+; CHECK64: lgr 3, 0
+; CHECK64: lg  3, 2192(3)
+; CHECK64: stmg  4, 11, 2048(4)
+; CHECK64: lgr 8, 4
+define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
+  %arr0 = alloca [131072 x i64], align 8
+  %arr1 = alloca i64, i64 %n1, align 8
+  call i64 (ptr, ptr, i64, i64, i64) @fun4(ptr %arr0,
+            ptr %arr1, i64 %n1, i64 %n2, i64 %n3)
   ret void
 }
 
@@ -343,3 +388,5 @@ define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
 declare i64 @fun(i64 %arg0)
 declare i64 @fun1(ptr %ptr)
 declare i64 @fun2(i64 %n, ptr %arr0, ptr %arr1)
+declare i64 @fun3(ptr %ptr, i64 %n1, i64 %n2, i64 %n3)
+declare i64 @fun4(ptr %ptr0, ptr %ptr1, i64 %n1, i64 %n2, i64 %n3)

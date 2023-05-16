@@ -656,7 +656,7 @@ public:
 
   // If we discover a new machine location, assign it an mphi with this
   // block number.
-  unsigned CurBB;
+  unsigned CurBB = 0; // FIXME: https://reviews.llvm.org/D150420
 
   /// Cached local copy of the number of registers the target has.
   unsigned NumRegs;

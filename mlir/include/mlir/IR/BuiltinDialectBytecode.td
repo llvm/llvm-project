@@ -51,7 +51,7 @@ let cType = "StringAttr" in {
 def StringAttr : DialectAttribute<(attr
   String:$value
 )> {
-  let printerPredicate = "$_val.getType().isa<NoneType>()";
+  let printerPredicate = "::llvm::isa<NoneType>($_val.getType())";
 }
 
 //  ///   StringAttrWithType {
@@ -63,7 +63,7 @@ def StringAttr : DialectAttribute<(attr
 def StringAttrWithType : DialectAttribute<(attr
   String:$value,
   Type:$type
-)> { let printerPredicate = "!$_val.getType().isa<NoneType>()"; }
+)> { let printerPredicate = "!::llvm::isa<NoneType>($_val.getType())"; }
 }
 
 //  ///   DictionaryAttr {
@@ -321,7 +321,7 @@ def IntegerType : DialectType<(type
     "static_cast<IntegerType::SignednessSemantics>(_widthAndSignedness & 0x3)">:$signedness
 )>;
 
-// 
+//
 //   ///   IndexType {
 //   ///   }
 //   ///

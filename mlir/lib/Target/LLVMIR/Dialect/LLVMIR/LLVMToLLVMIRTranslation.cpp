@@ -231,9 +231,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         Attribute attr = it.value();
         if (!attr)
           continue;
-        DictionaryAttr dAttr = attr.cast<DictionaryAttr>();
+        DictionaryAttr dAttr = cast<DictionaryAttr>(attr);
         TypeAttr tAttr =
-            dAttr.get(InlineAsmOp::getElementTypeAttrName()).cast<TypeAttr>();
+            cast<TypeAttr>(dAttr.get(InlineAsmOp::getElementTypeAttrName()));
         llvm::AttrBuilder b(moduleTranslation.getLLVMContext());
         llvm::Type *ty = moduleTranslation.convertType(tAttr.getValue());
         b.addTypeAttr(llvm::Attribute::ElementType, ty);

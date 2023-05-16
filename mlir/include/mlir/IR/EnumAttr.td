@@ -34,7 +34,7 @@ class IntEnumAttrCaseBase<I intType, string sym, string strVal, int intVal> :
     EnumAttrCaseInfo<sym, intVal, strVal>,
     SignlessIntegerAttrBase<intType, "case " # strVal> {
   let predicate =
-    CPred<"$_self.cast<::mlir::IntegerAttr>().getInt() == " # intVal>;
+    CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == " # intVal>;
 }
 
 // Cases of integer enum attributes with a specific type. By default, the string
@@ -250,7 +250,7 @@ class BitEnumAttrBase<I intType, list<BitEnumAttrCaseBase> cases,
   let predicate = And<[
     SignlessIntegerAttrBase<intType, summary>.predicate,
     // Make sure we don't have unknown bit set.
-    CPred<"!($_self.cast<::mlir::IntegerAttr>().getValue().getZExtValue() & (~("
+    CPred<"!(::llvm::cast<::mlir::IntegerAttr>($_self).getValue().getZExtValue() & (~("
           # !interleave(!foreach(case, cases, case.value # "u"), "|") #
           ")))">
   ]>;

@@ -10,9 +10,8 @@
 #ifndef _PSTL_GLUE_NUMERIC_IMPL_H
 #define _PSTL_GLUE_NUMERIC_IMPL_H
 
+#include <__config>
 #include <functional>
-
-#include "pstl_config.h"
 
 #include "execution_impl.h"
 #include "numeric_fwd.h"

@@ -31,6 +31,37 @@
 // CHECK:      "name": "process_name"
 // CHECK:      "name": "thread_name"
 
+// RUN: mkdir d e f && cp %s d/a.cpp && touch d/b.c
+
+/// TODO: Support -fno-integrated-as.
+// RUN: %clang -### -c -ftime-trace -ftime-trace-granularity=0 -fintegrated-as d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPILE1
+// COMPILE1: -cc1{{.*}} "-ftime-trace=e/a.json" "-ftime-trace-granularity=0"
+
+// RUN: %clang -### -c -ftime-trace -ftime-trace-granularity=0 d/a.cpp d/b.c -dumpdir f/ 2>&1 | FileCheck %s --check-prefix=COMPILE2
+// COMPILE2: -cc1{{.*}} "-ftime-trace=f/a.json" "-ftime-trace-granularity=0"
+// COMPILE2: -cc1{{.*}} "-ftime-trace=f/b.json" "-ftime-trace-granularity=0"
+
+/// -o specifies the link output. Create ${output}-${basename}.json.
+// RUN: %clang -### -ftime-trace -ftime-trace-granularity=0 d/a.cpp d/b.c -o e/x 2>&1 | FileCheck %s --check-prefix=LINK1
+// LINK1: -cc1{{.*}} "-ftime-trace=e/x-a.json" "-ftime-trace-granularity=0"
+// LINK1: -cc1{{.*}} "-ftime-trace=e/x-b.json" "-ftime-trace-granularity=0"
+
+/// -dumpdir is f/g, not ending with a path separator. We create f/g${basename}.json.
+// RUN: %clang -### -ftime-trace -ftime-trace-granularity=0 d/a.cpp d/b.c -o e/x -dumpdir f/g 2>&1 | FileCheck %s --check-prefix=LINK2
+// LINK2: -cc1{{.*}} "-ftime-trace=f/ga.json" "-ftime-trace-granularity=0"
+// LINK2: -cc1{{.*}} "-ftime-trace=f/gb.json" "-ftime-trace-granularity=0"
+
+// RUN: %clang -### -ftime-trace=e -ftime-trace-granularity=0 d/a.cpp d/b.c -o f/x -dumpdir f/ 2>&1 | FileCheck %s --check-prefix=LINK3
+// LINK3: -cc1{{.*}} "-ftime-trace=e{{/|\\\\}}a-{{[^.]*}}.json" "-ftime-trace-granularity=0"
+// LINK3: -cc1{{.*}} "-ftime-trace=e{{/|\\\\}}b-{{[^.]*}}.json" "-ftime-trace-granularity=0"
+
+// RUN: %clang -### -ftime-trace -ftime-trace=e -ftime-trace-granularity=1 -xassembler d/a.cpp 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=UNUSED
+// UNUSED:      warning: argument unused during compilation: '-ftime-trace'
+// UNUSED-NEXT: warning: argument unused during compilation: '-ftime-trace=e'
+// UNUSED-NEXT: warning: argument unused during compilation: '-ftime-trace-granularity=1'
+// UNUSED-NOT:  warning:
+
 template <typename T>
 struct Struct {
   T Num;

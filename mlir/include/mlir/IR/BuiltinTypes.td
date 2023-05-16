@@ -1072,7 +1072,7 @@ def Builtin_Vector : Builtin_Type<"Vector", [ShapedTypeInterface], "Type"> {
     /// type. In particular, vectors can consist of integer, index, or float
     /// primitives.
     static bool isValidElementType(Type t) {
-      return t.isa<IntegerType, IndexType, FloatType>();
+      return ::llvm::isa<IntegerType, IndexType, FloatType>(t);
     }
 
     /// Returns true if the vector contains scalable dimensions.

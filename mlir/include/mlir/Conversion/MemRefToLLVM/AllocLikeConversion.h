@@ -31,7 +31,7 @@ protected:
                              Value input, Value alignment);
 
   static MemRefType getMemRefResultType(Operation *op) {
-    return op->getResult(0).getType().cast<MemRefType>();
+    return cast<MemRefType>(op->getResult(0).getType());
   }
 
   /// Computes the alignment for the given memory allocation op.

@@ -862,9 +862,10 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     }
   }
 
-  // A slidedown/slideup with a VL of 1 whose destination is an IMPLICIT_DEF
-  // can use any VL/SEW combination which writes at least the first element.
-  // Notes:
+  // A slidedown/slideup with an IMPLICIT_DEF merge op can freely clobber
+  // elements not copied from the source vector (e.g. masked off, tail, or
+  // slideup's prefix). Notes:
+  // * We can't modify SEW here since the slide amount is in units of SEW.
   // * VL=1 is special only because we have existing support for zero vs
   //   non-zero VL.  We could generalize this if we had a VL > C predicate.
   // * The LMUL1 restriction is for machines whose latency may depend on VL.
@@ -872,13 +873,10 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   if (isVSlideInstr(MI) && Require.hasAVLImm() && Require.getAVLImm() == 1 &&
       isLMUL1OrSmaller(CurInfo.getVLMUL())) {
     auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
-    if (VRegDef && VRegDef->isImplicitDef() &&
-        CurInfo.getSEW() >= Require.getSEW()) {
+    if (VRegDef && VRegDef->isImplicitDef()) {
       Used.VLAny = false;
       Used.VLZeroness = true;
-      Used.SEW = false;
       Used.LMUL = false;
-      Used.SEWLMULRatio = false;
       Used.TailPolicy = false;
     }
   }

@@ -256,6 +256,13 @@ enum NodeType : unsigned {
   VFMSUB_VL,
   VFNMSUB_VL,
 
+  // Vector widening FMA ops with a mask as a fourth operand and VL as a fifth
+  // operand.
+  VFWMADD_VL,
+  VFWNMADD_VL,
+  VFWMSUB_VL,
+  VFWNMSUB_VL,
+
   // Widening instructions with a merge value a third operand, a mask as a
   // fourth operand, and VL as a fifth operand.
   VWMUL_VL,

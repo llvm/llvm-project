@@ -349,7 +349,7 @@ uint64_t Debugger::GetTerminalWidth() const {
       idx, g_debugger_properties[idx].default_uint_value);
 }
 
-bool Debugger::SetTerminalWidth(uint32_t term_width) {
+bool Debugger::SetTerminalWidth(uint64_t term_width) {
   if (auto handler_sp = m_io_handler_stack.Top())
     handler_sp->TerminalSizeChanged();
 
@@ -544,7 +544,7 @@ uint64_t Debugger::GetTabSize() const {
       idx, g_debugger_properties[idx].default_uint_value);
 }
 
-bool Debugger::SetTabSize(uint32_t tab_size) {
+bool Debugger::SetTabSize(uint64_t tab_size) {
   const uint32_t idx = ePropertyTabSize;
   return SetPropertyAtIndex(idx, tab_size);
 }
@@ -1699,8 +1699,10 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
 
     // Display running state changes first before any STDIO
     if (got_state_changed && !state_is_stopped) {
+      // This is a public stop which we are going to announce to the user, so 
+      // we should force the most relevant frame selection here.
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
-                                              DoNoSelectMostRelevantFrame,
+                                              SelectMostRelevantFrame,
                                               pop_process_io_handler);
     }
 
@@ -1740,7 +1742,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     // Now display any stopped state changes after any STDIO
     if (got_state_changed && state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
-                                              DoNoSelectMostRelevantFrame,
+                                              SelectMostRelevantFrame,
                                               pop_process_io_handler);
     }
 

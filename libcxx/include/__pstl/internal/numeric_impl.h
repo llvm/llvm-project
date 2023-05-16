@@ -11,12 +11,12 @@
 #define _PSTL_NUMERIC_IMPL_H
 
 #include <__assert>
+#include <__config>
 #include <iterator>
 #include <type_traits>
 #include <numeric>
 
 #include "parallel_backend.h"
-#include "pstl_config.h"
 #include "execution_impl.h"
 #include "unseq_backend_simd.h"
 #include "algorithm_fwd.h"

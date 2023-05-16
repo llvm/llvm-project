@@ -12,11 +12,9 @@ body:             |
     %3:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
     %5:vreg_64 = COPY %3
     %6:vreg_64 = COPY %3
-    ; CHECK: DIVERGENT
-    ; CHECK-SAME: FLAT_ATOMIC_SWAP_RTN
+    ; CHECK: DIVERGENT{{.*}}FLAT_ATOMIC_SWAP_RTN
     %4:vgpr_32 = FLAT_ATOMIC_SWAP_RTN killed %5, %2, 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
-    ; CHECK: DIVERGENT
-    ; CHECK-SAME: FLAT_ATOMIC_SWAP_RTN
+    ; CHECK: DIVERGENT{{.*}}FLAT_ATOMIC_SWAP_RTN
     %7:vgpr_32 = FLAT_ATOMIC_SWAP_RTN killed %6, %2, 0, 1, implicit $exec, implicit $flat_scr ; No memopernads
     $vgpr0 = COPY %4
     SI_RETURN implicit $vgpr0
@@ -36,8 +34,7 @@ body:             |
     %5:sreg_64 = REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1
     %7:vreg_64 = COPY %4
     %8:vreg_64 = COPY %5
-    ; CHECK: DIVERGENT
-    ; CHECK-SAME: FLAT_ATOMIC_CMPSWAP_RTN
+    ; CHECK: DIVERGENT{{.*}}FLAT_ATOMIC_CMPSWAP_RTN
     %6:vgpr_32 = FLAT_ATOMIC_CMPSWAP_RTN killed %7, killed %8, 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst seq_cst (s32))
     %9:sreg_64_xexec = V_CMP_EQ_U32_e64 %6, %2, implicit $exec
     %10:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
@@ -57,8 +54,7 @@ body:             |
     %0:vgpr_32 = IMPLICIT_DEF
     %3:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
     %5:vreg_64 = COPY %3
-    ; CHECK: DIVERGENT
-    ; CHECK-SAME: GLOBAL_ATOMIC_INC_RTN
+    ; CHECK: DIVERGENT{{.*}}GLOBAL_ATOMIC_INC_RTN
     %4:vgpr_32 = GLOBAL_ATOMIC_INC_RTN killed %5, %2, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
     $vgpr0 = COPY %4
     SI_RETURN implicit $vgpr0
@@ -78,8 +74,7 @@ body:             |
     %5:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
     %7:vreg_64 = COPY %5
     %8:vreg_64 = COPY %4
-    ; CHECK: DIVERGENT
-    ; CHECK-SAME: GLOBAL_ATOMIC_INC_X2_RTN
+    ; CHECK: DIVERGENT{{.*}}GLOBAL_ATOMIC_INC_X2_RTN
     %6:vreg_64 = GLOBAL_ATOMIC_INC_X2_RTN killed %7, killed %8, 0, 1, implicit $exec :: (load store (s64), addrspace 1)
     %9:vgpr_32 = COPY %6.sub1
     %10:vgpr_32 = COPY %6.sub0
@@ -99,8 +94,7 @@ body:             |
     %0:vgpr_32 = IMPLICIT_DEF
     %3:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
     %5:vreg_64 = COPY %3
-    ; CHECK: DIVERGENT
-    ; CHECK-SAME: GLOBAL_ATOMIC_DEC_RTN
+    ; CHECK: DIVERGENT{{.*}}GLOBAL_ATOMIC_DEC_RTN
     %4:vgpr_32 = GLOBAL_ATOMIC_DEC_RTN killed %5, %2, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
     $vgpr0 = COPY %4
     SI_RETURN implicit $vgpr0
@@ -121,8 +115,7 @@ body:             |
     %5:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
     %7:vreg_64 = COPY %5
     %8:vreg_64 = COPY %4
-    ; CHECK: DIVERGENT
-    ; CHECK-SAME: GLOBAL_ATOMIC_DEC_X2_RTN
+    ; CHECK: DIVERGENT{{.*}}GLOBAL_ATOMIC_DEC_X2_RTN
     %6:vreg_64 = GLOBAL_ATOMIC_DEC_X2_RTN killed %7, killed %8, 0, 1, implicit $exec :: (load store (s64), addrspace 1)
     %9:vgpr_32 = COPY %6.sub1
     %10:vgpr_32 = COPY %6.sub0

@@ -29,7 +29,7 @@ verifySymbolRefs(Operation *op, StringRef name, ArrayAttr symbolRefs,
   // names processed here (e.g. 'tbaa'). This verification
   // is redundant in some cases.
   if (!llvm::all_of(symbolRefs, [](Attribute attr) {
-        return attr && attr.isa<SymbolRefAttr>();
+        return attr && llvm::isa<SymbolRefAttr>(attr);
       }))
     return op->emitOpError() << name
                              << " attribute failed to satisfy constraint: "

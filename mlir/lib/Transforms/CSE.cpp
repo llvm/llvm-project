@@ -136,7 +136,7 @@ void CSE::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
   // If the existing operation has an unknown location and the current
   // operation doesn't, then set the existing op's location to that of the
   // current op.
-  if (existing->getLoc().isa<UnknownLoc>() && !op->getLoc().isa<UnknownLoc>())
+  if (isa<UnknownLoc>(existing->getLoc()) && !isa<UnknownLoc>(op->getLoc()))
     existing->setLoc(op->getLoc());
 
   ++numCSE;

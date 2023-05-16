@@ -881,7 +881,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     default:
       llvm_unreachable("Unexpected size");
     case MVT::f16:
-      Opc = RISCV::FMV_H_X;
+      Opc =
+          Subtarget->hasStdExtZhinxOrZhinxmin() ? RISCV::COPY : RISCV::FMV_H_X;
       break;
     case MVT::f32:
       Opc = Subtarget->hasStdExtZfinx() ? RISCV::COPY : RISCV::FMV_W_X;
@@ -3156,36 +3157,42 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   const RISCVInstrInfo &TII = *Subtarget->getInstrInfo();
   const MCInstrDesc &MaskedMCID = TII.get(N->getMachineOpcode());
 
-  bool IsTA = true;
+  bool UseTUPseudo = false;
   if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
-    TailPolicyOpIdx = getVecPolicyOpIdx(N, MaskedMCID);
-    if (!(N->getConstantOperandVal(*TailPolicyOpIdx) &
-          RISCVII::TAIL_AGNOSTIC)) {
-      // Keep the true-masked instruction when there is no unmasked TU
-      // instruction
-      if (I->UnmaskedTUPseudo == I->MaskedPseudo && !N->getOperand(0).isUndef())
-        return false;
-      // We can't use TA if the tie-operand is not IMPLICIT_DEF
-      if (!N->getOperand(0).isUndef())
-        IsTA = false;
+    // Some operations are their own TU.
+    if (I->UnmaskedTUPseudo == I->UnmaskedPseudo) {
+      UseTUPseudo = true;
+    } else {
+      TailPolicyOpIdx = getVecPolicyOpIdx(N, MaskedMCID);
+      if (!(N->getConstantOperandVal(*TailPolicyOpIdx) &
+            RISCVII::TAIL_AGNOSTIC)) {
+        // We can't use TA if the tie-operand is not IMPLICIT_DEF
+        if (!N->getOperand(0).isUndef()) {
+          // Keep the true-masked instruction when there is no unmasked TU
+          // instruction
+          if (I->UnmaskedTUPseudo == I->MaskedPseudo)
+            return false;
+          UseTUPseudo = true;
+        }
+      }
     }
   }
 
-  unsigned Opc = IsTA ? I->UnmaskedPseudo : I->UnmaskedTUPseudo;
+  unsigned Opc = UseTUPseudo ? I->UnmaskedTUPseudo : I->UnmaskedPseudo;
 
   // Check that we're dropping the mask operand and any policy operand
-  // when we transform to this unmasked pseudo. Additionally, if this insturtion
-  // is tail agnostic, the unmasked instruction should not have a merge op.
+  // when we transform to this unmasked pseudo. Additionally, if this
+  // instruction is tail agnostic, the unmasked instruction should not have a
+  // merge op.
   uint64_t TSFlags = TII.get(Opc).TSFlags;
-  assert((IsTA != RISCVII::hasMergeOp(TSFlags)) &&
+  assert((UseTUPseudo == RISCVII::hasMergeOp(TSFlags)) &&
          RISCVII::hasDummyMaskOp(TSFlags) &&
-         !RISCVII::hasVecPolicyOp(TSFlags) &&
          "Unexpected pseudo to transform to");
   (void)TSFlags;
 
   SmallVector<SDValue, 8> Ops;
-  // Skip the merge operand at index 0 if IsTA
-  for (unsigned I = IsTA, E = N->getNumOperands(); I != E; I++) {
+  // Skip the merge operand at index 0 if !UseTUPseudo.
+  for (unsigned I = !UseTUPseudo, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, the policy, and the Glue.
     SDValue Op = N->getOperand(I);
     if (I == MaskOpIdx || I == TailPolicyOpIdx ||

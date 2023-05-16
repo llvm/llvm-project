@@ -119,19 +119,19 @@ protected:
   }
 
   python::PythonObject Transform(Status arg) {
-    return python::ToSWIGWrapper(arg);
+    return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
   python::PythonObject Transform(lldb::ProcessAttachInfoSP arg) {
-    return python::ToSWIGWrapper(arg);
+    return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
   python::PythonObject Transform(lldb::ProcessLaunchInfoSP arg) {
-    return python::ToSWIGWrapper(arg);
+    return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
   python::PythonObject Transform(lldb::DataExtractorSP arg) {
-    return python::ToSWIGWrapper(arg);
+    return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
   template <typename T, typename U>

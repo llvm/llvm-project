@@ -457,6 +457,28 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) NO_THREAD_SAFETY_ANALYSIS {
     TSD->unlock();
 }
 
+SCUDO_TYPED_TEST(ScudoCombinedTest, ForceCacheDrain) NO_THREAD_SAFETY_ANALYSIS {
+  auto *Allocator = this->Allocator.get();
+
+  std::vector<void *> V;
+  for (scudo::uptr I = 0; I < 64U; I++)
+    V.push_back(Allocator->allocate(
+        rand() % (TypeParam::Primary::SizeClassMap::MaxSize / 2U), Origin));
+  for (auto P : V)
+    Allocator->deallocate(P, Origin);
+
+  // `ForceAll` will also drain the caches.
+  Allocator->releaseToOS(scudo::ReleaseToOS::ForceAll);
+
+  bool UnlockRequired;
+  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  EXPECT_TRUE(TSD->getCache().isEmpty());
+  EXPECT_EQ(TSD->getQuarantineCache().getSize(), 0U);
+  EXPECT_TRUE(Allocator->getQuarantine()->isEmpty());
+  if (UnlockRequired)
+    TSD->unlock();
+}
+
 SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
   std::mutex Mutex;
   std::condition_variable Cv;

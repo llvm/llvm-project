@@ -105,3 +105,40 @@ func.func @testupdateop(%a: memref<f32>, %ifCond: i1) -> () {
 
 // CHECK:  func @testupdateop(%{{.*}}: memref<f32>, [[IFCOND:%.*]]: i1)
 // CHECK:    acc.update if(%{{.*}}) dataOperands(%{{.*}} : memref<f32>)
+
+// -----
+
+func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
+  %0 = acc.use_device varPtr(%a : memref<f32>) -> memref<f32>
+  %false = arith.constant false
+  acc.host_data dataOperands(%0 : memref<f32>) if(%false) {
+    acc.loop {
+      acc.yield
+    }
+    acc.loop {
+      acc.yield
+    }
+    acc.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @testhostdataop
+// CHECK-NOT: acc.host_data
+// CHECK: acc.loop
+// CHECK: acc.yield
+// CHECK: acc.loop
+// CHECK: acc.yield
+
+// -----
+
+func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
+  %0 = acc.use_device varPtr(%a : memref<f32>) -> memref<f32>
+  %true = arith.constant true
+  acc.host_data dataOperands(%0 : memref<f32>) if(%true) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @testhostdataop
+// CHECK: acc.host_data dataOperands(%{{.*}} : memref<f32>) {

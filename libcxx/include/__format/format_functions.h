@@ -89,14 +89,16 @@ namespace __format {
 template <class _CharT>
 class _LIBCPP_TEMPLATE_VIS __compile_time_handle {
 public:
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr void __parse(basic_format_parse_context<_CharT>& __parse_ctx) const { __parse_(__parse_ctx); }
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr void __parse(_ParseContext& __ctx) const {
+    __parse_(__ctx);
+  }
 
   template <class _Tp>
   _LIBCPP_HIDE_FROM_ABI constexpr void __enable() {
-    __parse_ = [](basic_format_parse_context<_CharT>& __parse_ctx) {
+    __parse_ = [](basic_format_parse_context<_CharT>& __ctx) {
       formatter<_Tp, _CharT> __f;
-      __parse_ctx.advance_to(__f.parse(__parse_ctx));
+      __ctx.advance_to(__f.parse(__ctx));
     };
   }
 

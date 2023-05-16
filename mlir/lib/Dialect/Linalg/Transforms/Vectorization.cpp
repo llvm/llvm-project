@@ -563,7 +563,7 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
         loc, value, outputOperand->get(), indices, writeMap);
   } else {
     // 0-d case is still special: do not invert the reindexing writeMap.
-    if (!value.getType().isa<VectorType>())
+    if (!isa<VectorType>(value.getType()))
       value = rewriter.create<vector::BroadcastOp>(loc, vectorType, value);
     assert(value.getType() == vectorType && "incorrect type");
     write = rewriter.create<vector::TransferWriteOp>(
@@ -864,7 +864,7 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
       targetShape.back() == 1)
     return VectorMemoryAccessKind::Gather;
 
-  auto inputShape = extractOp.getTensor().getType().cast<ShapedType>();
+  auto inputShape = cast<ShapedType>(extractOp.getTensor().getType());
 
   // 2. Assume that it's a gather load when reading _from_ a tensor for which
   // the trailing dimension is 1, e.g. `tensor<1x4x1xi32>`.
@@ -1024,8 +1024,8 @@ static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp, Operation *op,
                                  const IRMapping &bvm) {
   Value reduceVec = bvm.lookup(reduceValue);
   Value outputVec = bvm.lookup(initialValue);
-  auto reduceType = reduceVec.getType().dyn_cast<VectorType>();
-  auto outputType = outputVec.getType().dyn_cast<VectorType>();
+  auto reduceType = dyn_cast<VectorType>(reduceVec.getType());
+  auto outputType = dyn_cast<VectorType>(outputVec.getType());
   // Reduce only if needed as the value may already have been reduce for
   // contraction vectorization.
   if (!reduceType ||
@@ -1082,7 +1082,7 @@ vectorizeOneOp(RewriterBase &rewriter, LinalgOp linalgOp, Operation *op,
   // 4 . Check if the operation is a reduction.
   SmallVector<std::pair<Value, Value>> reductionOperands;
   for (Value operand : op->getOperands()) {
-    auto blockArg = operand.dyn_cast<BlockArgument>();
+    auto blockArg = dyn_cast<BlockArgument>(operand);
     if (!blockArg || blockArg.getOwner() != linalgOp.getBlock() ||
         blockArg.getArgNumber() < linalgOp.getNumDpsInputs())
       continue;
@@ -1107,7 +1107,7 @@ vectorizeOneOp(RewriterBase &rewriter, LinalgOp linalgOp, Operation *op,
   //   a. first get the first max ranked shape.
   SmallVector<int64_t, 4> firstMaxRankedShape;
   for (Value operand : op->getOperands()) {
-    auto vt = bvm.lookup(operand).getType().dyn_cast<VectorType>();
+    auto vt = dyn_cast<VectorType>(bvm.lookup(operand).getType());
     if (vt && firstMaxRankedShape.size() < vt.getShape().size())
       firstMaxRankedShape.assign(vt.getShape().begin(), vt.getShape().end());
   }
@@ -1230,7 +1230,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
     // 3.c. Not all ops support 0-d vectors, extract the scalar for now.
     // TODO: remove this.
-    if (readValue.getType().cast<VectorType>().getRank() == 0)
+    if (cast<VectorType>(readValue.getType()).getRank() == 0)
       readValue = rewriter.create<vector::ExtractElementOp>(loc, readValue);
 
     LDBG("New vectorized bbarg(" << bbarg.getArgNumber() << "): " << readValue
@@ -1528,8 +1528,8 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, LinalgOp linalgOp,
 LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
                                           memref::CopyOp copyOp) {
 
-  auto srcType = copyOp.getSource().getType().cast<MemRefType>();
-  auto dstType = copyOp.getTarget().getType().cast<MemRefType>();
+  auto srcType = cast<MemRefType>(copyOp.getSource().getType());
+  auto dstType = cast<MemRefType>(copyOp.getTarget().getType());
   if (!srcType.hasStaticShape() || !dstType.hasStaticShape())
     return failure();
 
@@ -1549,7 +1549,7 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
   Value readValue = rewriter.create<vector::TransferReadOp>(
       loc, readType, copyOp.getSource(), indices,
       rewriter.getMultiDimIdentityMap(srcType.getRank()));
-  if (readValue.getType().cast<VectorType>().getRank() == 0) {
+  if (cast<VectorType>(readValue.getType()).getRank() == 0) {
     readValue = rewriter.create<vector::ExtractElementOp>(loc, readValue);
     readValue = rewriter.create<vector::BroadcastOp>(loc, writeType, readValue);
   }
@@ -1566,7 +1566,7 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
 
 /// Helper function that retrieves the value of an IntegerAttr.
 static int64_t getIntFromAttr(Attribute attr) {
-  return attr.cast<IntegerAttr>().getInt();
+  return cast<IntegerAttr>(attr).getInt();
 }
 
 /// Given an ArrayRef of OpFoldResults, return a vector of Values.
@@ -1836,8 +1836,8 @@ struct PadOpVectorizationWithTransferWritePattern
       if (hasSameTensorSize(castOp.getSource(), afterTrimming))
         return true;
 
-    auto t1 = beforePadding.getType().dyn_cast<RankedTensorType>();
-    auto t2 = afterTrimming.getType().dyn_cast<RankedTensorType>();
+    auto t1 = dyn_cast<RankedTensorType>(beforePadding.getType());
+    auto t2 = dyn_cast<RankedTensorType>(afterTrimming.getType());
     // Only RankedTensorType supported.
     if (!t1 || !t2)
       return false;
@@ -1946,7 +1946,7 @@ struct PadOpVectorizationWithInsertSlicePattern
     if (!padValue)
       return failure();
     // Dynamic shapes not supported.
-    if (!padOp.getResult().getType().cast<ShapedType>().hasStaticShape())
+    if (!cast<ShapedType>(padOp.getResult().getType()).hasStaticShape())
       return failure();
     // Pad result not used as destination.
     if (insertOp.getDest() == padOp.getResult())
@@ -2074,7 +2074,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   memref::CopyOp copyOp;
   for (auto &u : subView.getUses()) {
     if (auto newCopyOp = dyn_cast<memref::CopyOp>(u.getOwner())) {
-      assert(newCopyOp.getTarget().getType().isa<MemRefType>());
+      assert(isa<MemRefType>(newCopyOp.getTarget().getType()));
       if (newCopyOp.getTarget() != subView)
         continue;
       if (mayExistInterleavedUses(newCopyOp, xferOp, {viewOrAlloc, subView}))
@@ -2091,7 +2091,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   FillOp maybeFillOp;
   for (auto &u : viewOrAlloc.getUses()) {
     if (auto newFillOp = dyn_cast<FillOp>(u.getOwner())) {
-      assert(newFillOp.output().getType().isa<MemRefType>());
+      assert(isa<MemRefType>(newFillOp.output().getType()));
       if (newFillOp.output() != viewOrAlloc)
         continue;
       if (mayExistInterleavedUses(newFillOp, copyOp, {viewOrAlloc, subView}))
@@ -2162,7 +2162,7 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
     return rewriter.notifyMatchFailure(xferOp, "no copy found");
 
   // `out` is the subview copied into that we replace.
-  assert(copyOp.getTarget().getType().isa<MemRefType>());
+  assert(isa<MemRefType>(copyOp.getTarget().getType()));
   Value out = copyOp.getTarget();
 
   // Forward vector.transfer into copy.
@@ -2204,7 +2204,7 @@ static void bindShapeDims(ShapedType shapedType, IntTy &...vals) {
 namespace {
 bool isCastOfBlockArgument(Operation *op) {
   return isa<CastOpInterface>(op) && op->getNumOperands() == 1 &&
-         op->getOperand(0).isa<BlockArgument>();
+         isa<BlockArgument>(op->getOperand(0));
 }
 
 bool isSupportedPoolKind(vector::CombiningKind kind) {
@@ -2268,9 +2268,9 @@ struct Conv1DGenerator
     lhsShaped = linalgOp.getDpsInputOperand(0)->get();
     rhsShaped = linalgOp.getDpsInputOperand(1)->get();
     resShaped = linalgOp.getDpsInitOperand(0)->get();
-    lhsShapedType = lhsShaped.getType().dyn_cast<ShapedType>();
-    rhsShapedType = rhsShaped.getType().dyn_cast<ShapedType>();
-    resShapedType = resShaped.getType().dyn_cast<ShapedType>();
+    lhsShapedType = dyn_cast<ShapedType>(lhsShaped.getType());
+    rhsShapedType = dyn_cast<ShapedType>(rhsShaped.getType());
+    resShapedType = dyn_cast<ShapedType>(resShaped.getType());
     if (!lhsShapedType || !rhsShapedType || !resShapedType)
       return;
     // (LHS has dimension NCW/NWC and RES has dimension NFW/NCW/NWF/NWC) OR
@@ -2717,8 +2717,8 @@ struct Conv1DGenerator
   /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to MulAcc
   Value depthwiseConv1dSliceAsMulAcc(RewriterBase &rewriter, Location loc,
                                      Value lhs, Value rhs, Value res) {
-    auto rhsTy = rhs.getType().cast<ShapedType>();
-    auto resTy = res.getType().cast<ShapedType>();
+    auto rhsTy = cast<ShapedType>(rhs.getType());
+    auto resTy = cast<ShapedType>(res.getType());
 
     // TODO(suderman): Change this to use a vector.ima intrinsic.
     lhs = promote(rewriter, loc, lhs, resTy);
@@ -2730,7 +2730,7 @@ struct Conv1DGenerator
     if (!lhs || !rhs)
       return nullptr;
 
-    if (resTy.getElementType().isa<FloatType>())
+    if (isa<FloatType>(resTy.getElementType()))
       return rewriter.create<vector::FMAOp>(loc, lhs, rhs, res);
 
     auto mul = rewriter.create<arith::MulIOp>(loc, lhs, rhs);
@@ -2863,15 +2863,14 @@ private:
   // Otherwise, check for one or zero `ext` predecessor. The `ext` operands
   // must be block arguments or extension of block arguments.
   bool setOperKind(Operation *reduceOp) {
-    int numBlockArguments =
-        llvm::count_if(reduceOp->getOperands(),
-                       [](Value v) { return v.isa<BlockArgument>(); });
+    int numBlockArguments = llvm::count_if(
+        reduceOp->getOperands(), [](Value v) { return isa<BlockArgument>(v); });
     switch (numBlockArguments) {
     case 1: {
       // Will be convolution if feeder is a MulOp.
       // Otherwise, if it can be pooling.
       auto feedValIt = llvm::find_if(reduceOp->getOperands(), [](Value v) {
-        return !v.isa<BlockArgument>();
+        return !isa<BlockArgument>(v);
       });
       Operation *feedOp = (*feedValIt).getDefiningOp();
       if (isCastOfBlockArgument(feedOp)) {
@@ -2880,7 +2879,7 @@ private:
         poolExtOp = feedOp->getName().getIdentifier();
       } else if (!(isa<arith::MulIOp, arith::MulFOp>(feedOp) &&
                    llvm::all_of(feedOp->getOperands(), [](Value v) {
-                     if (v.isa<BlockArgument>())
+                     if (isa<BlockArgument>(v))
                        return true;
                      if (Operation *op = v.getDefiningOp())
                        return isCastOfBlockArgument(op);

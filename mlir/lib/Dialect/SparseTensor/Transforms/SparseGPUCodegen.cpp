@@ -1,4 +1,4 @@
-//===- SparseGPUCodegen.cpp - Generates GPU code (using CUDA) -------------===//
+//===- SparseGPUCodegen.cpp - Generates GPU code --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,9 +18,12 @@
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -100,7 +103,7 @@ static Value genLaunchGPUFunc(OpBuilder &builder, gpu::GPUFuncOp gpuFunc,
 /// completion. Needs to cast the buffer to a unranked buffer.
 static Value genHostRegisterMemref(OpBuilder &builder, Location loc,
                                    Value mem) {
-  MemRefType memTp = mem.getType().cast<MemRefType>();
+  MemRefType memTp = cast<MemRefType>(mem.getType());
   UnrankedMemRefType resTp =
       UnrankedMemRefType::get(memTp.getElementType(), /*memorySpace=*/0);
   Value cast = builder.create<memref::CastOp>(loc, resTp, mem);
@@ -133,20 +136,28 @@ static void genBlockingWait(OpBuilder &builder, Location loc,
 ///       that feature does not seem to be fully supported yet.
 static gpu::AllocOp genAllocMemRef(OpBuilder &builder, Location loc, Value mem,
                                    Value token) {
-  auto tp = mem.getType().cast<ShapedType>();
+  auto tp = cast<ShapedType>(mem.getType());
   auto elemTp = tp.getElementType();
   auto shape = tp.getShape();
   auto memTp = MemRefType::get(shape, elemTp);
   SmallVector<Value> dynamicSizes;
   for (unsigned r = 0, rank = tp.getRank(); r < rank; r++) {
     if (shape[r] == ShapedType::kDynamic) {
-      Value dim = constantIndex(builder, loc, r);
-      Value dimOp = builder.create<memref::DimOp>(loc, mem, dim);
+      Value dimOp = linalg::createOrFoldDimOp(builder, loc, mem, r);
       dynamicSizes.push_back(dimOp);
     }
   }
   return builder.create<gpu::AllocOp>(loc, TypeRange({memTp, token.getType()}),
                                       token, dynamicSizes, ValueRange());
+}
+
+// Allocates a void buffer on the device with given size.
+static gpu::AllocOp genAllocBuffer(OpBuilder &builder, Location loc, Value size,
+                                   Value token) {
+  const auto memTp =
+      MemRefType::get({ShapedType::kDynamic}, builder.getI8Type());
+  return builder.create<gpu::AllocOp>(loc, TypeRange({memTp, token.getType()}),
+                                      token, size, ValueRange());
 }
 
 /// Deallocates memory from the device.
@@ -161,6 +172,26 @@ static Value genCopyMemRef(OpBuilder &builder, Location loc, Value dst,
                            Value src, Value token) {
   return builder.create<gpu::MemcpyOp>(loc, token.getType(), token, dst, src)
       .getAsyncToken();
+}
+
+/// Generates an alloc/copy pair.
+static Value genAllocCopy(OpBuilder &builder, Location loc, Value b,
+                          SmallVectorImpl<Value> &tokens) {
+  Value firstToken = genFirstWait(builder, loc);
+  auto alloc = genAllocMemRef(builder, loc, b, firstToken);
+  Value devMem = alloc.getResult(0);
+  Value depToken = alloc.getAsyncToken(); // copy-after-alloc
+  tokens.push_back(genCopyMemRef(builder, loc, devMem, b, depToken));
+  return devMem;
+}
+
+/// Generates a memref from tensor operation.
+static Value genTensorToMemref(PatternRewriter &rewriter, Location loc,
+                               Value tensor) {
+  auto tensorType = tensor.getType().cast<ShapedType>();
+  auto memrefType =
+      MemRefType::get(tensorType.getShape(), tensorType.getElementType());
+  return rewriter.create<bufferization::ToMemrefOp>(loc, memrefType, tensor);
 }
 
 /// Prepares the outlined arguments, passing scalars and buffers in. Here we
@@ -186,12 +217,7 @@ static Value genParametersIn(OpBuilder &builder, Location loc,
       useHostRegistrationForOut = false;
       continue;
     }
-    Value firstToken = genFirstWait(builder, loc);
-    auto alloc = genAllocMemRef(builder, loc, b, firstToken);
-    Value devMem = alloc.getResult(0);
-    Value depToken = alloc.getAsyncToken(); // copy-after-alloc
-    args.push_back(devMem);
-    tokens.push_back(genCopyMemRef(builder, loc, devMem, b, depToken));
+    args.push_back(genAllocCopy(builder, loc, b, tokens));
   }
   return out;
 }
@@ -272,10 +298,216 @@ static void genGPUCode(PatternRewriter &rewriter, gpu::GPUFuncOp gpuFunc,
 }
 
 //===----------------------------------------------------------------------===//
-// Rewriting rules.
+// Library helper methods.
 //===----------------------------------------------------------------------===//
 
-/// Proof-of-concept rewriter. This rule generates a CUDA implementation
+/// Helper to detect a * b.
+static bool matchMulOfArgs(linalg::GenericOp op, Value val) {
+  if (auto *def = val.getDefiningOp()) {
+    if (isa<arith::MulFOp>(def) || isa<arith::MulIOp>(def)) {
+      Value a = op.getBlock()->getArguments()[0];
+      Value b = op.getBlock()->getArguments()[1];
+      return (def->getOperand(0) == a && def->getOperand(1) == b) ||
+             (def->getOperand(0) == b && def->getOperand(1) == a);
+    }
+  }
+  return false;
+}
+
+/// Helper to detect x = x + a * b
+static bool matchSumOfMultOfArgs(linalg::GenericOp op) {
+  auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
+  if (auto *def = yieldOp.getOperand(0).getDefiningOp()) {
+    if (isa<arith::AddFOp>(def) || isa<arith::AddIOp>(def)) {
+      Value x = op.getBlock()->getArguments()[2];
+      return (def->getOperand(0) == x &&
+              matchMulOfArgs(op, def->getOperand(1))) ||
+             (def->getOperand(1) == x &&
+              matchMulOfArgs(op, def->getOperand(0)));
+    }
+  }
+  return false;
+}
+
+/// Test for sorted COO with suitable data and coordinates types.
+static bool isAdmissibleCOO(SparseTensorType &aTp) {
+  return aTp.isCompressedLvl(0) && aTp.isOrderedLvl(0) && !aTp.isUniqueLvl(0) &&
+         aTp.isSingletonLvl(1) && aTp.isOrderedLvl(1) && aTp.isUniqueLvl(1) &&
+         (aTp.getElementType().isF64() || aTp.getElementType().isF32()) &&
+         (aTp.getCrdWidth() == 0 || aTp.getCrdWidth() == 32 ||
+          aTp.getCrdWidth() == 64);
+}
+
+/// Test for CSR with suitable data and coordinates types.
+static bool isAdmissibleCSR(SparseTensorType &aTp) {
+  return aTp.isDenseLvl(0) && aTp.isCompressedLvl(1) && aTp.isOrderedLvl(1) &&
+         aTp.isUniqueLvl(1) &&
+         (aTp.getElementType().isF64() || aTp.getElementType().isF32()) &&
+         (aTp.getCrdWidth() == 0 || aTp.getCrdWidth() == 32 ||
+          aTp.getCrdWidth() == 64);
+}
+
+/// Generates the first positions/coordinates of a sparse matrix.
+static Value genFirstPosOrCrds(OpBuilder &builder, Location loc, Value a,
+                               bool isCOO, bool enableRT) {
+  if (isCOO) {
+    // Library uses SoA COO, direct IR uses AoS COO.
+    if (enableRT)
+      return genToCoordinates(builder, loc, a, 0, /*cooStart=*/0);
+    return genToCoordinatesBuffer(builder, loc, a);
+  }
+  // CSR uses positions.
+  return genToPositions(builder, loc, a, 1);
+}
+
+/// Generates the second coordinates of a sparse matrix.
+static Value genSecondCrds(OpBuilder &builder, Location loc, Value a,
+                           bool isCOO, bool enableRT) {
+  if (isCOO && !enableRT)
+    return Value(); // nothing needed
+  return genToCoordinates(builder, loc, a, 1, /*cooStart=*/0);
+}
+
+/// Generates the sparse matrix multiplication.
+static Operation *genSpMat(OpBuilder &builder, Location loc, Type handleTp,
+                           Type tokenTp, Value token, Value szY, Value szX,
+                           Value nnzA, Value rowA, Value colA, Value valA,
+                           bool isCOO, bool enableRT) {
+  if (isCOO) {
+    // Library uses SoA COO, direct IR uses AoS COO.
+    if (enableRT)
+      return builder.create<gpu::CreateCooOp>(loc, handleTp, tokenTp, token,
+                                              szY, szX, nnzA, rowA, colA, valA);
+    llvm_unreachable("gpu::CreateCooAoSOp is deprecated");
+  }
+  return builder.create<gpu::CreateCsrOp>(loc, handleTp, tokenTp, token, szY,
+                                          szX, nnzA, rowA, colA, valA);
+}
+
+/// Match and rewrite SpMV kernel.
+static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
+                                 linalg::GenericOp op, bool enableRT) {
+  Location loc = op.getLoc();
+  Value a = op.getOperand(0);
+  Value x = op.getOperand(1);
+  Value y = op.getOperand(2); // we have y = Ax
+  SmallVector<Value> tokens;
+
+  // Only admissible sparse matrix format and dense vectors for now.
+  bool isCOO = false;
+  SparseTensorType aTp = getSparseTensorType(a);
+  SparseTensorType xTp = getSparseTensorType(x);
+  SparseTensorType yTp = getSparseTensorType(y);
+  if (xTp.hasEncoding() || yTp.hasEncoding())
+    return failure();
+  if (isAdmissibleCOO(aTp)) {
+    isCOO = true;
+    // TODO: CreateCooAoSOp was deprecated, find another way
+    if (!enableRT)
+      return failure();
+  } else if (isAdmissibleCSR(aTp)) {
+    isCOO = false;
+  } else {
+    return failure();
+  }
+
+  // Start sparse kernel and copy data from host to device.
+  //   a : memR/memC/memV -> rowA,colA,valA
+  //   x : memX           -> vecX
+  //   y : memY           -> vecY
+  Value nnzA = rewriter.create<NumberOfEntriesOp>(loc, a);
+  Value szY = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
+  Value szX = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
+  Value memR = genFirstPosOrCrds(rewriter, loc, a, isCOO, enableRT);
+  Value memC = genSecondCrds(rewriter, loc, a, isCOO, enableRT);
+  Value memV = genToValues(rewriter, loc, a);
+  Value rowA = genAllocCopy(rewriter, loc, memR, tokens);
+  Value colA = memC ? genAllocCopy(rewriter, loc, memC, tokens) : Value();
+  Value valA = genAllocCopy(rewriter, loc, memV, tokens);
+  Value memX = genTensorToMemref(rewriter, loc, x);
+  Value vecX = genAllocCopy(rewriter, loc, memX, tokens);
+  Value memY = genTensorToMemref(rewriter, loc, y);
+  Value vecY = genAllocCopy(rewriter, loc, memY, tokens);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+
+  // Create sparse environment and sparse matrix/dense vector handles.
+  Type indexTp = rewriter.getIndexType();
+  Type handleTp = rewriter.getType<gpu::SparseHandleType>();
+  Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
+  Value token = genFirstWait(rewriter, loc);
+  auto env =
+      rewriter.create<gpu::CreateSparseEnvOp>(loc, handleTp, tokenTp, token);
+  Value handle = env.getResult(0);
+  token = env.getAsyncToken();
+  Operation *spGenA = genSpMat(rewriter, loc, handleTp, tokenTp, token, szY,
+                               szX, nnzA, rowA, colA, valA, isCOO, enableRT);
+  Value spMatA = spGenA->getResult(0);
+  token = spGenA->getResult(1);
+  auto dvecX = rewriter.create<gpu::CreateDnVecOp>(loc, handleTp, tokenTp,
+                                                   token, vecX, szX);
+  Value dnX = dvecX.getResult(0);
+  token = dvecX.getAsyncToken();
+  auto dvecY = rewriter.create<gpu::CreateDnVecOp>(loc, handleTp, tokenTp,
+                                                   token, vecY, szY);
+  Value dnY = dvecY.getResult(0);
+  token = dvecY.getAsyncToken();
+
+  // Precompute buffersize for SpMV.
+  auto bufferComp = rewriter.create<gpu::SpMVBufferSizeOp>(
+      loc, indexTp, tokenTp, token, handle, spMatA, dnX, dnY);
+  Value bufferSz = bufferComp.getResult(0);
+  token = bufferComp.getAsyncToken();
+  auto buf = genAllocBuffer(rewriter, loc, bufferSz, token);
+  Value buffer = buf.getResult(0);
+  token = buf.getAsyncToken();
+
+  // Perform the SpMV.
+  auto spmvComp = rewriter.create<gpu::SpMVOp>(loc, tokenTp, token, handle,
+                                               spMatA, dnX, dnY, buffer);
+  token = spmvComp.getAsyncToken();
+
+  // Copy data back to host and free all the resoures.
+  token = rewriter.create<gpu::DestroySpMatOp>(loc, tokenTp, token, spMatA)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroyDnVecOp>(loc, tokenTp, token, dnX)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroyDnVecOp>(loc, tokenTp, token, dnY)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
+              .getAsyncToken();
+  tokens.push_back(token);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+  token = genFirstWait(rewriter, loc);
+  token = genCopyMemRef(rewriter, loc, memY, vecY, token);
+  token = genDeallocMemRef(rewriter, loc, rowA, token);
+  if (colA)
+    token = genDeallocMemRef(rewriter, loc, colA, token);
+  token = genDeallocMemRef(rewriter, loc, valA, token);
+  token = genDeallocMemRef(rewriter, loc, buffer, token);
+  token = genDeallocMemRef(rewriter, loc, vecX, token);
+  token = genDeallocMemRef(rewriter, loc, vecY, token);
+  tokens.push_back(token);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+
+  // Done.
+  rewriter.replaceOp(op, op.getDpsInitOperand(0)->get());
+  return success();
+}
+
+/// Match and rewrite SpMM kernel.
+static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
+                                 linalg::GenericOp op, bool enableRT) {
+  return failure(); // TODO: implement
+}
+
+//===----------------------------------------------------------------------===//
+// Rewriting rules for direct code generation.
+//===----------------------------------------------------------------------===//
+
+/// Proof-of-concept rewriter. This rule generates a GPU implementation
 /// for each outermost forall loop generated by the sparse compiler.
 /// TODO: right works with parallelization-strategy=dense-outer-loop
 ///       but give this its own flags in the future
@@ -304,7 +536,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
       for (OpOperand &o : op->getOpOperands()) {
         Value val = o.get();
         Block *block;
-        if (auto arg = val.dyn_cast<BlockArgument>())
+        if (auto arg = dyn_cast<BlockArgument>(val))
           block = arg.getOwner();
         else
           block = val.getDefiningOp()->getBlock();
@@ -321,7 +553,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
       Type tp = val.getType();
       if (val.getDefiningOp<arith::ConstantOp>())
         constants.push_back(val);
-      else if (tp.isa<FloatType>() || tp.isIntOrIndex())
+      else if (isa<FloatType>(tp) || tp.isIntOrIndex())
         scalars.push_back(val);
       else if (isa<MemRefType>(tp))
         buffers.push_back(val);
@@ -373,13 +605,77 @@ private:
   unsigned numThreads;
 };
 
+//===----------------------------------------------------------------------===//
+// Rewriting rules for library recognition and code generation.
+//===----------------------------------------------------------------------===//
+
+/// Proof-of-concept rewriter. This rule recognizes certain math kernels
+/// and replaces these with corresponding calls into the sparse library.
+struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
+  using OpRewritePattern<linalg::GenericOp>::OpRewritePattern;
+
+  LinalgOpRewriter(MLIRContext *context, bool rt)
+      : OpRewritePattern(context), enableRT(rt) {}
+
+  LogicalResult matchAndRewrite(linalg::GenericOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getNumDpsInits() != 1)
+      return failure(); // reject multi-output
+
+    const unsigned numLoops = op.getNumLoops();
+    const unsigned numTensors = op->getNumOperands();
+    const auto iteratorTypes = op.getIteratorTypesArray();
+    SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
+
+    using MapList = ArrayRef<ArrayRef<AffineExpr>>;
+    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    AffineExpr i, j, k;
+    bindDims(getContext(), i, j, k);
+
+    // TODO: more robust patterns, tranposed versions, more kernels...
+
+    // Recognize a SpMV kernel.
+    if (numLoops == 2 && numTensors == 3 &&
+        linalg::isParallelIterator(iteratorTypes[0]) &&
+        linalg::isReductionIterator(iteratorTypes[1]) &&
+        maps == infer({{i, j}, {j}, {i}}) && matchSumOfMultOfArgs(op)) {
+      return rewriteSpMV(rewriter, op, enableRT);
+    }
+
+    // Recognize a SpMM kernel.
+    if (numLoops == 3 && numTensors == 3 &&
+        linalg::isParallelIterator(iteratorTypes[0]) &&
+        linalg::isParallelIterator(iteratorTypes[1]) &&
+        linalg::isReductionIterator(iteratorTypes[2]) &&
+        maps == infer({{i, k}, {k, j}, {i, j}}) && matchSumOfMultOfArgs(op)) {
+      return rewriteSpMM(rewriter, op, enableRT);
+    }
+
+    return failure();
+  }
+
+private:
+  bool enableRT;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
 // Public method for populating GPU rewriting rules.
+//
+// Currently two set of rewriting rules are made available. The first set
+// implements direct code generation, currently by means of convering the
+// outermost paralell loop into GPU threads. The second set implements
+// libary recognition of a set of sparse operations. Eventually, the right
+// combination of these two approaches has to be found.
 //===----------------------------------------------------------------------===//
 
 void mlir::populateSparseGPUCodegenPatterns(RewritePatternSet &patterns,
                                             unsigned numThreads) {
   patterns.add<ForallRewriter>(patterns.getContext(), numThreads);
+}
+
+void mlir::populateSparseGPULibgenPatterns(RewritePatternSet &patterns,
+                                           bool enableRT) {
+  patterns.add<LinalgOpRewriter>(patterns.getContext(), enableRT);
 }

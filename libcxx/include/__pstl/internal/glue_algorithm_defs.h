@@ -10,11 +10,11 @@
 #ifndef _PSTL_GLUE_ALGORITHM_DEFS_H
 #define _PSTL_GLUE_ALGORITHM_DEFS_H
 
+#include <__config>
 #include <functional>
 #include <iterator>
 
 #include "execution_defs.h"
-#include "pstl_config.h"
 
 namespace std {
 
@@ -112,14 +112,6 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 
 // [alg.copy]
 
-template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
-copy(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __result);
-
-template <class _ExecutionPolicy, class _ForwardIterator1, class _Size, class _ForwardIterator2>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
-copy_n(_ExecutionPolicy&& __exec, _ForwardIterator1 __first, _Size __n, _ForwardIterator2 __result);
-
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
 copy_if(_ExecutionPolicy&& __exec,
@@ -133,29 +125,6 @@ copy_if(_ExecutionPolicy&& __exec,
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2> swap_ranges(
     _ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2);
-
-// [alg.transform]
-
-template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _UnaryOperation>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
-transform(_ExecutionPolicy&& __exec,
-          _ForwardIterator1 __first,
-          _ForwardIterator1 __last,
-          _ForwardIterator2 __result,
-          _UnaryOperation __op);
-
-template <class _ExecutionPolicy,
-          class _ForwardIterator1,
-          class _ForwardIterator2,
-          class _ForwardIterator,
-          class _BinaryOperation>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
-transform(_ExecutionPolicy&& __exec,
-          _ForwardIterator1 __first1,
-          _ForwardIterator1 __last1,
-          _ForwardIterator2 __first2,
-          _ForwardIterator __result,
-          _BinaryOperation __op);
 
 // [alg.replace]
 

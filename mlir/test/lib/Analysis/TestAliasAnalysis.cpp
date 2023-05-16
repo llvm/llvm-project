@@ -24,7 +24,7 @@ static void printAliasOperand(Operation *op) {
   llvm::errs() << op->getAttrOfType<StringAttr>("test.ptr").getValue();
 }
 static void printAliasOperand(Value value) {
-  if (BlockArgument arg = value.dyn_cast<BlockArgument>()) {
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     Region *region = arg.getParentRegion();
     unsigned parentBlockNumber =
         std::distance(region->begin(), arg.getOwner()->getIterator());
@@ -37,7 +37,7 @@ static void printAliasOperand(Value value) {
     llvm::errs() << "#" << arg.getArgNumber();
     return;
   }
-  OpResult result = value.cast<OpResult>();
+  OpResult result = cast<OpResult>(value);
   printAliasOperand(result.getOwner());
   llvm::errs() << "#" << result.getResultNumber();
 }
@@ -156,7 +156,7 @@ struct TestAliasAnalysisModRefPass
 
 /// Check if value is function argument.
 static bool isFuncArg(Value val) {
-  auto blockArg = val.dyn_cast<BlockArgument>();
+  auto blockArg = dyn_cast<BlockArgument>(val);
   if (!blockArg)
     return false;
 
@@ -166,7 +166,7 @@ static bool isFuncArg(Value val) {
 
 /// Check if value has "restrict" attribute. Value must be a function argument.
 static bool isRestrict(Value val) {
-  auto blockArg = val.cast<BlockArgument>();
+  auto blockArg = cast<BlockArgument>(val);
   auto func =
       mlir::cast<FunctionOpInterface>(blockArg.getOwner()->getParentOp());
   return !!func.getArgAttr(blockArg.getArgNumber(),

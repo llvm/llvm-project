@@ -401,7 +401,7 @@ static Value buildUnresolvedTargetMaterialization(
     SmallVectorImpl<UnresolvedMaterialization> &unresolvedMaterializations) {
   Block *insertBlock = input.getParentBlock();
   Block::iterator insertPt = insertBlock->begin();
-  if (OpResult inputRes = input.dyn_cast<OpResult>())
+  if (OpResult inputRes = dyn_cast<OpResult>(input))
     insertPt = ++inputRes.getOwner()->getIterator();
 
   return buildUnresolvedMaterialization(
@@ -1033,7 +1033,7 @@ void ConversionPatternRewriterImpl::applyRewrites() {
     if (!repl)
       continue;
 
-    if (repl.isa<BlockArgument>()) {
+    if (isa<BlockArgument>(repl)) {
       arg.replaceAllUsesWith(repl);
       continue;
     }
@@ -1041,7 +1041,7 @@ void ConversionPatternRewriterImpl::applyRewrites() {
     // If the replacement value is an operation, we check to make sure that we
     // don't replace uses that are within the parent operation of the
     // replacement value.
-    Operation *replOp = repl.cast<OpResult>().getOwner();
+    Operation *replOp = cast<OpResult>(repl).getOwner();
     Block *replBlock = replOp->getBlock();
     arg.replaceUsesWithIf(repl, [&](OpOperand &operand) {
       Operation *user = operand.getOwner();
@@ -2615,7 +2615,7 @@ static void computeNecessaryMaterializations(
     }
 
     // Check to see if this is an argument materialization.
-    auto isBlockArg = [](Value v) { return v.isa<BlockArgument>(); };
+    auto isBlockArg = [](Value v) { return isa<BlockArgument>(v); };
     if (llvm::any_of(op->getOperands(), isBlockArg) ||
         llvm::any_of(inverseMapping[op->getResult(0)], isBlockArg)) {
       mat->setKind(UnresolvedMaterialization::Argument);

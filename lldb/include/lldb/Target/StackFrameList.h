@@ -100,7 +100,11 @@ protected:
 
   bool SetFrameAtIndex(uint32_t idx, lldb::StackFrameSP &frame_sp);
 
-  void GetFramesUpTo(uint32_t end_idx);
+  /// Realizes frames up to (and including) end_idx (which can be greater than  
+  /// the actual number of frames.)  
+  /// Returns true if the function was interrupted, false otherwise.
+  bool GetFramesUpTo(uint32_t end_idx, 
+      InterruptionControl allow_interrupt = AllowInterruption);
 
   void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind &unwinder);
 

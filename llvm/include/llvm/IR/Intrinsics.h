@@ -138,6 +138,7 @@ namespace Intrinsic {
       AMX,
       PPCQuad,
       AnyPtrToElt,
+      AArch64Svcount,
     } Kind;
 
     union {

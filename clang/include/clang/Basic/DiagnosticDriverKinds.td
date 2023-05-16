@@ -118,6 +118,9 @@ def warn_drv_unsupported_option_for_flang : Warning<
 def warn_drv_unsupported_diag_option_for_flang : Warning<
   "The warning option '-%0' is not supported">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_option_for_processor : Warning<
+  "ignoring '%0' option as it is not currently supported for processor '%1'">,
+  InGroup<OptionIgnored>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -646,6 +649,8 @@ def err_drv_invalid_object_mode : Error<
   "OBJECT_MODE setting %0 is not recognized and is not a valid setting">;
 
 def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
+def err_roptr_requires_data_sections: Error<"-mxcoff-roptr is supported only with -fdata-sections">;
+def err_roptr_cannot_build_shared: Error<"-mxcoff-roptr is not supported with -shared">;
 
 def err_invalid_cxx_abi : Error<"invalid C++ ABI name '%0'">;
 def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;

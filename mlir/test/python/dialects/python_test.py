@@ -1,6 +1,7 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *
+import mlir.dialects.func as func
 import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 
@@ -330,3 +331,55 @@ def testTensorValue():
 
       # CHECK: False
       print(tt.is_null())
+
+
+# CHECK-LABEL: TEST: inferReturnTypeComponents
+@run
+def inferReturnTypeComponents():
+    with Context() as ctx, Location.unknown(ctx):
+        test.register_python_test_dialect(ctx)
+        module = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
+            resultType = UnrankedTensorType.get(i32)
+            operandTypes = [
+                RankedTensorType.get([1, 3, 10, 10], i32),
+                UnrankedTensorType.get(i32),
+            ]
+            f = func.FuncOp(
+                "test_inferReturnTypeComponents", (operandTypes, [resultType])
+            )
+            entry_block = Block.create_at_start(f.operation.regions[0], operandTypes)
+            with InsertionPoint(entry_block):
+                ranked_op = test.InferShapedTypeComponentsOp(
+                    resultType, entry_block.arguments[0]
+                )
+                unranked_op = test.InferShapedTypeComponentsOp(
+                    resultType, entry_block.arguments[1]
+                )
+
+        # CHECK: has rank: True
+        # CHECK: rank: 4
+        # CHECK: element type: i32
+        # CHECK: shape: [1, 3, 10, 10]
+        iface = InferShapedTypeOpInterface(ranked_op)
+        shaped_type_components = iface.inferReturnTypeComponents(
+            operands=[ranked_op.operand]
+        )[0]
+        print("has rank:", shaped_type_components.has_rank)
+        print("rank:", shaped_type_components.rank)
+        print("element type:", shaped_type_components.element_type)
+        print("shape:", shaped_type_components.shape)
+
+        # CHECK: has rank: False
+        # CHECK: rank: None
+        # CHECK: element type: i32
+        # CHECK: shape: None
+        iface = InferShapedTypeOpInterface(unranked_op)
+        shaped_type_components = iface.inferReturnTypeComponents(
+          operands=[unranked_op.operand]
+        )[0]
+        print("has rank:", shaped_type_components.has_rank)
+        print("rank:", shaped_type_components.rank)
+        print("element type:", shaped_type_components.element_type)
+        print("shape:", shaped_type_components.shape)

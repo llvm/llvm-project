@@ -165,7 +165,8 @@ public:
   ~Constant();
 
   bool operator==(const Constant &that) const {
-    return shape() == that.shape() && values_ == that.values_;
+    return LEN() == that.LEN() && shape() == that.shape() &&
+        values_ == that.values_;
   }
   bool empty() const;
   std::size_t size() const;

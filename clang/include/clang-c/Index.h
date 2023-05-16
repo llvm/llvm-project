@@ -48,6 +48,10 @@
 #define CINDEX_VERSION_STRING                                                  \
   CINDEX_VERSION_STRINGIZE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR)
 
+#ifndef __has_feature
+#define __has_feature(feature) 0
+#endif
+
 LLVM_CLANG_C_EXTERN_C_BEGIN
 
 /** \defgroup CINDEX libclang: C Interface to Clang
@@ -3856,8 +3860,6 @@ typedef enum CXChildVisitResult (*CXCursorVisitor)(CXCursor cursor,
 CINDEX_LINKAGE unsigned clang_visitChildren(CXCursor parent,
                                             CXCursorVisitor visitor,
                                             CXClientData client_data);
-#ifdef __has_feature
-#if __has_feature(blocks)
 /**
  * Visitor invoked for each cursor found by a traversal.
  *
@@ -3868,8 +3870,12 @@ CINDEX_LINKAGE unsigned clang_visitChildren(CXCursor parent,
  * The visitor should return one of the \c CXChildVisitResult values
  * to direct clang_visitChildrenWithBlock().
  */
+#if __has_feature(blocks)
 typedef enum CXChildVisitResult (^CXCursorVisitorBlock)(CXCursor cursor,
                                                         CXCursor parent);
+#else
+typedef struct _CXChildVisitResult *CXCursorVisitorBlock;
+#endif
 
 /**
  * Visits the children of a cursor using the specified block.  Behaves
@@ -3877,8 +3883,6 @@ typedef enum CXChildVisitResult (^CXCursorVisitorBlock)(CXCursor cursor,
  */
 CINDEX_LINKAGE unsigned
 clang_visitChildrenWithBlock(CXCursor parent, CXCursorVisitorBlock block);
-#endif
-#endif
 
 /**
  * @}
@@ -5879,11 +5883,12 @@ CINDEX_LINKAGE CXResult clang_findReferencesInFile(
 CINDEX_LINKAGE CXResult clang_findIncludesInFile(
     CXTranslationUnit TU, CXFile file, CXCursorAndRangeVisitor visitor);
 
-#ifdef __has_feature
 #if __has_feature(blocks)
-
 typedef enum CXVisitorResult (^CXCursorAndRangeVisitorBlock)(CXCursor,
                                                              CXSourceRange);
+#else
+typedef struct _CXCursorAndRangeVisitorBlock *CXCursorAndRangeVisitorBlock;
+#endif
 
 CINDEX_LINKAGE
 CXResult clang_findReferencesInFileWithBlock(CXCursor, CXFile,
@@ -5892,9 +5897,6 @@ CXResult clang_findReferencesInFileWithBlock(CXCursor, CXFile,
 CINDEX_LINKAGE
 CXResult clang_findIncludesInFileWithBlock(CXTranslationUnit, CXFile,
                                            CXCursorAndRangeVisitorBlock);
-
-#endif
-#endif
 
 /**
  * The client's data object that is associated with a CXFile.

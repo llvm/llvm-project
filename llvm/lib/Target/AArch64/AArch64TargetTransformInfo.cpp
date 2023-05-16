@@ -2156,6 +2156,25 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i32, 2},
   };
 
+  // We have to estimate a cost of fixed length operation upon
+  // SVE registers(operations) with the number of registers required
+  // for a fixed type to be represented upon SVE registers.
+  EVT WiderTy = SrcTy.bitsGT(DstTy) ? SrcTy : DstTy;
+  if (SrcTy.isFixedLengthVector() && DstTy.isFixedLengthVector() &&
+      SrcTy.getVectorNumElements() == DstTy.getVectorNumElements() &&
+      ST->useSVEForFixedLengthVectors(WiderTy)) {
+    std::pair<InstructionCost, MVT> LT =
+        getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
+    unsigned NumElements = AArch64::SVEBitsPerBlock /
+                           LT.second.getVectorElementType().getSizeInBits();
+    return AdjustCost(
+        LT.first *
+        getCastInstrCost(
+            Opcode, ScalableVectorType::get(Dst->getScalarType(), NumElements),
+            ScalableVectorType::get(Src->getScalarType(), NumElements), CCH,
+            CostKind, I));
+  }
+
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
                                                  DstTy.getSimpleVT(),
                                                  SrcTy.getSimpleVT()))
@@ -2584,6 +2603,14 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         return Entry->Cost;
     }
   }
+
+  if (isa<FixedVectorType>(ValTy) && ISD == ISD::SETCC) {
+    auto LT = getTypeLegalizationCost(ValTy);
+    // Cost v4f16 FCmp without FP16 support via converting to v4f32 and back.
+    if (LT.second == MVT::v4f16 && !ST->hasFullFP16())
+      return LT.first * 4; // fcvtl + fcvtl + fcmp + xtn
+  }
+
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
@@ -3477,7 +3504,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
 static bool containsDecreasingPointers(Loop *TheLoop,
                                        PredicatedScalarEvolution *PSE) {
-  const ValueToValueMap &Strides = ValueToValueMap();
+  const auto &Strides = DenseMap<Value *, const SCEV *>();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for addresses that are
     // consecutive and decreasing.

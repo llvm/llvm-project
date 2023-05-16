@@ -113,7 +113,7 @@ static void applyFoldConstantExtractSlicePatterns(Operation *rootOp) {
         if (!op.getSource().hasOneUse())
           return false;
 
-        auto resultType = op.getResult().getType().cast<ShapedType>();
+        auto resultType = cast<ShapedType>(op.getResult().getType());
         constexpr int64_t kConstantFoldingMaxNumElements = 1024;
         return resultType.getNumElements() <= kConstantFoldingMaxNumElements;
       };

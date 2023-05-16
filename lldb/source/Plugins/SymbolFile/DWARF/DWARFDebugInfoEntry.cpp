@@ -177,7 +177,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
 
         case DW_FORM_indirect:
           form_is_indirect = true;
-          form = data.GetULEB128(&offset);
+          form = static_cast<dw_form_t>(data.GetULEB128(&offset));
           break;
 
         case DW_FORM_strp:
@@ -410,10 +410,10 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 // specification or abstract origin attributes and including those in the
 // results. Any duplicate attributes will have the first instance take
 // precedence (this can happen for declaration attributes).
-size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
-                                          DWARFAttributes &attributes,
-                                          Recurse recurse,
-                                          uint32_t curr_depth) const {
+void DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
+                                        DWARFAttributes &attributes,
+                                        Recurse recurse,
+                                        uint32_t curr_depth) const {
   const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
   if (abbrevDecl) {
     const DWARFDataExtractor &data = cu->GetData();
@@ -464,7 +464,6 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
   } else {
     attributes.Clear();
   }
-  return attributes.Size();
 }
 
 // GetAttributeValue
@@ -756,8 +755,7 @@ DWARFDeclContext DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnit *cu) const {
 
 DWARFDIE
 DWARFDebugInfoEntry::GetParentDeclContextDIE(DWARFUnit *cu) const {
-  DWARFAttributes attributes;
-  GetAttributes(cu, attributes, Recurse::yes);
+  DWARFAttributes attributes = GetAttributes(cu, Recurse::yes);
   return GetParentDeclContextDIE(cu, attributes);
 }
 

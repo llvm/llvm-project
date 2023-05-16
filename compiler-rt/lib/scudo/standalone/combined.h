@@ -239,6 +239,7 @@ public:
   }
 
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
+  QuarantineT *getQuarantine() { return &Quarantine; }
 
   // The Cache must be provided zero-initialized.
   void initCache(CacheT *Cache) { Cache->init(&Stats, &Primary); }
@@ -253,6 +254,13 @@ public:
                      QuarantineCallback(*this, TSD->getCache()));
     TSD->getCache().destroy(&Stats);
   }
+
+  void drainCache(TSD<ThisT> *TSD) {
+    Quarantine.drainAndRecycle(&TSD->getQuarantineCache(),
+                               QuarantineCallback(*this, TSD->getCache()));
+    TSD->getCache().drain();
+  }
+  void drainCaches() { TSDRegistry.drainCaches(this); }
 
   ALWAYS_INLINE void *getHeaderTaggedPointer(void *Ptr) {
     if (!allocatorSupportsMemoryTagging<Params>())
@@ -747,6 +755,8 @@ public:
 
   void releaseToOS(ReleaseToOS ReleaseType) {
     initThreadMaybe();
+    if (ReleaseType == ReleaseToOS::ForceAll)
+      drainCaches();
     Primary.releaseToOS(ReleaseType);
     Secondary.releaseToOS();
   }

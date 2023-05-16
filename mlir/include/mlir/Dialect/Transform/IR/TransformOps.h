@@ -48,8 +48,8 @@ public:
 protected:
   /// Return a replacement payload op for the given op, which is going to be
   /// replaced with the given values. By default, if all values are defined by
-  /// the same newly-created op, which also has the same type as the given op,
-  /// that defining op is used as a replacement.
+  /// the same op, which also has the same type as the given op, that defining
+  /// op is used as a replacement.
   virtual Operation *findReplacementOp(Operation *op,
                                        ValueRange newValues) const;
 
@@ -66,21 +66,13 @@ protected:
   virtual void notifyPayloadReplacementNotFound(Operation *op,
                                                 ValueRange values) {}
 
-  /// Return "true" if the given op is a new op.
-  bool isNewOp(Operation *op) const;
-
   /// Return the single op that defines all given values (if any).
   static Operation *getCommonDefiningOp(ValueRange values);
 
 private:
-  void notifyOperationInserted(Operation *op) override;
-
   void notifyOperationRemoved(Operation *op) override;
 
   void notifyOperationReplaced(Operation *op, ValueRange newValues) override;
-
-  /// Ops that were newly created during the transform.
-  DenseMap<OperationName, DenseSet<Operation *>> newOps;
 
   /// The transform op in which this TrackingListener is used.
   TransformOpInterface transformOp;

@@ -65,7 +65,7 @@ static void patchOperandSegmentSizes(ArrayRef<NamedAttribute> attrs,
       newAttrs.push_back(attr);
       continue;
     }
-    auto segmentAttr = attr.getValue().cast<DenseI32ArrayAttr>();
+    auto segmentAttr = cast<DenseI32ArrayAttr>(attr.getValue());
     MLIRContext *context = segmentAttr.getContext();
     DenseI32ArrayAttr newSegments;
     switch (action) {
@@ -128,7 +128,7 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
 
   Value prevLoadForCompare = prevLoad;
   Value atomicResForCompare = atomicRes;
-  if (auto floatDataTy = dataType.dyn_cast<FloatType>()) {
+  if (auto floatDataTy = dyn_cast<FloatType>(dataType)) {
     Type equivInt = rewriter.getIntegerType(floatDataTy.getWidth());
     prevLoadForCompare =
         rewriter.create<arith::BitcastOp>(loc, equivInt, prevLoad);

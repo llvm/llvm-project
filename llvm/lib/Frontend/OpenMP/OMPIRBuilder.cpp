@@ -4225,10 +4225,12 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     // variable for possibly changing that to internal or private, or maybe
     // create different versions of the function for different OMP internal
     // variables.
-    Elem.second = new GlobalVariable(
+    auto *GV = new GlobalVariable(
         M, Ty, /*IsConstant=*/false, GlobalValue::CommonLinkage,
         Constant::getNullValue(Ty), Elem.first(),
         /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal, AddressSpace);
+    GV->setAlignment(M.getDataLayout().getABITypeAlign(Ty));
+    Elem.second = GV;
   }
 
   return cast<GlobalVariable>(&*Elem.second);

@@ -175,13 +175,13 @@ sum = 0.0;
 // CHECK: call void @llvm.memcpy.p0.p0.i64(
 
 // CHECK: define internal void @[[RED_FINI2]](ptr noundef %0)
-// CHECK: [[RED_SIZE1_ADDR:%.+]] = call ptr @llvm.threadlocal.address.p0(ptr [[RED_SIZE1]]
+// CHECK: [[RED_SIZE1_ADDR:%.+]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 [[RED_SIZE1]]
 // CHECK: load i64, ptr [[RED_SIZE1_ADDR]]
 // CHECK: call void @
 // CHECK: ret void
 
 // CHECK: define internal void @[[RED_COMB2]](ptr noundef %0, ptr noundef %1)
-// CHECK: [[RED_SIZE1_ADDR2:%.+]] = call ptr @llvm.threadlocal.address.p0(ptr [[RED_SIZE1]]
+// CHECK: [[RED_SIZE1_ADDR2:%.+]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 [[RED_SIZE1]]
 // CHECK: load i64, ptr [[RED_SIZE1_ADDR2]]
 // CHECK: call void [[OMP_COMB1]](
 // CHECK: ret void
@@ -196,13 +196,13 @@ sum = 0.0;
 // CHECK: ret void
 
 // CHECK: define internal void @[[RED_INIT4]](ptr noalias noundef %{{.+}}, ptr noalias noundef %{{.+}})
-// CHECK: [[RED_SIZE2_ADDR:%.+]] = call ptr @llvm.threadlocal.address.p0(ptr [[RED_SIZE2]]
+// CHECK: [[RED_SIZE2_ADDR:%.+]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 [[RED_SIZE2]]
 // CHECK: load i64, ptr [[RED_SIZE2_ADDR]]
 // CHECK: store float 0.000000e+00, ptr %
 // CHECK: ret void
 
 // CHECK: define internal void @[[RED_COMB4]](ptr noundef %0, ptr noundef %1)
-// CHECK: [[RED_SIZE2_ADDR2:%.+]] = call ptr @llvm.threadlocal.address.p0(ptr [[RED_SIZE2]]
+// CHECK: [[RED_SIZE2_ADDR2:%.+]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 [[RED_SIZE2]]
 // CHECK: load i64, ptr [[RED_SIZE2_ADDR2]]
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, ptr %

@@ -90,8 +90,9 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
   // Tosa dialect constants only support ElementsAttr unlike standard dialect
   // constant which supports all attributes.
-  if (value.isa<ElementsAttr>())
-    return builder.create<tosa::ConstOp>(loc, type, value.cast<ElementsAttr>());
+  if (llvm::isa<ElementsAttr>(value))
+    return builder.create<tosa::ConstOp>(loc, type,
+                                         llvm::cast<ElementsAttr>(value));
   return nullptr;
 }
 
@@ -101,10 +102,8 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
 
 template <typename T> static LogicalResult verifyConvOp(T op) {
   // All TOSA conv ops have an input() and weight().
-  auto inputType =
-      op.getInput().getType().template dyn_cast<RankedTensorType>();
-  auto weightType =
-      op.getWeight().getType().template dyn_cast<RankedTensorType>();
+  auto inputType = llvm::dyn_cast<RankedTensorType>(op.getInput().getType());
+  auto weightType = llvm::dyn_cast<RankedTensorType>(op.getWeight().getType());
 
   // Must be ranked tensor types
   if (!inputType) {
@@ -119,8 +118,8 @@ template <typename T> static LogicalResult verifyConvOp(T op) {
   auto inputEType = inputType.getElementType();
   auto weightEType = weightType.getElementType();
 
-  bool inputIsQuant = !inputEType.template isa<FloatType>();
-  bool weightIsQuant = !weightEType.template isa<FloatType>();
+  bool inputIsQuant = !llvm::isa<FloatType>(inputEType);
+  bool weightIsQuant = !llvm::isa<FloatType>(weightEType);
 
   // Either both must be quantized or both unquantized.
   if (inputIsQuant != weightIsQuant) {
@@ -143,14 +142,27 @@ template <typename T> static LogicalResult verifyConvOp(T op) {
 }
 
 LogicalResult tosa::AvgPool2dOp::verify() {
-  auto inputETy = getInput().getType().cast<ShapedType>().getElementType();
-  auto resultETy = getType().cast<ShapedType>().getElementType();
+  auto inputETy = llvm::cast<ShapedType>(getInput().getType()).getElementType();
+  auto resultETy = llvm::cast<ShapedType>(getType()).getElementType();
 
-  if (auto quantType = inputETy.dyn_cast<mlir::quant::UniformQuantizedType>())
+  if (auto quantType =
+          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputETy))
     inputETy = quantType.getStorageType();
 
-  if (auto quantType = resultETy.dyn_cast<mlir::quant::UniformQuantizedType>())
+  if (auto quantType =
+          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(resultETy))
     resultETy = quantType.getStorageType();
+
+  auto accType = getAccType();
+  if (inputETy.isa<IntegerType>() && !accType.isInteger(32))
+    return emitOpError("accumulator type for integer tensor is not i32");
+
+  if ((inputETy.isBF16() || inputETy.isF16()) &&
+      !(accType.isF16() || accType.isF32()))
+    return emitOpError("accumulator type for f16/bf16 tensor is not f16/f32");
+
+  if (inputETy.isF32() && !accType.isF32())
+    return emitOpError("accumulator type for f32 tensor is not f32");
 
   if (inputETy.isF32() && resultETy.isF32())
     return success();
@@ -240,16 +252,16 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
   if (quantAttr) {
     result.addAttribute("quantization_info", quantAttr);
 
-    auto inputType = a.getType().dyn_cast<ShapedType>();
+    auto inputType = llvm::dyn_cast<ShapedType>(a.getType());
     assert(inputType && "Input must be a shaped tensor type!");
 
-    auto inputQType = inputType.getElementType()
-                          .dyn_cast<mlir::quant::UniformQuantizedType>();
+    auto inputQType = llvm::dyn_cast<mlir::quant::UniformQuantizedType>(
+        inputType.getElementType());
     assert(inputQType && "Tensor must have quantized datatype!");
 
     unsigned inputBits = inputQType.getStorageTypeIntegralWidth();
 
-    auto outputShapedType = outputType.dyn_cast<ShapedType>();
+    auto outputShapedType = llvm::dyn_cast<ShapedType>(outputType);
     assert(outputShapedType && "Output must be a shaped type");
 
     IntegerType accElementType;
@@ -267,13 +279,16 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
 /// Both the tosa.avg_pool2d and unary ops use the same UnaruOpQuantizationAttr
 /// but avg_pool operator has its own builder as it has additional parameters
 /// not part of the unary ops.
-static void buildAvgPool2dOpWithQuantInfo(
-    OpBuilder &builder, OperationState &result, Type outputType, Value input,
-    DenseArrayAttr kernel, DenseArrayAttr stride, DenseArrayAttr pad) {
+static void
+buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
+                              Type outputType, Value input,
+                              DenseArrayAttr kernel, DenseArrayAttr stride,
+                              DenseArrayAttr pad, TypeAttr acc_type) {
   result.addOperands(input);
   result.addAttribute("kernel", kernel);
   result.addAttribute("stride", stride);
   result.addAttribute("pad", pad);
+  result.addAttribute("acc_type", acc_type);
   auto quantAttr = buildUnaryOpQuantizationAttr(builder, input, outputType);
   if (quantAttr)
     result.addAttribute("quantization_info", quantAttr);
@@ -368,7 +383,8 @@ LogicalResult tosa::ArgMaxOp::inferReturnTypeComponents(
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
-  IntegerAttr axis = attributes.get("axis").cast<IntegerAttr>();
+  auto *prop = properties.as<Properties *>();
+  IntegerAttr axis = prop->axis;
   int32_t axisVal = axis.getValue().getSExtValue();
 
   if (!inputShape.hasRank()) {
@@ -431,8 +447,8 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Infer all dimension sizes by reducing based on inputs.
-  int32_t axis =
-      attributes.get("axis").cast<IntegerAttr>().getValue().getSExtValue();
+  auto *prop = properties.as<Properties *>();
+  int32_t axis = prop->axis.getValue().getSExtValue();
   llvm::SmallVector<int64_t> outputShape;
   bool hasRankedInput = false;
   for (auto operand : operands) {
@@ -459,7 +475,8 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
 
     hasRankedInput = true;
   }
-  Type inputType = operands.getType()[0].cast<TensorType>().getElementType();
+  Type inputType =
+      llvm::cast<TensorType>(operands.getType()[0]).getElementType();
   if (!hasRankedInput) {
     inferredReturnShapes.push_back(ShapedTypeComponents(inputType));
     return success();
@@ -738,8 +755,8 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
 }
 
 mlir::LogicalResult tosa::ReshapeOp::verify() {
-  ShapedType inputType = getInput1().getType().cast<ShapedType>();
-  ShapedType outputType = getType().cast<ShapedType>();
+  ShapedType inputType = llvm::cast<ShapedType>(getInput1().getType());
+  ShapedType outputType = llvm::cast<ShapedType>(getType());
 
   if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
     int64_t inputElementsNum = inputType.getNumElements();
@@ -969,7 +986,7 @@ static LogicalResult ReduceInferReturnTypes(
     Type inputType =                                                           \
         operands.getType()[0].cast<TensorType>().getElementType();             \
     return ReduceInferReturnTypes(operands.getShape(0), inputType,             \
-                                  attributes.get("axis").cast<IntegerAttr>(),  \
+                                  properties.as<Properties *>()->axis,         \
                                   inferredReturnShapes);                       \
   }                                                                            \
   COMPATIBLE_RETURN_TYPES(OP)
@@ -1046,6 +1063,7 @@ NARY_SHAPE_INFER(tosa::SigmoidOp)
 
 static LogicalResult poolingInferReturnTypes(
     const ValueShapeRange &operands, DictionaryAttr attributes,
+    ArrayRef<int64_t> kernel, ArrayRef<int64_t> stride, ArrayRef<int64_t> pad,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
   llvm::SmallVector<int64_t> outputShape;
@@ -1063,10 +1081,6 @@ static LogicalResult poolingInferReturnTypes(
 
   int64_t height = inputShape.getDimSize(1);
   int64_t width = inputShape.getDimSize(2);
-
-  ArrayRef<int64_t> kernel = attributes.get("kernel").cast<DenseI64ArrayAttr>();
-  ArrayRef<int64_t> stride = attributes.get("stride").cast<DenseI64ArrayAttr>();
-  ArrayRef<int64_t> pad = attributes.get("pad").cast<DenseI64ArrayAttr>();
 
   if (!ShapedType::isDynamic(height)) {
     int64_t padded = height + pad[0] + pad[1] - kernel[0];
@@ -1227,7 +1241,9 @@ LogicalResult AvgPool2dOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  return poolingInferReturnTypes(operands, attributes, inferredReturnShapes);
+  Properties &prop = *properties.as<Properties *>();
+  return poolingInferReturnTypes(operands, attributes, prop.kernel, prop.stride,
+                                 prop.pad, inferredReturnShapes);
 }
 
 LogicalResult MaxPool2dOp::inferReturnTypeComponents(
@@ -1235,7 +1251,9 @@ LogicalResult MaxPool2dOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  return poolingInferReturnTypes(operands, attributes, inferredReturnShapes);
+  Properties &prop = *properties.as<Properties *>();
+  return poolingInferReturnTypes(operands, attributes, prop.kernel, prop.stride,
+                                 prop.pad, inferredReturnShapes);
 }
 
 LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
@@ -1473,7 +1491,7 @@ LogicalResult WhileOp::inferReturnTypeComponents(
 }
 
 std::optional<SmallVector<int64_t, 4>> ApplyScaleOp::getShapeForUnroll() {
-  if (auto vt = getType().dyn_cast<VectorType>())
+  if (auto vt = llvm::dyn_cast<VectorType>(getType()))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
 }

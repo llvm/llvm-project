@@ -33,8 +33,8 @@ define <vscale x 8 x i32> @widening_nxv8i16(<vscale x 8 x i16> %in1, <vscale x 8
 
 define <8 x i32> @widening_v8i16_svevl2(<8 x i16> %in1, <8 x i16> %in2) vscale_range(2,16) {
 ; CHECK-LABEL: 'widening_v8i16_svevl2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %in1.ext = zext <8 x i16> %in2 to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %in2.ext = zext <8 x i16> %in2 to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %in1.ext = zext <8 x i16> %in2 to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %in2.ext = zext <8 x i16> %in2 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %in.add = add <8 x i32> %in1.ext, %in2.ext
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %in.add
 ;

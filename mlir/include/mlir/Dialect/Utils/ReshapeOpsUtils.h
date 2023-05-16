@@ -92,9 +92,8 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   if (reshapeSrcOp && reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
     return reshapeSrcOp.getSrc();
   // Reshape of a constant can be replaced with a new constant.
-  if (auto elements = operands.front().dyn_cast_or_null<DenseElementsAttr>()) {
-    return elements.reshape(
-        reshapeOp.getResult().getType().template cast<ShapedType>());
+  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front())) {
+    return elements.reshape(cast<ShapedType>(reshapeOp.getResult().getType()));
   }
   return nullptr;
 }

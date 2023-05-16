@@ -27,6 +27,14 @@
 // This does not define std::mbstate_t -- this only brings in the declaration
 // in the global namespace.
 
+// We define this here to support older versions of glibc <wchar.h> that do
+// not define this for clang. This is also set in libc++'s <wchar.h> header,
+// and we need to do so here too to avoid a different function signature given
+// a different include order.
+#ifdef __cplusplus
+#  define __CORRECT_ISO_CPP_WCHAR_H_PROTO
+#endif
+
 #if __has_include(<bits/types/mbstate_t.h>)
 #   include <bits/types/mbstate_t.h> // works on most Unixes
 #elif __has_include(<sys/_types/_mbstate_t.h>)

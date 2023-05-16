@@ -247,3 +247,39 @@ module {
     transform.structured.fuse_into_containing_op %0 into %1
   }
 }
+
+// -----
+
+module {
+  // CHECK-LABEL: func.func @fuse_repeated
+  func.func @fuse_repeated(%fill: tensor<2xf32>, %output: tensor<2xf32>) -> tensor<2xf32> {
+    %c0 = arith.constant 0.0 : f32
+    %0 = linalg.fill ins(%c0 : f32) outs(%fill : tensor<2xf32>) -> tensor<2xf32>
+
+    // CHECK: scf.forall
+    %1 = scf.forall (%i) in (2) shared_outs(%arg1 = %output) -> (tensor<2xf32>) {
+      %2 = tensor.extract_slice %0[%i][1][1] : tensor<2xf32> to tensor<1xf32>
+      %3 = tensor.extract_slice %arg1[%i][1][1] : tensor<2xf32> to tensor<1xf32>
+      // CHECK: %[[FUSED:.+]] = linalg.fill
+      // CHECK: elemwise_unary ins(%[[FUSED]]
+      %4 = linalg.elemwise_unary ins(%2 : tensor<1xf32>) outs(%3 : tensor<1xf32>) -> tensor<1xf32>
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %4 into %arg1[%i][1][1] : tensor<1xf32> into tensor<2xf32>
+      }
+    }
+
+    return %1 : tensor<2xf32>
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !pdl.operation
+    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !pdl.operation
+
+    // Create a new handle that points to `linalg.fill` twice.
+    %2 = transform.merge_handles %0, %0 : !pdl.operation
+
+    // It shouldn't be a problem to fuse this handle.
+    transform.structured.fuse_into_containing_op %2 into %1
+  }
+}

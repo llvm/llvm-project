@@ -66,14 +66,14 @@ private:
     case AffineExprKind::Constant:
       return expr.cast<AffineConstantExpr>().getValue();
     case AffineExprKind::DimId:
-      if (auto attr = operandConsts[expr.cast<AffineDimExpr>().getPosition()]
-                          .dyn_cast_or_null<IntegerAttr>())
+      if (auto attr = llvm::dyn_cast_or_null<IntegerAttr>(
+              operandConsts[expr.cast<AffineDimExpr>().getPosition()]))
         return attr.getInt();
       return std::nullopt;
     case AffineExprKind::SymbolId:
-      if (auto attr = operandConsts[numDims +
-                                    expr.cast<AffineSymbolExpr>().getPosition()]
-                          .dyn_cast_or_null<IntegerAttr>())
+      if (auto attr = llvm::dyn_cast_or_null<IntegerAttr>(
+              operandConsts[numDims +
+                            expr.cast<AffineSymbolExpr>().getPosition()]))
         return attr.getInt();
       return std::nullopt;
     }

@@ -99,7 +99,7 @@ def MultiTensorRankOf : TEST_Op<"multi_tensor_rank_of"> {
 }
 
 def TEST_TestType : DialectType<Test_Dialect,
-    CPred<"$_self.isa<::test::TestType>()">, "test">,
+    CPred<"::llvm::isa<::test::TestType>($_self)">, "test">,
     BuildableType<"$_builder.getType<::test::TestType>()">;
 
 //===----------------------------------------------------------------------===//
@@ -260,7 +260,7 @@ def DerivedTypeAttrOp : TEST_Op<"derived_type_attr", []> {
   DerivedTypeAttr element_dtype =
     DerivedTypeAttr<"return getElementTypeOrSelf(getOutput().getType());">;
   DerivedAttr num_elements = DerivedAttr<"int",
-    "return getOutput().getType().cast<ShapedType>().getNumElements();",
+    "return ::llvm::cast<ShapedType>(getOutput().getType()).getNumElements();",
     "$_builder.getI32IntegerAttr($_self)">;
 }
 
@@ -578,7 +578,7 @@ def FunctionalRegionOp : TEST_Op<"functional_region_op",
   let extraClassDeclaration = [{
     ::mlir::Region *getCallableRegion() { return &getBody(); }
     ::llvm::ArrayRef<::mlir::Type> getCallableResults() {
-      return getType().cast<::mlir::FunctionType>().getResults();
+      return ::llvm::cast<::mlir::FunctionType>(getType()).getResults();
     }
     ::mlir::ArrayAttr getCallableArgAttrs() {
       return nullptr;
@@ -1262,11 +1262,10 @@ def OpAllAttrConstraint2 : TEST_Op<"all_attr_constraint_of2"> {
   let results = (outs I32);
 }
 def Constraint0 : AttrConstraint<
-    CPred<"$_self.cast<ArrayAttr>()[0]."
-          "cast<::mlir::IntegerAttr>().getInt() == 0">,
+    CPred<"::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<ArrayAttr>($_self)[0]).getInt() == 0">,
     "[0] == 0">;
 def Constraint1 : AttrConstraint<
-    CPred<"$_self.cast<ArrayAttr>()[1].cast<::mlir::IntegerAttr>().getInt() == 1">,
+    CPred<"::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<ArrayAttr>($_self)[1]).getInt() == 1">,
     "[1] == 1">;
 def : Pat<(OpAllAttrConstraint1
             AllAttrOf<[Constraint0, Constraint1]>:$attr),
@@ -1483,7 +1482,7 @@ def OpAttrMatch2 : TEST_Op<"match_op_attribute2"> {
   let results = (outs I32);
 }
 def MoreConstraint : AttrConstraint<
-    CPred<"$_self.cast<IntegerAttr>().getInt() == 4">, "more constraint">;
+    CPred<"::llvm::cast<IntegerAttr>($_self).getInt() == 4">, "more constraint">;
 def : Pat<(OpAttrMatch1 $required, $optional, $default_valued,
                         MoreConstraint:$more),
           (OpAttrMatch2 $required, $optional, $default_valued, $more)>;
@@ -2908,6 +2907,34 @@ def OpCrashShort : TEST_Op<"op_crash_short"> {
 }
 
 def : Pat<(OpCrashLong $_, $_, $_), (OpCrashShort)>;
+
+//===----------------------------------------------------------------------===//
+// Test DestinationStyleOpInterface.
+//===----------------------------------------------------------------------===//
+
+def TestDestinationStyleOp :
+    TEST_Op<"destination_style_op", [
+      DestinationStyleOpInterface,
+      AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<AnyType>:$inputs,
+    Variadic<AnyType>:$outputs,
+    Variadic<AnyType>:$other_operands);
+  let results = (outs Variadic<AnyType>:$results);
+  let assemblyFormat = [{
+    attr-dict (`ins` `(` $inputs^ `:` type($inputs) `)`)?
+    (`outs` `(` $outputs^  `:` type($outputs) `)`)?
+    (`(` $other_operands^ `:` type($other_operands) `)`)?
+    (`->` type($results)^)?
+  }];
+
+  let extraClassDeclaration = [{
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
+      int64_t numOperands = this->getNumOperands();
+      return {numOperands - getOutputs().size(), numOperands};
+    }
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // Test LinalgConvolutionOpInterface.

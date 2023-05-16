@@ -34,15 +34,15 @@
     struct _LIBCPP_TEMPLATE_VIS __formatter_integer {
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr auto
-  parse(basic_format_parse_context<_CharT>& __parse_ctx) -> decltype(__parse_ctx.begin()) {
-    auto __result = __parser_.__parse(__parse_ctx, __format_spec::__fields_integral);
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_integral);
     __format_spec::__process_parsed_integer(__parser_);
     return __result;
   }
 
-  template <integral _Tp>
-  _LIBCPP_HIDE_FROM_ABI auto format(_Tp __value, auto& __ctx) const -> decltype(__ctx.out()) {
+  template <integral _Tp, class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(_Tp __value, _FormatContext& __ctx) const {
     __format_spec::__parsed_specifications<_CharT> __specs = __parser_.__get_parsed_std_specifications(__ctx);
 
     if (__specs.__std_.__type_ == __format_spec::__type::__char)

@@ -1333,7 +1333,7 @@ ParseResult OperationParser::parseGenericOperationAfterOpName(
     auto type = parseType();
     if (!type)
       return failure();
-    auto fnType = type.dyn_cast<FunctionType>();
+    auto fnType = dyn_cast<FunctionType>(type);
     if (!fnType)
       return mlir::emitError(typeLoc, "expected function type");
 
@@ -2352,7 +2352,7 @@ ParseResult OperationParser::codeCompleteSSAUse() {
         if (!forwardRefPlaceholders.count(result))
           detailOS << result.getOwner()->getName() << ": ";
       } else {
-        detailOS << "arg #" << frontValue.cast<BlockArgument>().getArgNumber()
+        detailOS << "arg #" << cast<BlockArgument>(frontValue).getArgNumber()
                  << ": ";
       }
 

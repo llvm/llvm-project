@@ -3,10 +3,18 @@
 ; RUN:   -target-abi ilp32f < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfh -verify-machineinstrs \
 ; RUN:   -target-abi lp64f < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+zhinx -verify-machineinstrs \
+; RUN:   -target-abi ilp32 < %s | FileCheck -check-prefixes=CHECKIZHINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zhinx -verify-machineinstrs \
+; RUN:   -target-abi lp64 < %s | FileCheck -check-prefixes=CHECKIZHINX %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -target-abi ilp32f < %s | FileCheck -check-prefixes=CHECKIZFHMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -target-abi lp64f < %s | FileCheck -check-prefixes=CHECKIZFHMIN %s
+; RUN: llc -mtriple=riscv32 -mattr=+zhinxmin -verify-machineinstrs \
+; RUN:   -target-abi ilp32 < %s | FileCheck -check-prefixes=CHECKIZHINXMIN %s
+; RUN: llc -mtriple=riscv64 -mattr=+zhinxmin -verify-machineinstrs \
+; RUN:   -target-abi lp64 < %s | FileCheck -check-prefixes=CHECKIZHINXMIN %s
 
 define zeroext i1 @half_is_nan(half %a) nounwind {
 ; CHECK-LABEL: half_is_nan:
@@ -15,12 +23,25 @@ define zeroext i1 @half_is_nan(half %a) nounwind {
 ; CHECK-NEXT:    xori a0, a0, 1
 ; CHECK-NEXT:    ret
 ;
+; CHECKIZHINX-LABEL: half_is_nan:
+; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    feq.h a0, a0, a0
+; CHECKIZHINX-NEXT:    xori a0, a0, 1
+; CHECKIZHINX-NEXT:    ret
+;
 ; CHECKIZFHMIN-LABEL: half_is_nan:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    feq.s a0, fa5, fa5
 ; CHECKIZFHMIN-NEXT:    xori a0, a0, 1
 ; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: half_is_nan:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    feq.s a0, a0, a0
+; CHECKIZHINXMIN-NEXT:    xori a0, a0, 1
+; CHECKIZHINXMIN-NEXT:    ret
   %1 = fcmp uno half %a, 0.000000e+00
   ret i1 %1
 }
@@ -31,11 +52,22 @@ define zeroext i1 @half_not_nan(half %a) nounwind {
 ; CHECK-NEXT:    feq.h a0, fa0, fa0
 ; CHECK-NEXT:    ret
 ;
+; CHECKIZHINX-LABEL: half_not_nan:
+; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    feq.h a0, a0, a0
+; CHECKIZHINX-NEXT:    ret
+;
 ; CHECKIZFHMIN-LABEL: half_not_nan:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    feq.s a0, fa5, fa5
 ; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: half_not_nan:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    feq.s a0, a0, a0
+; CHECKIZHINXMIN-NEXT:    ret
   %1 = fcmp ord half %a, 0.000000e+00
   ret i1 %1
 }

@@ -29,7 +29,7 @@ inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
   size_t index = 0;
   for (unsigned pos : permutation)
     newInBoundsValues[pos] =
-        attr.getValue()[index++].cast<BoolAttr>().getValue();
+        cast<BoolAttr>(attr.getValue()[index++]).getValue();
   return builder.getBoolArrayAttr(newInBoundsValues);
 }
 
@@ -37,7 +37,7 @@ inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
 /// dimensions.
 static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
                               int64_t addedRank) {
-  auto originalVecType = vec.getType().cast<VectorType>();
+  auto originalVecType = cast<VectorType>(vec.getType());
   SmallVector<int64_t> newShape(addedRank, 1);
   newShape.append(originalVecType.getShape().begin(),
                   originalVecType.getShape().end());
@@ -257,7 +257,7 @@ struct TransferWriteNonPermutationLowering
       // All the new dimensions added are inbound.
       SmallVector<bool> newInBoundsValues(missingInnerDim.size(), true);
       for (Attribute attr : op.getInBounds().value().getValue()) {
-        newInBoundsValues.push_back(attr.cast<BoolAttr>().getValue());
+        newInBoundsValues.push_back(cast<BoolAttr>(attr).getValue());
       }
       newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
     }
@@ -315,7 +315,7 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
     // In the meantime, lower these to a scalar load when they pop up.
     if (reducedShapeRank == 0) {
       Value newRead;
-      if (op.getShapedType().isa<TensorType>()) {
+      if (isa<TensorType>(op.getShapedType())) {
         newRead = rewriter.create<tensor::ExtractOp>(
             op.getLoc(), op.getSource(), op.getIndices());
       } else {
@@ -397,7 +397,7 @@ struct TransferReadToVectorLoadLowering
             &broadcastedDims))
       return rewriter.notifyMatchFailure(read, "not minor identity + bcast");
 
-    auto memRefType = read.getShapedType().dyn_cast<MemRefType>();
+    auto memRefType = dyn_cast<MemRefType>(read.getShapedType());
     if (!memRefType)
       return rewriter.notifyMatchFailure(read, "not a memref source");
 
@@ -418,11 +418,11 @@ struct TransferReadToVectorLoadLowering
     // `vector.load` supports vector types as memref's elements only when the
     // resulting vector type is the same as the element type.
     auto memrefElTy = memRefType.getElementType();
-    if (memrefElTy.isa<VectorType>() && memrefElTy != unbroadcastedVectorType)
+    if (isa<VectorType>(memrefElTy) && memrefElTy != unbroadcastedVectorType)
       return rewriter.notifyMatchFailure(read, "incompatible element type");
 
     // Otherwise, element types of the memref and the vector must match.
-    if (!memrefElTy.isa<VectorType>() &&
+    if (!isa<VectorType>(memrefElTy) &&
         memrefElTy != read.getVectorType().getElementType())
       return rewriter.notifyMatchFailure(read, "non-matching element type");
 
@@ -543,7 +543,7 @@ struct TransferWriteToVectorStoreLowering
         diag << "permutation map is not minor identity: " << write;
       });
 
-    auto memRefType = write.getShapedType().dyn_cast<MemRefType>();
+    auto memRefType = dyn_cast<MemRefType>(write.getShapedType());
     if (!memRefType)
       return rewriter.notifyMatchFailure(write.getLoc(), [=](Diagnostic &diag) {
         diag << "not a memref type: " << write;
@@ -558,13 +558,13 @@ struct TransferWriteToVectorStoreLowering
     // `vector.store` supports vector types as memref's elements only when the
     // type of the vector value being written is the same as the element type.
     auto memrefElTy = memRefType.getElementType();
-    if (memrefElTy.isa<VectorType>() && memrefElTy != write.getVectorType())
+    if (isa<VectorType>(memrefElTy) && memrefElTy != write.getVectorType())
       return rewriter.notifyMatchFailure(write.getLoc(), [=](Diagnostic &diag) {
         diag << "elemental type mismatch: " << write;
       });
 
     // Otherwise, element types of the memref and the vector must match.
-    if (!memrefElTy.isa<VectorType>() &&
+    if (!isa<VectorType>(memrefElTy) &&
         memrefElTy != write.getVectorType().getElementType())
       return rewriter.notifyMatchFailure(write.getLoc(), [=](Diagnostic &diag) {
         diag << "elemental type mismatch: " << write;

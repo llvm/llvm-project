@@ -102,7 +102,7 @@ public:
   matchAndRewrite(::test::GetTupleElementOp op, OpAdaptor adaptor,
                   OneToNPatternRewriter &rewriter) const override {
     // Construct mapping for tuple element types.
-    auto stateType = op->getOperand(0).getType().cast<TupleType>();
+    auto stateType = cast<TupleType>(op->getOperand(0).getType());
     TypeRange originalElementTypes = stateType.getTypes();
     OneToNTypeMapping elementMapping(originalElementTypes);
     if (failed(typeConverter->convertSignatureArgs(originalElementTypes,
@@ -148,7 +148,7 @@ static void populateDecomposeTuplesTestPatterns(TypeConverter &typeConverter,
 static std::optional<SmallVector<Value>>
 buildGetTupleElementOps(OpBuilder &builder, TypeRange resultTypes, Value input,
                         Location loc) {
-  TupleType inputType = input.getType().dyn_cast<TupleType>();
+  TupleType inputType = dyn_cast<TupleType>(input.getType());
   if (!inputType)
     return {};
 
@@ -156,7 +156,7 @@ buildGetTupleElementOps(OpBuilder &builder, TypeRange resultTypes, Value input,
   for (auto [idx, elementType] : llvm::enumerate(inputType.getTypes())) {
     Value element = builder.create<::test::GetTupleElementOp>(
         loc, elementType, input, builder.getI32IntegerAttr(idx));
-    if (auto nestedTupleType = elementType.dyn_cast<TupleType>()) {
+    if (auto nestedTupleType = dyn_cast<TupleType>(elementType)) {
       // Recurse if the current element is also a tuple.
       SmallVector<Type> flatRecursiveTypes;
       nestedTupleType.getFlattenedTypes(flatRecursiveTypes);
@@ -186,7 +186,7 @@ static std::optional<Value> buildMakeTupleOp(OpBuilder &builder,
   elements.reserve(resultType.getTypes().size());
   ValueRange::iterator inputIt = inputs.begin();
   for (Type elementType : resultType.getTypes()) {
-    if (auto nestedTupleType = elementType.dyn_cast<TupleType>()) {
+    if (auto nestedTupleType = dyn_cast<TupleType>(elementType)) {
       // Determine how many input values are needed for the nested elements of
       // the nested TupleType and advance inputIt by that number.
       // TODO: We only need the *number* of nested types, not the types itself.

@@ -117,38 +117,6 @@ if.end19:                                         ; preds = %if.end18, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-; CHECK-LABEL: define ptr @foo() {
-; CHECK-NOT: @llvm.objc
-; CHECK: ret ptr %
-
-define ptr @foo() {
-  %t = alloca ptr, align 8
-  %v4 = load ptr, ptr @global1, align 8
-  %v5 = tail call ptr @llvm.objc.retain(ptr %v4)
-  store ptr %v4, ptr %t, align 8
-  %v13 = load ptr, ptr @"OBJC_CLASSLIST_REFERENCES_$_", align 8
-  %call78 = call ptr @bar(ptr %v13)
-  call void @llvm.objc.release(ptr %v4)
-  ret ptr %call78
-}
-
-; CHECK-LABEL: define void @test_select(
-; CHECK: call ptr @llvm.objc.retain(
-; CHECK: call void @llvm.objc.release(
-
-define void @test_select(i1 %c0, i1 %c1, ptr %p0, ptr %p1) {
-  %cond = select i1 %c0, ptr %p0, ptr %p1
-  %cond5 = select i1 %c0, ptr %p1, ptr %p0
-  %cond14 = select i1 %c1, ptr %cond5, ptr null
-  call ptr @llvm.objc.retain(ptr %cond14)
-  call void @llvm.objc.release(ptr %cond)
-  ret void
-}
-
-declare ptr @bar(ptr)
-
-declare ptr @llvm.objc.retain(ptr)
-
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 

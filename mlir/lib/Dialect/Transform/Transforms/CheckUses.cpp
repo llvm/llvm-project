@@ -148,14 +148,14 @@ public:
     // TODO: when this ported to the dataflow analysis infra, we should have
     // proper support for region-based control flow.
     Operation *valueSource =
-        operand.get().isa<OpResult>()
+        isa<OpResult>(operand.get())
             ? operand.get().getDefiningOp()
             : operand.get().getParentBlock()->getParentOp();
     auto iface = cast<MemoryEffectOpInterface>(valueSource);
     SmallVector<MemoryEffects::EffectInstance> instances;
     iface.getEffectsOnResource(transform::TransformMappingResource::get(),
                                instances);
-    assert((operand.get().isa<BlockArgument>() ||
+    assert((isa<BlockArgument>(operand.get()) ||
             hasEffect<MemoryEffects::Allocate>(instances, operand.get())) &&
            "expected the op defining the value to have an allocation effect "
            "on it");
@@ -182,7 +182,7 @@ public:
       // value is defined in the middle of the block, i.e., is not a block
       // argument.
       bool isOutermost = ancestor == ancestors.front();
-      bool isFromBlockPartial = isOutermost && operand.get().isa<OpResult>();
+      bool isFromBlockPartial = isOutermost && isa<OpResult>(operand.get());
 
       // Check if the value may be freed by operations between its definition
       // (allocation) point in its block and the terminator of the block or the

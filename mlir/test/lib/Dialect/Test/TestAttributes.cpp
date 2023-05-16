@@ -75,7 +75,7 @@ Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseRSquare() || parser.parseGreater())
     return Attribute();
   return parser.getChecked<TestI64ElementsAttr>(
-      parser.getContext(), type.cast<ShapedType>(), elements);
+      parser.getContext(), llvm::cast<ShapedType>(type), elements);
 }
 
 void TestI64ElementsAttr::print(AsmPrinter &printer) const {

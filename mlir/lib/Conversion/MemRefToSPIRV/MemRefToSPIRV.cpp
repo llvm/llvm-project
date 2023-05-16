@@ -93,11 +93,11 @@ static Value shiftValue(Location loc, Value value, Value offset, Value mask,
 /// can be lowered to SPIR-V.
 static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
   if (isa<memref::AllocOp, memref::DeallocOp>(allocOp)) {
-    auto sc = type.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
+    auto sc = dyn_cast_or_null<spirv::StorageClassAttr>(type.getMemorySpace());
     if (!sc || sc.getValue() != spirv::StorageClass::Workgroup)
       return false;
   } else if (isa<memref::AllocaOp>(allocOp)) {
-    auto sc = type.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
+    auto sc = dyn_cast_or_null<spirv::StorageClassAttr>(type.getMemorySpace());
     if (!sc || sc.getValue() != spirv::StorageClass::Function)
       return false;
   } else {
@@ -110,7 +110,7 @@ static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
     return false;
 
   Type elementType = type.getElementType();
-  if (auto vecType = elementType.dyn_cast<VectorType>())
+  if (auto vecType = dyn_cast<VectorType>(elementType))
     elementType = vecType.getElementType();
   return elementType.isIntOrFloat();
 }
@@ -119,7 +119,7 @@ static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
 /// operations of unsupported integer bitwidths, based on the memref
 /// type. Returns std::nullopt on failure.
 static std::optional<spirv::Scope> getAtomicOpScope(MemRefType type) {
-  auto sc = type.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
+  auto sc = dyn_cast_or_null<spirv::StorageClassAttr>(type.getMemorySpace());
   switch (sc.getValue()) {
   case spirv::StorageClass::StorageBuffer:
     return spirv::Scope::Device;
@@ -324,11 +324,11 @@ LogicalResult
 AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
                                     OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
-  if (atomicOp.getType().isa<FloatType>())
+  if (isa<FloatType>(atomicOp.getType()))
     return rewriter.notifyMatchFailure(atomicOp,
                                        "unimplemented floating-point case");
 
-  auto memrefType = atomicOp.getMemref().getType().cast<MemRefType>();
+  auto memrefType = cast<MemRefType>(atomicOp.getMemref().getType());
   std::optional<spirv::Scope> scope = getAtomicOpScope(memrefType);
   if (!scope)
     return rewriter.notifyMatchFailure(atomicOp,
@@ -380,7 +380,7 @@ LogicalResult
 DeallocOpPattern::matchAndRewrite(memref::DeallocOp operation,
                                   OpAdaptor adaptor,
                                   ConversionPatternRewriter &rewriter) const {
-  MemRefType deallocType = operation.getMemref().getType().cast<MemRefType>();
+  MemRefType deallocType = cast<MemRefType>(operation.getMemref().getType());
   if (!isAllocationSupported(operation, deallocType))
     return rewriter.notifyMatchFailure(operation, "unhandled allocation type");
   rewriter.eraseOp(operation);
@@ -395,7 +395,7 @@ LogicalResult
 IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                   ConversionPatternRewriter &rewriter) const {
   auto loc = loadOp.getLoc();
-  auto memrefType = loadOp.getMemref().getType().cast<MemRefType>();
+  auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
   if (!memrefType.getElementType().isSignlessInteger())
     return failure();
 
@@ -419,18 +419,18 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   Type pointeeType = pointerType.getPointeeType();
   Type dstType;
   if (typeConverter.allows(spirv::Capability::Kernel)) {
-    if (auto arrayType = pointeeType.dyn_cast<spirv::ArrayType>())
+    if (auto arrayType = dyn_cast<spirv::ArrayType>(pointeeType))
       dstType = arrayType.getElementType();
     else
       dstType = pointeeType;
   } else {
     // For Vulkan we need to extract element from wrapping struct and array.
     Type structElemType =
-        pointeeType.cast<spirv::StructType>().getElementType(0);
-    if (auto arrayType = structElemType.dyn_cast<spirv::ArrayType>())
+        cast<spirv::StructType>(pointeeType).getElementType(0);
+    if (auto arrayType = dyn_cast<spirv::ArrayType>(structElemType))
       dstType = arrayType.getElementType();
     else
-      dstType = structElemType.cast<spirv::RuntimeArrayType>().getElementType();
+      dstType = cast<spirv::RuntimeArrayType>(structElemType).getElementType();
   }
   int dstBits = dstType.getIntOrFloatBitWidth();
   assert(dstBits % srcBits == 0);
@@ -509,7 +509,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 LogicalResult
 LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                ConversionPatternRewriter &rewriter) const {
-  auto memrefType = loadOp.getMemref().getType().cast<MemRefType>();
+  auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
   if (memrefType.getElementType().isSignlessInteger())
     return failure();
   auto loadPtr = spirv::getElementPtr(
@@ -526,7 +526,7 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 LogicalResult
 IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
                                    ConversionPatternRewriter &rewriter) const {
-  auto memrefType = storeOp.getMemref().getType().cast<MemRefType>();
+  auto memrefType = cast<MemRefType>(storeOp.getMemref().getType());
   if (!memrefType.getElementType().isSignlessInteger())
     return failure();
 
@@ -553,18 +553,18 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   Type pointeeType = pointerType.getPointeeType();
   Type dstType;
   if (typeConverter.allows(spirv::Capability::Kernel)) {
-    if (auto arrayType = pointeeType.dyn_cast<spirv::ArrayType>())
+    if (auto arrayType = dyn_cast<spirv::ArrayType>(pointeeType))
       dstType = arrayType.getElementType();
     else
       dstType = pointeeType;
   } else {
     // For Vulkan we need to extract element from wrapping struct and array.
     Type structElemType =
-        pointeeType.cast<spirv::StructType>().getElementType(0);
-    if (auto arrayType = structElemType.dyn_cast<spirv::ArrayType>())
+        cast<spirv::StructType>(pointeeType).getElementType(0);
+    if (auto arrayType = dyn_cast<spirv::ArrayType>(structElemType))
       dstType = arrayType.getElementType();
     else
-      dstType = structElemType.cast<spirv::RuntimeArrayType>().getElementType();
+      dstType = cast<spirv::RuntimeArrayType>(structElemType).getElementType();
   }
 
   int dstBits = dstType.getIntOrFloatBitWidth();
@@ -651,21 +651,21 @@ LogicalResult MemorySpaceCastOpPattern::matchAndRewrite(
     return rewriter.notifyMatchFailure(
         loc, "address space casts require kernel capability");
 
-  auto sourceType = addrCastOp.getSource().getType().dyn_cast<MemRefType>();
+  auto sourceType = dyn_cast<MemRefType>(addrCastOp.getSource().getType());
   if (!sourceType)
     return rewriter.notifyMatchFailure(
         loc, "SPIR-V lowering requires ranked memref types");
-  auto resultType = addrCastOp.getResult().getType().cast<MemRefType>();
+  auto resultType = cast<MemRefType>(addrCastOp.getResult().getType());
 
   auto sourceStorageClassAttr =
-      sourceType.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
+      dyn_cast_or_null<spirv::StorageClassAttr>(sourceType.getMemorySpace());
   if (!sourceStorageClassAttr)
     return rewriter.notifyMatchFailure(loc, [sourceType](Diagnostic &diag) {
       diag << "source address space " << sourceType.getMemorySpace()
            << " must be a SPIR-V storage class";
     });
   auto resultStorageClassAttr =
-      resultType.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
+      dyn_cast_or_null<spirv::StorageClassAttr>(resultType.getMemorySpace());
   if (!resultStorageClassAttr)
     return rewriter.notifyMatchFailure(loc, [resultType](Diagnostic &diag) {
       diag << "result address space " << resultType.getMemorySpace()
@@ -709,7 +709,7 @@ LogicalResult MemorySpaceCastOpPattern::matchAndRewrite(
 LogicalResult
 StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter) const {
-  auto memrefType = storeOp.getMemref().getType().cast<MemRefType>();
+  auto memrefType = cast<MemRefType>(storeOp.getMemref().getType());
   if (memrefType.getElementType().isSignlessInteger())
     return failure();
   auto storePtr = spirv::getElementPtr(

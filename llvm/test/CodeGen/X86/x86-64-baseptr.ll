@@ -306,6 +306,102 @@ entry:
   ret void
 }
 
+; pr62625
+define void @vmw_host_printf(ptr %fmt, ...) nounwind {
+; CHECK-LABEL: vmw_host_printf:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %r10
+; CHECK-NEXT:    andq $-16, %rsp
+; CHECK-NEXT:    pushq -8(%r10)
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $200, %rsp
+; CHECK-NEXT:    movq %r10, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rsi, -184(%rbp)
+; CHECK-NEXT:    movq %rdx, -176(%rbp)
+; CHECK-NEXT:    movq %rcx, -168(%rbp)
+; CHECK-NEXT:    movq %r8, -160(%rbp)
+; CHECK-NEXT:    movq %r9, -152(%rbp)
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    je .LBB3_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    movaps %xmm0, -144(%rbp)
+; CHECK-NEXT:    movaps %xmm1, -128(%rbp)
+; CHECK-NEXT:    movaps %xmm2, -112(%rbp)
+; CHECK-NEXT:    movaps %xmm3, -96(%rbp)
+; CHECK-NEXT:    movaps %xmm4, -80(%rbp)
+; CHECK-NEXT:    movaps %xmm5, -64(%rbp)
+; CHECK-NEXT:    movaps %xmm6, -48(%rbp)
+; CHECK-NEXT:    movaps %xmm7, -32(%rbp)
+; CHECK-NEXT:  .LBB3_2: # %entry
+; CHECK-NEXT:    leaq -192(%rbp), %rax
+; CHECK-NEXT:    movq %rax, (%rax)
+; CHECK-NEXT:    leaq (%r10), %rax
+; CHECK-NEXT:    movq %rax, (%rax)
+; CHECK-NEXT:    movl $48, (%rax)
+; CHECK-NEXT:    movl $8, (%rax)
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Reload
+; CHECK-NEXT:    leaq -8(%rbp), %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    leaq -8(%r10), %rsp
+; CHECK-NEXT:    retq
+;
+; X32ABI-LABEL: vmw_host_printf:
+; X32ABI:       # %bb.0: # %entry
+; X32ABI-NEXT:    pushq %rbp
+; X32ABI-NEXT:    movl %esp, %ebp
+; X32ABI-NEXT:    pushq %rbx
+; X32ABI-NEXT:    andl $-16, %esp
+; X32ABI-NEXT:    subl $208, %esp
+; X32ABI-NEXT:    movl %esp, %ebx
+; X32ABI-NEXT:    movq %rsi, 24(%ebx)
+; X32ABI-NEXT:    movq %rdx, 32(%ebx)
+; X32ABI-NEXT:    movq %rcx, 40(%ebx)
+; X32ABI-NEXT:    movq %r8, 48(%ebx)
+; X32ABI-NEXT:    movq %r9, 56(%ebx)
+; X32ABI-NEXT:    testb %al, %al
+; X32ABI-NEXT:    je .LBB3_2
+; X32ABI-NEXT:  # %bb.1: # %entry
+; X32ABI-NEXT:    movaps %xmm0, 64(%ebx)
+; X32ABI-NEXT:    movaps %xmm1, 80(%ebx)
+; X32ABI-NEXT:    movaps %xmm2, 96(%ebx)
+; X32ABI-NEXT:    movaps %xmm3, 112(%ebx)
+; X32ABI-NEXT:    movaps %xmm4, 128(%ebx)
+; X32ABI-NEXT:    movaps %xmm5, 144(%ebx)
+; X32ABI-NEXT:    movaps %xmm6, 160(%ebx)
+; X32ABI-NEXT:    movaps %xmm7, 176(%ebx)
+; X32ABI-NEXT:  .LBB3_2: # %entry
+; X32ABI-NEXT:    leal 16(%rbx), %eax
+; X32ABI-NEXT:    movl %eax, (%eax)
+; X32ABI-NEXT:    leal 16(%rbp), %eax
+; X32ABI-NEXT:    movl %eax, (%eax)
+; X32ABI-NEXT:    movl $48, (%eax)
+; X32ABI-NEXT:    movl $8, (%eax)
+; X32ABI-NEXT:    xorl %eax, %eax
+; X32ABI-NEXT:    xorl %ebx, %ebx
+; X32ABI-NEXT:    xorl %ecx, %ecx
+; X32ABI-NEXT:    #APP
+; X32ABI-NEXT:    #NO_APP
+; X32ABI-NEXT:    leal -8(%ebp), %esp
+; X32ABI-NEXT:    popq %rbx
+; X32ABI-NEXT:    popq %rbp
+; X32ABI-NEXT:    retq
+entry:
+  %0 = alloca i8, i64 poison, align 8
+  call void @llvm.va_start(ptr nonnull poison)
+  %1 = call { i64, i64, i64, i64, i64, i64 } asm sideeffect "", "={ax},={bx},={cx},={dx},={si},={di},{ax},{bx},{cx},{dx},{si},{di},~{memory},~{dirflag},~{fpsr},~{flags}"(i32 0, i32 0, i32 0, i16 undef, i64 undef, i64 undef)
+  ret void
+}
+
+declare void @llvm.va_start(ptr)
+
 attributes #0 = {"frame-pointer"="all"}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"override-stack-alignment", i32 32}

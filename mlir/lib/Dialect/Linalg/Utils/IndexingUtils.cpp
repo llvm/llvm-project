@@ -43,16 +43,16 @@
 namespace mlir {
 namespace linalg {
 Value createOrFoldDimOp(OpBuilder &b, Location loc, Value val, int64_t dim) {
-  if (val.getType().isa<UnrankedMemRefType, MemRefType>())
+  if (isa<UnrankedMemRefType, MemRefType>(val.getType()))
     return b.createOrFold<memref::DimOp>(loc, val, dim);
-  if (val.getType().isa<UnrankedTensorType, RankedTensorType>())
+  if (isa<UnrankedTensorType, RankedTensorType>(val.getType()))
     return b.createOrFold<tensor::DimOp>(loc, val, dim);
   llvm_unreachable("Expected MemRefType or TensorType");
 }
 
 OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
                                int64_t dim) {
-  auto shapedType = val.getType().cast<ShapedType>();
+  auto shapedType = cast<ShapedType>(val.getType());
   if (!shapedType.hasRank() || shapedType.isDynamicDim(dim))
     return createOrFoldDimOp(b, loc, val, dim);
   return b.getIndexAttr(shapedType.getDimSize(dim));
@@ -60,7 +60,7 @@ OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
 
 SmallVector<Value> createDynamicDimensions(OpBuilder &b, Location loc,
                                            Value val) {
-  auto shapedType = val.getType().cast<ShapedType>();
+  auto shapedType = cast<ShapedType>(val.getType());
   assert(shapedType.hasRank() && "`val` must have a static rank");
   SmallVector<Value> res;
   res.reserve(shapedType.getRank());
@@ -73,7 +73,7 @@ SmallVector<Value> createDynamicDimensions(OpBuilder &b, Location loc,
 
 SmallVector<OpFoldResult> getMixedDimensions(OpBuilder &b, Location loc,
                                              Value val) {
-  auto shapedType = val.getType().cast<ShapedType>();
+  auto shapedType = cast<ShapedType>(val.getType());
   assert(shapedType.hasRank() && "`val` must have a static rank");
   SmallVector<Value> dynamicDims = createDynamicDimensions(b, loc, val);
   return getMixedValues(shapedType.getShape(), dynamicDims, b);

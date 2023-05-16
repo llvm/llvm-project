@@ -72,7 +72,7 @@ DenseElementsAttr transpose(ElementsAttr attr, ShapedType inputType,
   auto baseType = inputType.getElementType();
 
   // Handle possible integer types
-  if (auto intType = baseType.dyn_cast<IntegerType>()) {
+  if (auto intType = dyn_cast<IntegerType>(baseType)) {
     switch (intType.getWidth()) {
     case 1:
       return transposeType<bool>(attr, inputType, outputType, permValues);
@@ -102,7 +102,7 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    auto outputType = op.getType().cast<ShapedType>();
+    auto outputType = cast<ShapedType>(op.getType());
     // TOSA supports quantized types.
     if (!outputType.getElementType().isIntOrIndexOrFloat())
       return failure();
@@ -122,7 +122,7 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
         permAttr.getValues<APInt>(),
         [](const APInt &val) { return val.getSExtValue(); }));
 
-    auto inputType = op.getInput1().getType().cast<ShapedType>();
+    auto inputType = cast<ShapedType>(op.getInput1().getType());
 
     auto resultAttr = transpose(inputValues, inputType, outputType, permValues);
     rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, outputType, resultAttr);

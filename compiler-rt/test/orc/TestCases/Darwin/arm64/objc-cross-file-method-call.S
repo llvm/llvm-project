@@ -3,6 +3,8 @@
 // RUN: %clang -c -o %t.o %s
 // RUN: %clang -c -o %t.aux.o %S/Inputs/objc-Foo-foo-class-method.S
 // RUN: %llvm_jitlink -preload libobjc.A.dylib %t.o %t.aux.o
+//
+// REQUIRES: jit-compatible-osx-swift-runtime
 
         .section	__TEXT,__text,regular,pure_instructions
 	.build_version macos, 14, 0	sdk_version 14, 0

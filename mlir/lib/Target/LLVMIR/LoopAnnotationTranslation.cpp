@@ -190,7 +190,7 @@ void LoopAnnotationConversion::convertLoopOptions(LoopUnswitchAttr options) {
 
 void LoopAnnotationConversion::convertLocation(FusedLoc location) {
   auto localScopeAttr =
-      location.getMetadata().dyn_cast_or_null<DILocalScopeAttr>();
+      dyn_cast_or_null<DILocalScopeAttr>(location.getMetadata());
   if (!localScopeAttr)
     return;
   auto *localScope = dyn_cast<llvm::DILocalScope>(
@@ -198,10 +198,10 @@ void LoopAnnotationConversion::convertLocation(FusedLoc location) {
           localScopeAttr));
   if (!localScope)
     return;
-  const llvm::Metadata *loc =
+  llvm::Metadata *loc =
       loopAnnotationTranslation.moduleTranslation.translateLoc(location,
                                                                localScope);
-  metadataNodes.push_back(const_cast<llvm::Metadata *>(loc));
+  metadataNodes.push_back(loc);
 }
 
 llvm::MDNode *LoopAnnotationConversion::convert() {

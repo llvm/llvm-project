@@ -19,12 +19,11 @@ define void @test1_pr58811() {
 ; CHECK-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 false, label [[LOOP_1]], label [[LOOP_2_PREHEADER:%.*]]
 ; CHECK:       loop.2.preheader:
-; CHECK-NEXT:    [[INDUCTION_IV_LCSSA1:%.*]] = phi i32 [ [[INDUCTION_IV]], [[LOOP_1]] ]
 ; CHECK-NEXT:    [[INDUCTION_IV_LCSSA:%.*]] = phi i32 [ [[INDUCTION_IV]], [[LOOP_1]] ]
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i32 [ [[IV_1]], [[LOOP_1]] ]
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 196, [[INDUCTION_IV_LCSSA1]]
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 196, [[INDUCTION_IV_LCSSA]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -46,11 +45,11 @@ define void @test1_pr58811() {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_3_PREHEADER:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 196, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_2_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_2_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_2_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP_2:%.*]]
 ; CHECK:       loop.2:
 ; CHECK-NEXT:    [[IV_3:%.*]] = phi i16 [ [[IV_3_NEXT:%.*]], [[LOOP_2]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[IV_4:%.*]] = phi i32 [ [[IV_4_NEXT:%.*]], [[LOOP_2]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_4:%.*]] = phi i32 [ [[IV_4_NEXT:%.*]], [[LOOP_2]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_4_NEXT]] = sub i32 [[IV_4]], [[IV_1_LCSSA]]
 ; CHECK-NEXT:    [[IV_3_NEXT]] = add i16 [[IV_3]], 1
 ; CHECK-NEXT:    [[CMP88_1:%.*]] = icmp ult i16 [[IV_3]], 198
@@ -102,4 +101,188 @@ loop.3:
 
 unreachable.bb:                                   ; No predecessors!
   br label %loop.1.preheader
+}
+
+define void @test2_pr58811() {
+; CHECK-LABEL: @test2_pr58811(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
+; CHECK:       loop.1.header.loopexit:
+; CHECK-NEXT:    [[SUB93_2_LCSSA:%.*]] = phi i32 [ [[SUB93_2:%.*]], [[LOOP_4:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP_1_HEADER]]
+; CHECK:       loop.1.header:
+; CHECK-NEXT:    [[P_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SUB93_2_LCSSA]], [[LOOP_1_HEADER_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[P_1]], -1
+; CHECK-NEXT:    br label [[LOOP_2:%.*]]
+; CHECK:       loop.2:
+; CHECK-NEXT:    [[INDUCTION_IV:%.*]] = phi i32 [ [[INDUCTION_IV_NEXT:%.*]], [[LOOP_2]] ], [ [[TMP0]], [[LOOP_1_HEADER]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[P_1]], [[LOOP_1_HEADER]] ], [ [[ADD101:%.*]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ 0, [[LOOP_1_HEADER]] ], [ [[SUB93:%.*]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[IV_3]], -1
+; CHECK-NEXT:    [[SUB93]] = add i32 [[IV_3]], 1
+; CHECK-NEXT:    [[ADD101]] = add i32 [[IV_3]], [[IV_2]]
+; CHECK-NEXT:    [[INDUCTION_IV_NEXT]] = add i32 [[INDUCTION_IV]], [[TMP1]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_2]], label [[LOOP_3_PREHEADER:%.*]]
+; CHECK:       loop.3.preheader:
+; CHECK-NEXT:    [[IV_2_LCSSA:%.*]] = phi i32 [ [[IV_2]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[INDUCTION_IV_LCSSA:%.*]] = phi i32 [ [[INDUCTION_IV]], [[LOOP_2]] ]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 196, [[INDUCTION_IV_LCSSA]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], [[INDUCTION_IV_LCSSA]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 0, [[INDUCTION_IV_LCSSA]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 1, [[INDUCTION_IV_LCSSA]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 2, [[INDUCTION_IV_LCSSA]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 3, [[INDUCTION_IV_LCSSA]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[OFFSET_IDX]], [[TMP8]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 196
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 199, 196
+; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = mul i32 195, [[INDUCTION_IV_LCSSA]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 196, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
+; CHECK-NEXT:    br label [[LOOP_3:%.*]]
+; CHECK:       loop.3:
+; CHECK-NEXT:    [[INT16_TINDARRAYSAFEVAR_186_0747_1:%.*]] = phi i16 [ [[INC_1:%.*]], [[LOOP_3]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[UINT32_TVAR_177_2745_1:%.*]] = phi i32 [ [[SUB93_1:%.*]], [[LOOP_3]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUB93_1]] = sub i32 [[UINT32_TVAR_177_2745_1]], [[IV_2_LCSSA]]
+; CHECK-NEXT:    [[INC_1]] = add i16 [[INT16_TINDARRAYSAFEVAR_186_0747_1]], 1
+; CHECK-NEXT:    [[CMP88_1:%.*]] = icmp ult i16 [[INT16_TINDARRAYSAFEVAR_186_0747_1]], 198
+; CHECK-NEXT:    br i1 [[CMP88_1]], label [[LOOP_3]], label [[LOOP_4_PREHEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       loop.4.preheader:
+; CHECK-NEXT:    [[UINT32_TVAR_177_2745_1_LCSSA:%.*]] = phi i32 [ [[UINT32_TVAR_177_2745_1]], [[LOOP_3]] ], [ [[IND_ESCAPE]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[LOOP_4]]
+; CHECK:       loop.4:
+; CHECK-NEXT:    [[UINT32_TVAR_177_2745_2:%.*]] = phi i32 [ [[SUB93_2]], [[LOOP_4]] ], [ 0, [[LOOP_4_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB93_2]] = sub i32 [[UINT32_TVAR_177_2745_2]], [[UINT32_TVAR_177_2745_1_LCSSA]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_4]], label [[LOOP_1_HEADER_LOOPEXIT]]
+;
+entry:
+  br label %loop.1.header
+
+loop.1.header:
+  %p.1 = phi i32 [ 0, %entry ], [ %sub93.2, %loop.4 ]
+  br label %loop.2
+
+loop.2:
+  %iv.2 = phi i32 [ %p.1, %loop.1.header ], [ %add101, %loop.2 ]
+  %iv.3 = phi i32 [ 0, %loop.1.header ], [ %sub93, %loop.2 ]
+  %sub93 = add i32 %iv.3, 1
+  %add101 = add i32 %iv.3, %iv.2
+  br i1 false, label %loop.2, label %loop.3
+
+loop.3:
+  %iv.4 = phi i16 [ 0, %loop.2 ], [ %inc.1, %loop.3 ]
+  %iv.5 = phi i32 [ 0, %loop.2 ], [ %sub93.1, %loop.3 ]
+  %sub93.1 = sub i32 %iv.5, %iv.2
+  %inc.1 = add i16 %iv.4, 1
+  %cmp88.1 = icmp ult i16 %iv.4, 198
+  br i1 %cmp88.1, label %loop.3, label %loop.4
+
+loop.4:
+  %iv.6 = phi i32 [ 0, %loop.3 ], [ %sub93.2, %loop.4 ]
+  %sub93.2 = sub i32 %iv.6, %iv.5
+  br i1 false, label %loop.4, label %loop.1.header
+}
+
+define void @test3_pr58811() {
+; CHECK-LABEL: @test3_pr58811(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
+; CHECK:       loop.1.header:
+; CHECK-NEXT:    [[P_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SUB93_2:%.*]], [[LOOP_1_LATCH:%.*]] ]
+; CHECK-NEXT:    [[REM85:%.*]] = urem i32 1, [[P_1]]
+; CHECK-NEXT:    br label [[LOOP_2:%.*]]
+; CHECK:       loop.2:
+; CHECK-NEXT:    [[P_2:%.*]] = phi i32 [ 1, [[LOOP_1_HEADER]] ], [ 0, [[LOOP_2]] ]
+; CHECK-NEXT:    [[ADD101:%.*]] = add i32 [[REM85]], [[P_2]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_2]], label [[LOOP_3_PREHEADER:%.*]]
+; CHECK:       loop.3.preheader:
+; CHECK-NEXT:    [[P_2_LCSSA:%.*]] = phi i32 [ [[P_2]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[ADD101_LCSSA:%.*]] = phi i32 [ [[ADD101]], [[LOOP_2]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 1, [[P_1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[P_1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[P_2_LCSSA]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 196, [[TMP3]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 0, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 1, [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 2, [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[OFFSET_IDX]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 3, [[TMP3]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET_IDX]], [[TMP10]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 196
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 199, 196
+; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = mul i32 195, [[TMP3]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 196, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
+; CHECK-NEXT:    br label [[LOOP_3:%.*]]
+; CHECK:       loop.3:
+; CHECK-NEXT:    [[IV_3:%.*]] = phi i16 [ [[INC_1:%.*]], [[LOOP_3]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_4:%.*]] = phi i32 [ [[SUB93_1:%.*]], [[LOOP_3]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUB93_1]] = sub i32 [[IV_4]], [[ADD101_LCSSA]]
+; CHECK-NEXT:    [[INC_1]] = add i16 [[IV_3]], 1
+; CHECK-NEXT:    [[CMP88_1:%.*]] = icmp ult i16 [[IV_3]], 198
+; CHECK-NEXT:    br i1 [[CMP88_1]], label [[LOOP_3]], label [[LOOP_4_PREHEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       loop.4.preheader:
+; CHECK-NEXT:    [[IV_4_LCSSA:%.*]] = phi i32 [ [[IV_4]], [[LOOP_3]] ], [ [[IND_ESCAPE]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[LOOP_4:%.*]]
+; CHECK:       loop.4:
+; CHECK-NEXT:    [[IV_5:%.*]] = phi i32 [ [[SUB93_2]], [[LOOP_4]] ], [ 0, [[LOOP_4_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB93_2]] = sub i32 [[IV_5]], [[IV_4_LCSSA]]
+; CHECK-NEXT:    br label [[LOOP_4]]
+; CHECK:       loop.1.latch:
+; CHECK-NEXT:    br label [[LOOP_1_HEADER]]
+;
+entry:
+  br label %loop.1.header
+
+loop.1.header:
+  %p.1 = phi i32 [ 0, %entry ], [ %sub93.2, %loop.1.latch ]
+  %rem85 = urem i32 1, %p.1
+  br label %loop.2
+
+loop.2:
+  %p.2 = phi i32 [ 1, %loop.1.header ], [ 0, %loop.2 ]
+  %add101 = add i32 %rem85, %p.2
+  br i1 false, label %loop.2, label %loop.3
+
+loop.3:
+  %iv.3 = phi i16 [ 0, %loop.2 ], [ %inc.1, %loop.3 ]
+  %iv.4 = phi i32 [ 0, %loop.2 ], [ %sub93.1, %loop.3 ]
+  %sub93.1 = sub i32 %iv.4, %add101
+  %inc.1 = add i16 %iv.3, 1
+  %cmp88.1 = icmp ult i16 %iv.3, 198
+  br i1 %cmp88.1, label %loop.3, label %loop.4
+
+loop.4:
+  %iv.5 = phi i32 [ 0, %loop.3 ], [ %sub93.2, %loop.4 ]
+  %sub93.2 = sub i32 %iv.5, %iv.4
+  br label %loop.4
+
+loop.1.latch:                                 ; No predecessors!
+  br label %loop.1.header
 }

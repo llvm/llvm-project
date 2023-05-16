@@ -11,6 +11,18 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+d \
 ; RUN:   -mattr=+zfhmin -verify-machineinstrs -target-abi lp64d | \
 ; RUN:   FileCheck -check-prefix=RV64IDZFHMIN %s
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+zhinxmin \
+; RUN:   -verify-machineinstrs -target-abi ilp32 | \
+; RUN:   FileCheck -check-prefix=RV32IZHINXMIN %s
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zhinxmin \
+; RUN:   -verify-machineinstrs -target-abi lp64 | \
+; RUN:   FileCheck -check-prefix=RV64IZHINXMIN %s
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+zdinx \
+; RUN:   -mattr=+zhinxmin -verify-machineinstrs -target-abi ilp32 | \
+; RUN:   FileCheck -check-prefix=RV32IZDINXZHINXMIN %s
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zdinx \
+; RUN:   -mattr=+zhinxmin -verify-machineinstrs -target-abi lp64 | \
+; RUN:   FileCheck -check-prefix=RV64IZDINXZHINXMIN %s
 
 ; These intrinsics require half to be a legal type.
 
@@ -40,6 +52,30 @@ define iXLen @lrint_f16(half %a) nounwind {
 ; RV64IDZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IDZFHMIN-NEXT:    fcvt.l.s a0, fa5
 ; RV64IDZFHMIN-NEXT:    ret
+;
+; RV32IZHINXMIN-LABEL: lrint_f16:
+; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV32IZHINXMIN-NEXT:    fcvt.w.s a0, a0
+; RV32IZHINXMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: lrint_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.l.s a0, a0
+; RV64IZHINXMIN-NEXT:    ret
+;
+; RV32IZDINXZHINXMIN-LABEL: lrint_f16:
+; RV32IZDINXZHINXMIN:       # %bb.0:
+; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV32IZDINXZHINXMIN-NEXT:    fcvt.w.s a0, a0
+; RV32IZDINXZHINXMIN-NEXT:    ret
+;
+; RV64IZDINXZHINXMIN-LABEL: lrint_f16:
+; RV64IZDINXZHINXMIN:       # %bb.0:
+; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZDINXZHINXMIN-NEXT:    fcvt.l.s a0, a0
+; RV64IZDINXZHINXMIN-NEXT:    ret
   %1 = call iXLen @llvm.lrint.iXLen.f16(half %a)
   ret iXLen %1
 }
@@ -70,6 +106,30 @@ define iXLen @lround_f16(half %a) nounwind {
 ; RV64IDZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; RV64IDZFHMIN-NEXT:    fcvt.l.s a0, fa5, rmm
 ; RV64IDZFHMIN-NEXT:    ret
+;
+; RV32IZHINXMIN-LABEL: lround_f16:
+; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV32IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rmm
+; RV32IZHINXMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: lround_f16:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.l.s a0, a0, rmm
+; RV64IZHINXMIN-NEXT:    ret
+;
+; RV32IZDINXZHINXMIN-LABEL: lround_f16:
+; RV32IZDINXZHINXMIN:       # %bb.0:
+; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV32IZDINXZHINXMIN-NEXT:    fcvt.w.s a0, a0, rmm
+; RV32IZDINXZHINXMIN-NEXT:    ret
+;
+; RV64IZDINXZHINXMIN-LABEL: lround_f16:
+; RV64IZDINXZHINXMIN:       # %bb.0:
+; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; RV64IZDINXZHINXMIN-NEXT:    fcvt.l.s a0, a0, rmm
+; RV64IZDINXZHINXMIN-NEXT:    ret
   %1 = call iXLen @llvm.lround.iXLen.f16(half %a)
   ret iXLen %1
 }

@@ -3,17 +3,9 @@
 import os
 import platform
 import re
+import shlex
 
 import lit.formats
-
-# Get shlex.quote if available (added in 3.3), and fall back to pipes.quote if
-# it's not available.
-try:
-  import shlex
-  sh_quote = shlex.quote
-except:
-  import pipes
-  sh_quote = pipes.quote
 
 def get_required_attr(config, attr_name):
   attr_value = getattr(config, attr_name, None)
@@ -182,7 +174,7 @@ if platform.system() == 'Windows':
 # FIXME: De-hardcode this path.
 asan_source_dir = os.path.join(
   get_required_attr(config, "compiler_rt_src_root"), "lib", "asan")
-python_exec = sh_quote(get_required_attr(config, "python_executable"))
+python_exec = shlex.quote(get_required_attr(config, "python_executable"))
 # Setup path to asan_symbolize.py script.
 asan_symbolize = os.path.join(asan_source_dir, "scripts", "asan_symbolize.py")
 if not os.path.exists(asan_symbolize):

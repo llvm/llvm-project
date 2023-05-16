@@ -32,6 +32,9 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// Otherwise, a pass failure is triggered.
   bool allowReturnAllocs = false;
 
+  /// Specifies whether the tensor IR should be annotated with alias sets.
+  bool dumpAliasSets = false;
+
   /// The heuristic controls the order in which ops are traversed during the
   /// analysis.
   AnalysisHeuristic analysisHeuristic = AnalysisHeuristic::BottomUp;

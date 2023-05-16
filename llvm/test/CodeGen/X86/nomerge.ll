@@ -42,6 +42,8 @@ define void @foo_tail(i1 %i) nounwind {
 ; CHECK-LABEL: foo_tail:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    je bar # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    jmp bar # TAILCALL
 entry:
   br i1 %i, label %if.then, label %if.else

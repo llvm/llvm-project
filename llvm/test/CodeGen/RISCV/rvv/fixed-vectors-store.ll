@@ -43,9 +43,9 @@ define void @store_v6i8(ptr %p, <6 x i8> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <6 x i8> %v, ptr %p
@@ -67,9 +67,9 @@ define void @store_v12i8(ptr %p, <12 x i8> %v) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a0)
 ; RV64-NEXT:    ret
   store <12 x i8> %v, ptr %p
@@ -91,9 +91,9 @@ define void @store_v6i16(ptr %p, <6 x i16> %v) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a0)
 ; RV64-NEXT:    ret
   store <6 x i16> %v, ptr %p
@@ -155,9 +155,9 @@ define void @store_v6f16(ptr %p, <6 x half> %v) {
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a0)
 ; RV64-NEXT:    ret
   store <6 x half> %v, ptr %p
@@ -209,7 +209,7 @@ define void @store_v6i1(ptr %p, <6 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vfirst.m a1, v0
-; CHECK-NEXT:    snez a1, a1
+; CHECK-NEXT:    seqz a1, a1
 ; CHECK-NEXT:    vmv.x.s a2, v0
 ; CHECK-NEXT:    andi a3, a2, 2
 ; CHECK-NEXT:    or a1, a1, a3

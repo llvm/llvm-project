@@ -80,7 +80,7 @@ static void genStore(OpBuilder &builder, Location loc, Value val, Value mem,
                      Value idx) {
   idx = genCast(builder, loc, idx, builder.getIndexType());
   val = genCast(builder, loc, val,
-                mem.getType().cast<ShapedType>().getElementType());
+                cast<ShapedType>(mem.getType()).getElementType());
   builder.create<memref::StoreOp>(loc, val, mem, idx);
 }
 
@@ -253,7 +253,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
         case SparseTensorFieldKind::CrdMemRef:
         case SparseTensorFieldKind::ValMemRef:
           field = createAllocation(
-              builder, loc, fType.cast<MemRefType>(),
+              builder, loc, cast<MemRefType>(fType),
               (fKind == SparseTensorFieldKind::PosMemRef)   ? posHeuristic
               : (fKind == SparseTensorFieldKind::CrdMemRef) ? crdHeuristic
                                                             : valHeuristic,
@@ -779,7 +779,7 @@ public:
       fields.reserve(desc.getNumFields());
       // Memcpy on memref fields.
       for (auto field : desc.getMemRefFields()) {
-        auto memrefTp = field.getType().cast<MemRefType>();
+        auto memrefTp = cast<MemRefType>(field.getType());
         auto size = rewriter.create<memref::DimOp>(loc, field, 0);
         auto copied =
             rewriter.create<memref::AllocOp>(loc, memrefTp, ValueRange{size});
@@ -1128,7 +1128,7 @@ public:
     auto srcDesc = getDescriptorFromTensorTuple(adaptor.getSource());
     SmallVector<Value> fields;
     foreachFieldAndTypeInSparseTensor(
-        SparseTensorType(op.getResult().getType().cast<RankedTensorType>()),
+        SparseTensorType(cast<RankedTensorType>(op.getResult().getType())),
         [&rewriter, &fields, srcDesc,
          loc](Type fTp, FieldIndex fIdx, SparseTensorFieldKind fKind, Level lvl,
               DimLevelType /*dlt*/) -> bool {
@@ -1143,7 +1143,7 @@ public:
             // values.
             Value sz = linalg::createOrFoldDimOp(rewriter, loc, srcMem, 0);
             auto dstMem = rewriter.create<memref::AllocOp>(
-                loc, fTp.cast<MemRefType>(), sz);
+                loc, cast<MemRefType>(fTp), sz);
             if (fTp != srcMem.getType()) {
               // Converts elements type.
               scf::buildLoopNest(
@@ -1397,7 +1397,7 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
           }
 
           assert(field);
-          if (auto memrefTp = field.getType().dyn_cast<MemRefType>();
+          if (auto memrefTp = dyn_cast<MemRefType>(field.getType());
               memrefTp && memrefTp.getRank() > 1) {
             ReassociationIndices reassociation;
             for (int i = 0, e = memrefTp.getRank(); i < e; i++)

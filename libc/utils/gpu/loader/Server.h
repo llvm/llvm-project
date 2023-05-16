@@ -19,12 +19,11 @@
 
 static __llvm_libc::rpc::Server server;
 
-static __llvm_libc::cpp::Atomic<uint32_t>
-    lock[__llvm_libc::rpc::default_port_count] = {0};
-
 /// Queries the RPC client at least once and performs server-side work if there
 /// are any active requests.
 void handle_server() {
+  using namespace __llvm_libc;
+
   // Continue servicing the client until there is no work left and we return.
   for (;;) {
     auto port = server.try_open();
@@ -32,38 +31,65 @@ void handle_server() {
       return;
 
     switch (port->get_opcode()) {
-    case __llvm_libc::rpc::Opcode::PRINT_TO_STDERR: {
-      uint64_t str_size[__llvm_libc::rpc::MAX_LANE_SIZE] = {0};
-      char *strs[__llvm_libc::rpc::MAX_LANE_SIZE] = {nullptr};
-      port->recv_n([&](uint64_t size, uint32_t id) {
-        str_size[id] = size;
-        strs[id] = new char[size];
-        return strs[id];
-      });
-      for (uint64_t i = 0; i < __llvm_libc::rpc::MAX_LANE_SIZE; ++i) {
+    case rpc::Opcode::PRINT_TO_STDERR: {
+      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
+      void *strs[rpc::MAX_LANE_SIZE] = {nullptr};
+      port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
+      for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
         if (strs[i]) {
-          fwrite(strs[i], str_size[i], 1, stderr);
-          delete[] strs[i];
+          fwrite(strs[i], sizes[i], 1, stderr);
+          delete[] reinterpret_cast<uint8_t *>(strs[i]);
         }
       }
       break;
     }
-    case __llvm_libc::rpc::Opcode::EXIT: {
-      port->recv([](__llvm_libc::rpc::Buffer *buffer) {
+    case rpc::Opcode::EXIT: {
+      port->recv([](rpc::Buffer *buffer) {
         exit(reinterpret_cast<uint32_t *>(buffer->data)[0]);
       });
       break;
     }
-    case __llvm_libc::rpc::Opcode::TEST_INCREMENT: {
-      port->recv_and_send([](__llvm_libc::rpc::Buffer *buffer) {
+    case rpc::Opcode::TEST_INCREMENT: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
         reinterpret_cast<uint64_t *>(buffer->data)[0] += 1;
       });
       break;
     }
+    case rpc::Opcode::TEST_INTERFACE: {
+      uint64_t cnt = 0;
+      bool end_with_recv;
+      port->recv([&](rpc::Buffer *buffer) { end_with_recv = buffer->data[0]; });
+      port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      port->send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
+      port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      port->send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
+      port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      port->send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
+      port->send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
+      if (end_with_recv)
+        port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      else
+        port->send(
+            [&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
+      break;
+    }
+    case rpc::Opcode::TEST_STREAM: {
+      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
+      void *dst[rpc::MAX_LANE_SIZE] = {nullptr};
+      port->recv_n(dst, sizes, [](uint64_t size) { return new char[size]; });
+      port->send_n(dst, sizes);
+      for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
+        if (dst[i])
+          delete[] reinterpret_cast<uint8_t *>(dst[i]);
+      }
+      break;
+    }
     default:
-      port->recv([](__llvm_libc::rpc::Buffer *buffer) {});
+      port->recv([](rpc::Buffer *buffer) {});
     }
     port->close();
   }
 }
+
 #endif

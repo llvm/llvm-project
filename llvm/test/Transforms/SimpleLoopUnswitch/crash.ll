@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -disable-output
+; RUN: opt < %s -passes='simple-loop-unswitch<nontrivial>' -verify-memoryssa -disable-output
 
 define void @test1(ptr %S2) {
 entry:

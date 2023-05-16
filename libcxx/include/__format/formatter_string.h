@@ -32,14 +32,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS __formatter_string {
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
-      -> decltype(__parse_ctx.begin()) {
-    auto __result = __parser_.__parse(__parse_ctx, __format_spec::__fields_string);
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_string);
     __format_spec::__process_display_type_string(__parser_.__type_);
     return __result;
   }
 
-  _LIBCPP_HIDE_FROM_ABI auto format(basic_string_view<_CharT> __str, auto& __ctx) const -> decltype(__ctx.out()) {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  format(basic_string_view<_CharT> __str, _FormatContext& __ctx) const {
 #  if _LIBCPP_STD_VER >= 23
     if (__parser_.__type_ == __format_spec::__type::__debug)
       return __formatter::__format_escaped_string(__str, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
@@ -61,7 +63,8 @@ struct _LIBCPP_TEMPLATE_VIS formatter<const _CharT*, _CharT>
     : public __formatter_string<_CharT> {
   using _Base = __formatter_string<_CharT>;
 
-  _LIBCPP_HIDE_FROM_ABI auto format(const _CharT* __str, auto& __ctx) const -> decltype(__ctx.out()) {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(const _CharT* __str, _FormatContext& __ctx) const {
     _LIBCPP_ASSERT(__str, "The basic_format_arg constructor should have "
                           "prevented an invalid pointer.");
 
@@ -99,7 +102,8 @@ struct _LIBCPP_TEMPLATE_VIS formatter<_CharT*, _CharT>
     : public formatter<const _CharT*, _CharT> {
   using _Base = formatter<const _CharT*, _CharT>;
 
-  _LIBCPP_HIDE_FROM_ABI auto format(_CharT* __str, auto& __ctx) const -> decltype(__ctx.out()) {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(_CharT* __str, _FormatContext& __ctx) const {
     return _Base::format(__str, __ctx);
   }
 };
@@ -110,7 +114,8 @@ struct _LIBCPP_TEMPLATE_VIS formatter<_CharT[_Size], _CharT>
     : public __formatter_string<_CharT> {
   using _Base = __formatter_string<_CharT>;
 
-  _LIBCPP_HIDE_FROM_ABI auto format(_CharT __str[_Size], auto& __ctx) const -> decltype(__ctx.out()) {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(_CharT __str[_Size], _FormatContext& __ctx) const {
     return _Base::format(basic_string_view<_CharT>(__str, _Size), __ctx);
   }
 };
@@ -121,8 +126,9 @@ struct _LIBCPP_TEMPLATE_VIS formatter<basic_string<_CharT, _Traits, _Allocator>,
     : public __formatter_string<_CharT> {
   using _Base = __formatter_string<_CharT>;
 
-  _LIBCPP_HIDE_FROM_ABI auto format(const basic_string<_CharT, _Traits, _Allocator>& __str, auto& __ctx) const
-      -> decltype(__ctx.out()) {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  format(const basic_string<_CharT, _Traits, _Allocator>& __str, _FormatContext& __ctx) const {
     // Drop _Traits and _Allocator to have one std::basic_string formatter.
     return _Base::format(basic_string_view<_CharT>(__str.data(), __str.size()), __ctx);
   }
@@ -134,8 +140,9 @@ struct _LIBCPP_TEMPLATE_VIS formatter<basic_string_view<_CharT, _Traits>, _CharT
     : public __formatter_string<_CharT> {
   using _Base = __formatter_string<_CharT>;
 
-  _LIBCPP_HIDE_FROM_ABI auto format(basic_string_view<_CharT, _Traits> __str, auto& __ctx) const
-      -> decltype(__ctx.out()) {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  format(basic_string_view<_CharT, _Traits> __str, _FormatContext& __ctx) const {
     // Drop _Traits to have one std::basic_string_view formatter.
     return _Base::format(basic_string_view<_CharT>(__str.data(), __str.size()), __ctx);
   }

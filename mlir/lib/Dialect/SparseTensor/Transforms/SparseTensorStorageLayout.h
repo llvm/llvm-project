@@ -450,7 +450,7 @@ inline Value genTuple(OpBuilder &builder, Location loc,
 
 inline SparseTensorDescriptor getDescriptorFromTensorTuple(Value tensor) {
   auto tuple = getTuple(tensor);
-  SparseTensorType stt(tuple.getResultTypes()[0].cast<RankedTensorType>());
+  SparseTensorType stt(cast<RankedTensorType>(tuple.getResultTypes()[0]));
   return SparseTensorDescriptor(stt, tuple.getInputs());
 }
 
@@ -458,7 +458,7 @@ inline MutSparseTensorDescriptor
 getMutDescriptorFromTensorTuple(Value tensor, SmallVectorImpl<Value> &fields) {
   auto tuple = getTuple(tensor);
   fields.assign(tuple.getInputs().begin(), tuple.getInputs().end());
-  SparseTensorType stt(tuple.getResultTypes()[0].cast<RankedTensorType>());
+  SparseTensorType stt(cast<RankedTensorType>(tuple.getResultTypes()[0]));
   return MutSparseTensorDescriptor(stt, fields);
 }
 

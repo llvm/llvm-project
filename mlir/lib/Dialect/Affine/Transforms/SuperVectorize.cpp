@@ -838,7 +838,7 @@ void VectorizationState::registerValueVectorReplacementImpl(Value replaced,
                                                             Value replacement) {
   assert(!valueVectorReplacement.contains(replaced) &&
          "Vector replacement already registered");
-  assert(replacement.getType().isa<VectorType>() &&
+  assert(isa<VectorType>(replacement.getType()) &&
          "Expected vector type in vector replacement");
   valueVectorReplacement.map(replaced, replacement);
 }
@@ -883,7 +883,7 @@ void VectorizationState::registerValueScalarReplacementImpl(Value replaced,
                                                             Value replacement) {
   assert(!valueScalarReplacement.contains(replaced) &&
          "Scalar value replacement already registered");
-  assert(!replacement.getType().isa<VectorType>() &&
+  assert(!isa<VectorType>(replacement.getType()) &&
          "Expected scalar type in scalar replacement");
   valueScalarReplacement.map(replaced, replacement);
 }
@@ -946,7 +946,7 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
 /// strategy on the scalar type.
 static VectorType getVectorType(Type scalarTy,
                                 const VectorizationStrategy *strategy) {
-  assert(!scalarTy.isa<VectorType>() && "Expected scalar type");
+  assert(!isa<VectorType>(scalarTy) && "Expected scalar type");
   return VectorType::get(strategy->vectorSizes, scalarTy);
 }
 
@@ -1137,7 +1137,7 @@ static Value vectorizeOperand(Value operand, VectorizationState &state) {
   // An vector operand that is not in the replacement map should never reach
   // this point. Reaching this point could mean that the code was already
   // vectorized and we shouldn't try to vectorize already vectorized code.
-  assert(!operand.getType().isa<VectorType>() &&
+  assert(!isa<VectorType>(operand.getType()) &&
          "Vector op not found in replacement map");
 
   // Vectorize constant.

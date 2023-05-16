@@ -75,8 +75,7 @@ SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
   for (const auto &it : llvm::zip_equal(getBoundedValues(), getLowerBounds(),
                                         getUpperBounds())) {
     Value handle = std::get<0>(it);
-    ArrayRef<Operation *> boundedValueOps = state.getPayloadOps(handle);
-    for (Operation *op : boundedValueOps) {
+    for (Operation *op : state.getPayloadOps(handle)) {
       if (op->getNumResults() != 1 || !op->getResult(0).getType().isIndex()) {
         auto diag =
             emitDefiniteFailure()
@@ -104,8 +103,8 @@ SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
   }
 
   // Transform all targets.
-  ArrayRef<Operation *> targets = state.getPayloadOps(getTarget());
-  for (Operation *target : targets) {
+  SmallVector<Operation *> targets;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
     if (!isa<AffineMinOp, AffineMaxOp>(target)) {
       auto diag = emitDefiniteFailure()
                   << "target must be affine.min or affine.max";
@@ -118,6 +117,7 @@ SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
       diag.attachNote(target->getLoc()) << "target/constrained op";
       return diag;
     }
+    targets.push_back(target);
   }
   SmallVector<Operation *> transformed;
   RewritePatternSet patterns(getContext());

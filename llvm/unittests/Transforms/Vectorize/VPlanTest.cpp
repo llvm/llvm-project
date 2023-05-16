@@ -1006,10 +1006,14 @@ TEST(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
   Args.push_back(&Op1);
   Args.push_back(&Op2);
 
-  VPReplicateRecipe Recipe(nullptr, make_range(Args.begin(), Args.end()), true);
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  FunctionType *FTy = FunctionType::get(Int32, false);
+  auto *Call = CallInst::Create(FTy, UndefValue::get(FTy));
+  VPReplicateRecipe Recipe(Call, make_range(Args.begin(), Args.end()), true);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
+  delete Call;
 }
 
 TEST(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {

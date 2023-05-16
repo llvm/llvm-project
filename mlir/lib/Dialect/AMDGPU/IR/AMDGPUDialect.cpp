@@ -48,14 +48,15 @@ void AMDGPUDialect::initialize() {
 //===----------------------------------------------------------------------===//
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
-  MemRefType bufferType = op.getMemref().getType().template cast<MemRefType>();
+  MemRefType bufferType = llvm::cast<MemRefType>(op.getMemref().getType());
   Attribute memorySpace = bufferType.getMemorySpace();
   bool isGlobal = false;
   if (!memorySpace)
     isGlobal = true;
-  else if (auto intMemorySpace = memorySpace.dyn_cast<IntegerAttr>())
+  else if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
     isGlobal = intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  else if (auto gpuMemorySpace = memorySpace.dyn_cast<gpu::AddressSpaceAttr>())
+  else if (auto gpuMemorySpace =
+               llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     isGlobal = gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
 
   if (!isGlobal)
@@ -216,11 +217,11 @@ LogicalResult MFMAOp::verify() {
 
   Type sourceElem = sourceType, destElem = destType;
   uint32_t sourceLen = 1, destLen = 1;
-  if (auto sourceVector = sourceType.dyn_cast<VectorType>()) {
+  if (auto sourceVector = llvm::dyn_cast<VectorType>(sourceType)) {
     sourceLen = sourceVector.getNumElements();
     sourceElem = sourceVector.getElementType();
   }
-  if (auto destVector = destType.dyn_cast<VectorType>()) {
+  if (auto destVector = llvm::dyn_cast<VectorType>(destType)) {
     destLen = destVector.getNumElements();
     destElem = destVector.getElementType();
   }
@@ -229,7 +230,7 @@ LogicalResult MFMAOp::verify() {
   if (sourceElem.isFloat8E5M2FNUZ() || sourceElem.isFloat8E4M3FNUZ()) {
     int64_t sourceBLen = 1;
     Type sourceBElem = sourceBType;
-    if (auto sourceBVector = sourceBType.dyn_cast<VectorType>()) {
+    if (auto sourceBVector = llvm::dyn_cast<VectorType>(sourceBType)) {
       sourceBLen = sourceBVector.getNumElements();
       sourceBElem = sourceBVector.getElementType();
     }

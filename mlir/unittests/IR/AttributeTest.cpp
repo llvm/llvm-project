@@ -278,7 +278,7 @@ static void checkNativeAccess(MLIRContext *ctx, ArrayRef<T> data,
 
   // Check that we cast to this attribute when possible.
   Attribute genericAttr = attr;
-  EXPECT_TRUE(genericAttr.template isa<AttrT>());
+  EXPECT_TRUE(isa<AttrT>(genericAttr));
 }
 template <typename AttrT, typename T>
 static void checkNativeIntAccess(Builder &builder, size_t intWidth) {
@@ -330,9 +330,9 @@ TEST(DenseResourceElementsAttrTest, CheckNoCast) {
   Attribute i32ResourceAttr = DenseI32ResourceElementsAttr::get(
       type, "resource", UnmanagedAsmResourceBlob::allocateInferAlign(data));
 
-  EXPECT_TRUE(i32ResourceAttr.isa<DenseI32ResourceElementsAttr>());
-  EXPECT_FALSE(i32ResourceAttr.isa<DenseF32ResourceElementsAttr>());
-  EXPECT_FALSE(i32ResourceAttr.isa<DenseBoolResourceElementsAttr>());
+  EXPECT_TRUE(isa<DenseI32ResourceElementsAttr>(i32ResourceAttr));
+  EXPECT_FALSE(isa<DenseF32ResourceElementsAttr>(i32ResourceAttr));
+  EXPECT_FALSE(isa<DenseBoolResourceElementsAttr>(i32ResourceAttr));
 }
 
 TEST(DenseResourceElementsAttrTest, CheckInvalidData) {
@@ -407,17 +407,17 @@ TEST(SparseElementsAttrTest, GetZero) {
   // Only index (0, 0) contains an element, others are supposed to return
   // the zero/empty value.
   auto zeroIntValue =
-      sparseInt.getValues<Attribute>()[{1, 1}].cast<IntegerAttr>();
+      cast<IntegerAttr>(sparseInt.getValues<Attribute>()[{1, 1}]);
   EXPECT_EQ(zeroIntValue.getInt(), 0);
   EXPECT_TRUE(zeroIntValue.getType() == intTy);
 
   auto zeroFloatValue =
-      sparseFloat.getValues<Attribute>()[{1, 1}].cast<FloatAttr>();
+      cast<FloatAttr>(sparseFloat.getValues<Attribute>()[{1, 1}]);
   EXPECT_EQ(zeroFloatValue.getValueAsDouble(), 0.0f);
   EXPECT_TRUE(zeroFloatValue.getType() == floatTy);
 
   auto zeroStringValue =
-      sparseString.getValues<Attribute>()[{1, 1}].cast<StringAttr>();
+      cast<StringAttr>(sparseString.getValues<Attribute>()[{1, 1}]);
   EXPECT_TRUE(zeroStringValue.getValue().empty());
   EXPECT_TRUE(zeroStringValue.getType() == stringTy);
 }

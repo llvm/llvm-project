@@ -164,7 +164,7 @@ These instruction were tested with Visual Studio 2019 and Python 3.9.6:
    **RelWithDebInfo** which is also several time larger than Release.
    Another technique is to build all of LLVM in Release mode and change
    compiler flags, disabling optimization and enabling debug information, only
-   for specific librares or source files you actually need to debug.
+   for specific libraries or source files you actually need to debug.
 
 14. Test LLVM in Visual Studio:
 

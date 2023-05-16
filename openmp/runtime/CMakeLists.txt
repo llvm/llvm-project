@@ -342,6 +342,10 @@ if(LIBOMP_OMPD_SUPPORT AND ((NOT LIBOMP_OMPT_SUPPORT) OR (NOT "${CMAKE_SYSTEM_NA
   set(LIBOMP_OMPD_SUPPORT FALSE)
 endif()
 
+# OMPX Taskgraph support
+# Whether to build with OMPX Taskgraph (e.g. task record & replay)
+set(LIBOMP_OMPX_TASKGRAPH FALSE CACHE BOOL "OMPX-taskgraph (task record & replay)?")
+
 # Error check hwloc support after config-ix has run
 if(LIBOMP_USE_HWLOC AND (NOT LIBOMP_HAVE_HWLOC))
   libomp_error_say("Hwloc requested but not available")
@@ -411,6 +415,7 @@ if(${OPENMP_STANDALONE_BUILD})
   libomp_say("Use Adaptive locks   -- ${LIBOMP_USE_ADAPTIVE_LOCKS}")
   libomp_say("Use quad precision   -- ${LIBOMP_USE_QUAD_PRECISION}")
   libomp_say("Use Hwloc library    -- ${LIBOMP_USE_HWLOC}")
+  libomp_say("Use OMPX-taskgraph   -- ${LIBOMP_OMPX_TASKGRAPH}")
 endif()
 
 add_subdirectory(src)

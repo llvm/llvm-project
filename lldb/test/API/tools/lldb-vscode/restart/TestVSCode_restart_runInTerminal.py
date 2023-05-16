@@ -24,6 +24,7 @@ class TestVSCode_restart_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=["arm"]) # Always times out on buildbot
     def test_basic_functionality(self):
         '''
             Test basic restarting functionality when the process is running in
@@ -58,6 +59,7 @@ class TestVSCode_restart_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=["arm"]) # Always times out on buildbot
     def test_stopOnEntry(self):
         '''
             Check that stopOnEntry works correctly when using runInTerminal.

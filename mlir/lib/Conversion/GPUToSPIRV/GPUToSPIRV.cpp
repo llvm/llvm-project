@@ -495,9 +495,9 @@ static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
   Type type = arg.getType();
   using MembptrT = FuncT OpHandler::*;
   MembptrT handlerPtr;
-  if (type.isa<FloatType>()) {
+  if (isa<FloatType>(type)) {
     handlerPtr = &OpHandler::floatFunc;
-  } else if (type.isa<IntegerType>()) {
+  } else if (isa<IntegerType>(type)) {
     handlerPtr = &OpHandler::intFunc;
   } else {
     return std::nullopt;

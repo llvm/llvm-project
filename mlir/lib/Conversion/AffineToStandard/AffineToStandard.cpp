@@ -226,7 +226,7 @@ public:
       Type resultType = std::get<1>(pair);
       std::optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
-              static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
+              static_cast<uint64_t>(cast<IntegerAttr>(reduction).getInt()));
       assert(reductionOp && "Reduction operation cannot be of None Type");
       arith::AtomicRMWKind reductionOpValue = *reductionOp;
       identityVals.push_back(
@@ -246,7 +246,7 @@ public:
       // For each of the reduction operations get the respective mlir::Value.
       std::optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
-              reductions[i].cast<IntegerAttr>().getInt());
+              cast<IntegerAttr>(reductions[i]).getInt());
       assert(reductionOp && "Reduction Operation cannot be of None Type");
       arith::AtomicRMWKind reductionOpValue = *reductionOp;
       rewriter.setInsertionPoint(&parOp.getBody()->back());

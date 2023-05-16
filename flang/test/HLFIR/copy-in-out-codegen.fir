@@ -94,3 +94,36 @@ func.func @test_copy_out_copy_back(%box: !fir.box<!fir.array<?xf64>>, %temp: !fi
 // CHECK:      %[[VAL_11:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
 // CHECK:      fir.freemem %[[VAL_11]] : !fir.heap<!fir.array<?xf64>>
 // CHECK:    }
+
+func.func @test_copy_in_poly(%poly : !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>) {
+  %0:2 = hlfir.copy_in %poly : (!fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>) -> (!fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>, i1)
+  return
+}
+// CHECK-LABEL:   func.func @test_copy_in_poly(
+// CHECK-SAME:                                 %[[VAL_0:.*]]: !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>) {
+// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>
+// CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_0]] : (!fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>) -> !fir.box<none>
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAIsContiguous(%[[VAL_2]]) : (!fir.box<none>) -> i1
+// CHECK:           %[[VAL_4:.*]] = fir.if %[[VAL_3]] -> (!fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>) {
+// CHECK:             fir.result %[[VAL_0]] : !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>
+// CHECK:           } else {
+// CHECK:             %[[VAL_5:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>
+// CHECK:             %[[VAL_6:.*]] = arith.constant 0 : index
+// CHECK:             %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
+// CHECK:             %[[VAL_8:.*]] = fir.embox %[[VAL_5]](%[[VAL_7]]) : (!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>
+// CHECK:             fir.store %[[VAL_8]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>>
+// CHECK:             %[[VAL_9:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+// CHECK:             %[[VAL_10:.*]] = arith.constant {{.*}} : index
+// CHECK:             %[[VAL_11:.*]] = arith.constant {{.*}} : i32
+// CHECK:             %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:             %[[VAL_13:.*]] = fir.convert %[[VAL_0]] : (!fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>) -> !fir.box<none>
+// CHECK:             %[[VAL_14:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+// CHECK:             %[[VAL_15:.*]] = fir.call @_FortranAAssign(%[[VAL_12]], %[[VAL_13]], %[[VAL_14]], %[[VAL_11]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+// CHECK:             %[[VAL_16:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>>
+// CHECK:             %[[VAL_17:.*]] = fir.rebox %[[VAL_16]] : (!fir.box<!fir.heap<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>>) -> !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>
+// CHECK:             fir.result %[[VAL_17]] : !fir.class<!fir.array<?x!fir.type<test_copy_in_polyTt1{i:i32}>>>
+// CHECK:           }
+// CHECK:           %[[VAL_18:.*]] = arith.constant false
+// CHECK:           %[[VAL_19:.*]] = arith.cmpi eq, %[[VAL_3]], %[[VAL_18]] : i1
+// CHECK:           return
+// CHECK:         }

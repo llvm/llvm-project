@@ -173,9 +173,15 @@ static __hwasan::Thread *GetThreadByOsIDLocked(tid_t os_id) {
       [os_id](__hwasan::Thread *t) { return t->os_id() == os_id; });
 }
 
-void LockThreadRegistry() { __hwasan::hwasanThreadList().Lock(); }
+void LockThreadRegistry() {
+  __hwasan::hwasanThreadList().Lock();
+  __hwasan::hwasanThreadArgRetval().Lock();
+}
 
-void UnlockThreadRegistry() { __hwasan::hwasanThreadList().Unlock(); }
+void UnlockThreadRegistry() {
+  __hwasan::hwasanThreadArgRetval().Unlock();
+  __hwasan::hwasanThreadList().Unlock();
+}
 
 void EnsureMainThreadIDIsCorrect() { __hwasan::EnsureMainThreadIDIsCorrect(); }
 
@@ -202,7 +208,10 @@ void GetThreadExtraStackRangesLocked(tid_t os_id,
                                      InternalMmapVector<Range> *ranges) {}
 void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
-void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {}
+void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
+  __hwasan::hwasanThreadArgRetval().GetAllPtrsLocked(ptrs);
+}
+
 void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {}
 
 }  // namespace __lsan

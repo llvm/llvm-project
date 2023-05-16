@@ -233,9 +233,8 @@ define void @non_constant_vector_expansion(i32 %0, ptr %call) {
 ; STRIDED:       vector.scevcheck:
 ; STRIDED-NEXT:    br i1 true, label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[TMP2:%.*]] = sext i32 [[MUL]] to i64
-; STRIDED-NEXT:    [[TMP3:%.*]] = mul i64 4294967264, [[TMP2]]
-; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP3]]
+; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 4294967264, [[TMP1]]
+; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ null, [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]

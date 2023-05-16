@@ -260,7 +260,7 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
   if (!resultType)
     return {};
 
-  auto structType = resultType.dyn_cast<LLVM::LLVMStructType>();
+  auto structType = dyn_cast<LLVM::LLVMStructType>(resultType);
   if (structType) {
     // Struct types cannot be safely returned via C interface. Make this a
     // pointer argument, instead.
@@ -272,7 +272,7 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
     auto converted = convertType(t);
     if (!converted || !LLVM::isCompatibleType(converted))
       return {};
-    if (t.isa<MemRefType, UnrankedMemRefType>())
+    if (isa<MemRefType, UnrankedMemRefType>(t))
       converted = getPointerType(converted);
     inputs.push_back(converted);
   }
@@ -412,13 +412,13 @@ LLVMTypeConverter::getMemRefAddressSpace(BaseMemRefType type) {
 
 // Check if a memref type can be converted to a bare pointer.
 bool LLVMTypeConverter::canConvertToBarePtr(BaseMemRefType type) {
-  if (type.isa<UnrankedMemRefType>())
+  if (isa<UnrankedMemRefType>(type))
     // Unranked memref is not supported in the bare pointer calling convention.
     return false;
 
   // Check that the memref has static shape, strides and offset. Otherwise, it
   // cannot be lowered to a bare pointer.
-  auto memrefTy = type.cast<MemRefType>();
+  auto memrefTy = cast<MemRefType>(type);
   if (!memrefTy.hasStaticShape())
     return false;
 
@@ -476,7 +476,7 @@ Type LLVMTypeConverter::convertVectorType(VectorType type) {
 Type LLVMTypeConverter::convertCallingConventionType(Type type,
                                                      bool useBarePtrCallConv) {
   if (useBarePtrCallConv)
-    if (auto memrefTy = type.dyn_cast<BaseMemRefType>())
+    if (auto memrefTy = dyn_cast<BaseMemRefType>(type))
       return convertMemRefToBarePtr(memrefTy);
 
   return convertType(type);
@@ -491,7 +491,7 @@ void LLVMTypeConverter::promoteBarePtrsToDescriptors(
   assert(stdTypes.size() == values.size() &&
          "The number of types and values doesn't match");
   for (unsigned i = 0, end = values.size(); i < end; ++i)
-    if (auto memrefTy = stdTypes[i].dyn_cast<MemRefType>())
+    if (auto memrefTy = dyn_cast<MemRefType>(stdTypes[i]))
       values[i] = MemRefDescriptor::fromStaticShape(rewriter, loc, *this,
                                                     memrefTy, values[i]);
 }
@@ -569,19 +569,19 @@ LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
     if (useBarePtrCallConv) {
       // For the bare-ptr calling convention, we only have to extract the
       // aligned pointer of a memref.
-      if (auto memrefType = operand.getType().dyn_cast<MemRefType>()) {
+      if (auto memrefType = dyn_cast<MemRefType>(operand.getType())) {
         MemRefDescriptor desc(llvmOperand);
         llvmOperand = desc.alignedPtr(builder, loc);
-      } else if (operand.getType().isa<UnrankedMemRefType>()) {
+      } else if (isa<UnrankedMemRefType>(operand.getType())) {
         llvm_unreachable("Unranked memrefs are not supported");
       }
     } else {
-      if (operand.getType().isa<UnrankedMemRefType>()) {
+      if (isa<UnrankedMemRefType>(operand.getType())) {
         UnrankedMemRefDescriptor::unpack(builder, loc, llvmOperand,
                                          promotedOperands);
         continue;
       }
-      if (auto memrefType = operand.getType().dyn_cast<MemRefType>()) {
+      if (auto memrefType = dyn_cast<MemRefType>(operand.getType())) {
         MemRefDescriptor::unpack(builder, loc, llvmOperand, memrefType,
                                  promotedOperands);
         continue;
@@ -600,7 +600,7 @@ LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
 LogicalResult mlir::structFuncArgTypeConverter(LLVMTypeConverter &converter,
                                                Type type,
                                                SmallVectorImpl<Type> &result) {
-  if (auto memref = type.dyn_cast<MemRefType>()) {
+  if (auto memref = dyn_cast<MemRefType>(type)) {
     // In signatures, Memref descriptors are expanded into lists of
     // non-aggregate values.
     auto converted =
@@ -610,7 +610,7 @@ LogicalResult mlir::structFuncArgTypeConverter(LLVMTypeConverter &converter,
     result.append(converted.begin(), converted.end());
     return success();
   }
-  if (type.isa<UnrankedMemRefType>()) {
+  if (isa<UnrankedMemRefType>(type)) {
     auto converted = converter.getUnrankedMemRefDescriptorFields();
     if (converted.empty())
       return failure();

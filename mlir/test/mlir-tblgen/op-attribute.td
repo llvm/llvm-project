@@ -310,18 +310,18 @@ def BOp : NS_Op<"b_op", []> {
 
 // DEF-LABEL: BOpAdaptor::verify
 // DEF: if (tblgen_any_attr && !((true)))
-// DEF: if (tblgen_bool_attr && !((tblgen_bool_attr.isa<::mlir::BoolAttr>())))
-// DEF: if (tblgen_i32_attr && !(((tblgen_i32_attr.isa<::mlir::IntegerAttr>())) && ((tblgen_i32_attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(32)))))
-// DEF: if (tblgen_i64_attr && !(((tblgen_i64_attr.isa<::mlir::IntegerAttr>())) && ((tblgen_i64_attr.cast<::mlir::IntegerAttr>().getType().isSignlessInteger(64)))))
-// DEF: if (tblgen_f32_attr && !(((tblgen_f32_attr.isa<::mlir::FloatAttr>())) && ((tblgen_f32_attr.cast<::mlir::FloatAttr>().getType().isF32()))))
-// DEF: if (tblgen_f64_attr && !(((tblgen_f64_attr.isa<::mlir::FloatAttr>())) && ((tblgen_f64_attr.cast<::mlir::FloatAttr>().getType().isF64()))))
-// DEF: if (tblgen_str_attr && !((tblgen_str_attr.isa<::mlir::StringAttr>())))
-// DEF: if (tblgen_elements_attr && !((tblgen_elements_attr.isa<::mlir::ElementsAttr>())))
-// DEF: if (tblgen_function_attr && !((tblgen_function_attr.isa<::mlir::FlatSymbolRefAttr>())))
-// DEF: if (tblgen_some_type_attr && !(((tblgen_some_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_some_type_attr.cast<::mlir::TypeAttr>().getValue().isa<SomeType>())) && ((true))))
-// DEF: if (tblgen_array_attr && !((tblgen_array_attr.isa<::mlir::ArrayAttr>())))
-// DEF: if (tblgen_some_attr_array && !(((tblgen_some_attr_array.isa<::mlir::ArrayAttr>())) && (::llvm::all_of(tblgen_some_attr_array.cast<::mlir::ArrayAttr>(), [&](::mlir::Attribute attr) { return attr && ((some-condition)); }))))
-// DEF: if (tblgen_type_attr && !(((tblgen_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_type_attr.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>())) && ((true))))
+// DEF: if (tblgen_bool_attr && !((::llvm::isa<::mlir::BoolAttr>(tblgen_bool_attr))))
+// DEF: if (tblgen_i32_attr && !(((::llvm::isa<::mlir::IntegerAttr>(tblgen_i32_attr))) && ((::llvm::cast<::mlir::IntegerAttr>(tblgen_i32_attr).getType().isSignlessInteger(32)))))
+// DEF: if (tblgen_i64_attr && !(((::llvm::isa<::mlir::IntegerAttr>(tblgen_i64_attr))) && ((::llvm::cast<::mlir::IntegerAttr>(tblgen_i64_attr).getType().isSignlessInteger(64)))))
+// DEF: if (tblgen_f32_attr && !(((::llvm::isa<::mlir::FloatAttr>(tblgen_f32_attr))) && ((::llvm::cast<::mlir::FloatAttr>(tblgen_f32_attr).getType().isF32()))))
+// DEF: if (tblgen_f64_attr && !(((::llvm::isa<::mlir::FloatAttr>(tblgen_f64_attr))) && ((::llvm::cast<::mlir::FloatAttr>(tblgen_f64_attr).getType().isF64()))))
+// DEF: if (tblgen_str_attr && !((::llvm::isa<::mlir::StringAttr>(tblgen_str_attr))))
+// DEF: if (tblgen_elements_attr && !((::llvm::isa<::mlir::ElementsAttr>(tblgen_elements_attr))))
+// DEF: if (tblgen_function_attr && !((::llvm::isa<::mlir::FlatSymbolRefAttr>(tblgen_function_attr))))
+// DEF: if (tblgen_some_type_attr && !(((::llvm::isa<::mlir::TypeAttr>(tblgen_some_type_attr))) && ((::llvm::isa<SomeType>(::llvm::cast<::mlir::TypeAttr>(tblgen_some_type_attr).getValue()))) && ((true))))
+// DEF: if (tblgen_array_attr && !((::llvm::isa<::mlir::ArrayAttr>(tblgen_array_attr))))
+// DEF: if (tblgen_some_attr_array && !(((::llvm::isa<::mlir::ArrayAttr>(tblgen_some_attr_array))) && (::llvm::all_of(::llvm::cast<::mlir::ArrayAttr>(tblgen_some_attr_array), [&](::mlir::Attribute attr) { return attr && ((some-condition)); }))))
+// DEF: if (tblgen_type_attr && !(((::llvm::isa<::mlir::TypeAttr>(tblgen_type_attr))) && ((::llvm::isa<::mlir::Type>(::llvm::cast<::mlir::TypeAttr>(tblgen_type_attr).getValue()))) && ((true))))
 
 // Test common attribute kind getters' return types
 // ---

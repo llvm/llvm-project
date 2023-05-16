@@ -233,8 +233,15 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   const bool scalar_is_load_addr = true;
   AddressType addr_type;
-  lldb::addr_t addr_of_string =
-      valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
+  lldb::addr_t addr_of_string = LLDB_INVALID_ADDRESS;
+  if (valobj.IsPointerOrReferenceType()) {
+    Status error;
+    ValueObjectSP pointee_sp = valobj.Dereference(error);
+    if (pointee_sp && error.Success())
+      addr_of_string = pointee_sp->GetAddressOf(scalar_is_load_addr, &addr_type);
+  } else
+    addr_of_string =
+        valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
   if (addr_of_string != LLDB_INVALID_ADDRESS) {
     switch (addr_type) {
     case eAddressTypeLoad: {

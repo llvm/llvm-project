@@ -53,7 +53,7 @@ bool ElementsAttr::isValidIndex(ElementsAttr elementsAttr,
 }
 
 uint64_t ElementsAttr::getFlattenedIndex(Type type, ArrayRef<uint64_t> index) {
-  ShapedType shapeType = type.cast<ShapedType>();
+  ShapedType shapeType = llvm::cast<ShapedType>(type);
   assert(isValidIndex(shapeType, index) &&
          "expected valid multi-dimensional index");
 

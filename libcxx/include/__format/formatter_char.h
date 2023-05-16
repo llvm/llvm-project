@@ -33,14 +33,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS __formatter_char {
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr auto
-  parse(basic_format_parse_context<_CharT>& __parse_ctx) -> decltype(__parse_ctx.begin()) {
-    auto __result = __parser_.__parse(__parse_ctx, __format_spec::__fields_integral);
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_integral);
     __format_spec::__process_parsed_char(__parser_);
     return __result;
   }
 
-  _LIBCPP_HIDE_FROM_ABI auto format(_CharT __value, auto& __ctx) const -> decltype(__ctx.out()) {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(_CharT __value, _FormatContext& __ctx) const {
     if (__parser_.__type_ == __format_spec::__type::__default || __parser_.__type_ == __format_spec::__type::__char)
       return __formatter::__format_char(__value, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
 
@@ -60,7 +61,8 @@ public:
       return __formatter::__format_integer(__value, __ctx, __parser_.__get_parsed_std_specifications(__ctx));
   }
 
-  _LIBCPP_HIDE_FROM_ABI auto format(char __value, auto& __ctx) const -> decltype(__ctx.out())
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(char __value, _FormatContext& __ctx) const
     requires(same_as<_CharT, wchar_t>)
   {
     return format(static_cast<wchar_t>(__value), __ctx);

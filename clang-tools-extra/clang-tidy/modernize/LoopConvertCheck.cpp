@@ -453,10 +453,6 @@ static bool containerIsConst(const Expr *ContainerExpr, bool Dereference) {
   return false;
 }
 
-LoopConvertCheck::RangeDescriptor::RangeDescriptor()
-    : ContainerNeedsDereference(false), DerefByConstRef(false),
-      DerefByValue(false), NeedsReverseCall(false) {}
-
 LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), TUInfo(new TUTrackingInfo),
       MaxCopySize(Options.get("MaxCopySize", 16ULL)),

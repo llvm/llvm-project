@@ -28,7 +28,7 @@ static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
   // TODO: The conversion pattern can be made to work for `any_of` here, but
   // it's more complex as it requires tracking which operands are scalars.
   return llvm::all_of(op->getOperandTypes(),
-                      [](Type type) { return type.isa<RankedTensorType>(); });
+                      [](Type type) { return isa<RankedTensorType>(type); });
 }
 
 /// Given `op` assumed `isElementwiseMappableOpOnRankedTensors`, iterate over
@@ -67,7 +67,7 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
 
     // Extract static / dynamic shape mix from the first operand.
     Value firstOperand = operands.front();
-    auto rankedTensorType = t.cast<RankedTensorType>();
+    auto rankedTensorType = cast<RankedTensorType>(t);
     auto staticShape = llvm::to_vector<4>(rankedTensorType.getShape());
     auto dynamicShape = linalg::createDynamicDimensions(b, loc, firstOperand);
 
@@ -87,7 +87,7 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
       return rewriter.notifyMatchFailure(
           op, "requires elementwise op on ranked tensors");
 
-    auto rank = op->getResult(0).getType().cast<RankedTensorType>().getRank();
+    auto rank = cast<RankedTensorType>(op->getResult(0).getType()).getRank();
     SmallVector<AffineMap, 3> indexingMaps(
         op->getNumResults() + op->getNumOperands(),
         rewriter.getMultiDimIdentityMap(rank));
@@ -104,7 +104,7 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
         [&](OpBuilder &builder, Location loc, ValueRange regionArgs) {
           auto resultTypes = llvm::to_vector<6>(
               llvm::map_range(op->getResultTypes(), [](Type type) {
-                return type.cast<TensorType>().getElementType();
+                return cast<TensorType>(type).getElementType();
               }));
           auto *scalarOp =
               builder.create(loc, op->getName().getIdentifier(),

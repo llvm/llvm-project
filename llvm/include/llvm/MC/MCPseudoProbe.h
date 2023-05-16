@@ -30,12 +30,15 @@
 //            0 - block probe, 1 - indirect call, 2 - direct call
 //          ATTRIBUTE (uint3)
 //            1 - reserved
+//            2 - Sentinel
+//            4 - HasDiscriminator
 //          ADDRESS_TYPE (uint1)
 //            0 - code address for regular probes (for downwards compatibility)
 //              - GUID of linkage name for sentinel probes
 //            1 - address delta
 //          CODE_ADDRESS (uint64 or ULEB128)
 //            code address or address delta, depending on ADDRESS_TYPE
+//          DISCRIMINATOR (ULEB128) if HasDiscriminator
 //    INLINED FUNCTION RECORDS
 //        A list of NUM_INLINED_FUNCTIONS entries describing each of the inlined
 //        callees.  Each record contains:
@@ -108,6 +111,7 @@ class MCPseudoProbeBase {
 protected:
   uint64_t Guid;
   uint64_t Index;
+  uint32_t Discriminator;
   uint8_t Attributes;
   uint8_t Type;
   // The value should be equal to PseudoProbeReservedId::Last + 1 which is
@@ -116,14 +120,16 @@ protected:
   const static uint32_t PseudoProbeFirstId = 1;
 
 public:
-  MCPseudoProbeBase(uint64_t G, uint64_t I, uint64_t At, uint8_t T)
-      : Guid(G), Index(I), Attributes(At), Type(T) {}
+  MCPseudoProbeBase(uint64_t G, uint64_t I, uint64_t At, uint8_t T, uint32_t D)
+      : Guid(G), Index(I), Discriminator(D), Attributes(At), Type(T) {}
 
   bool isEntry() const { return Index == PseudoProbeFirstId; }
 
   uint64_t getGuid() const { return Guid; }
 
   uint64_t getIndex() const { return Index; }
+
+  uint32_t getDiscriminator() const { return Discriminator; }
 
   uint8_t getAttributes() const { return Attributes; }
 
@@ -155,8 +161,9 @@ class MCPseudoProbe : public MCPseudoProbeBase {
 
 public:
   MCPseudoProbe(MCSymbol *Label, uint64_t Guid, uint64_t Index, uint64_t Type,
-                uint64_t Attributes)
-      : MCPseudoProbeBase(Guid, Index, Attributes, Type), Label(Label) {
+                uint64_t Attributes, uint32_t Discriminator)
+      : MCPseudoProbeBase(Guid, Index, Attributes, Type, Discriminator),
+        Label(Label) {
     assert(Type <= 0xFF && "Probe type too big to encode, exceeding 2^8");
     assert(Attributes <= 0xFF &&
            "Probe attributes too big to encode, exceeding 2^16");
@@ -175,8 +182,9 @@ class MCDecodedPseudoProbe : public MCPseudoProbeBase {
 
 public:
   MCDecodedPseudoProbe(uint64_t Ad, uint64_t G, uint32_t I, PseudoProbeType K,
-                       uint8_t At, MCDecodedPseudoProbeInlineTree *Tree)
-      : MCPseudoProbeBase(G, I, At, static_cast<uint8_t>(K)), Address(Ad),
+                       uint8_t At, uint32_t D,
+                       MCDecodedPseudoProbeInlineTree *Tree)
+      : MCPseudoProbeBase(G, I, At, static_cast<uint8_t>(K), D), Address(Ad),
         InlineTree(Tree){};
 
   uint64_t getAddress() const { return Address; }

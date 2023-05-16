@@ -1152,7 +1152,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
                  Optional<GPU_AsyncToken>:$asyncToken);
 
   let extraClassDeclaration = [{
-    MemRefType getType() { return getMemref().getType().cast<MemRefType>(); }
+    MemRefType getType() { return ::llvm::cast<MemRefType>(getMemref().getType()); }
   }];
 
   let assemblyFormat = [{
@@ -1415,7 +1415,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
     [Pure,
      TypesMatchWith<"value type matches element type of mma_matrix",
                     "res", "value",
-                    "$_self.cast<gpu::MMAMatrixType>().getElementType()">]>{
+                    "::llvm::cast<gpu::MMAMatrixType>($_self).getElementType()">]>{
 
   let summary = "GPU warp synchronous constant matrix";
 
@@ -1447,7 +1447,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
 
   let extraClassDeclaration = [{
     gpu::MMAMatrixType getType() {
-      return getRes().getType().cast<gpu::MMAMatrixType>();
+      return ::llvm::cast<gpu::MMAMatrixType>(getRes().getType());
     }
   }];
 
@@ -1524,12 +1524,291 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
 
   let extraClassDeclaration = [{
     gpu::MMAMatrixType getType() {
-      return getRes().getType().cast<gpu::MMAMatrixType>();
+      return ::llvm::cast<gpu::MMAMatrixType>(getRes().getType());
     }
   }];
 
   let assemblyFormat = [{
     $opType $args attr-dict `:` functional-type($args, $res)
+  }];
+}
+
+//
+// Operation on sparse matrices, called from the host
+// (currently lowers to cuSparse for CUDA only, no ROCM lowering).
+//
+
+def GPU_CreateSparseEnvOp : GPU_Op<"create_sparse_env", [GPU_AsyncOpInterface]> {
+  let summary = "Create sparse environment operation";
+  let description = [{
+    The `gpu.create_sparse_env` operation initializes a sparse environment.
+    It must be executed prior to any other sparse operation. The operation
+    returns a handle to the new sparse environment.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %env, %token = gpu.create_sparse_env async [%dep]
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies);
+  let results = (outs Res<GPU_SparseHandle>:$env, Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) attr-dict
+  }];
+}
+
+def GPU_DestroySparseEnvOp : GPU_Op<"destroy_sparse_env", [GPU_AsyncOpInterface]> {
+  let summary = "Destroy sparse environment operation";
+  let description = [{
+    The `gpu.destroy_sparse_env` operation releases all resources of a sparse
+    environment represented by a handle that was previously created by a
+    `gpu.create_sparse_env` operation.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %token = gpu.destroy_sparse_env async [%dep] %env
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Arg<GPU_SparseHandle>:$env);
+  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) $env attr-dict
+  }];
+}
+
+def GPU_CreateDnVecOp : GPU_Op<"create_dn_vec", [GPU_AsyncOpInterface]> {
+  let summary = "Create dense vector operation";
+  let description = [{
+    The `gpu.create_dn_vec` operation initializes a dense vector from
+    the given values buffer and size. The buffer must already be copied
+    from the host to the device prior to using this operation. The
+    operation returns a handle to the dense vector descriptor.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %dvec, %token = gpu.create_dn_vec async [%dep] %mem, %size : memref<?xf64>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   AnyMemRef:$memref, Index:$size);
+  let results = (outs Res<GPU_SparseHandle>:$dvec, Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $memref `,` $size attr-dict `:` type($memref)
+  }];
+}
+
+def GPU_DestroyDnVecOp : GPU_Op<"destroy_dn_vec", [GPU_AsyncOpInterface]> {
+  let summary = "Destroy dense vector operation";
+  let description = [{
+    The `gpu.destroy_sparse_env` operation releases all resources of a dense
+    vector represented by a handle that was previously created by a
+    `gpu.create_dn_vec` operation.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %token = gpu.destroy_dn_vec async [%dep] %dvec
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Arg<GPU_SparseHandle>:$dvec);
+  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) $dvec attr-dict
+  }];
+}
+
+def GPU_CreateCooOp : GPU_Op<"create_coo", [GPU_AsyncOpInterface]> {
+  let summary = "Create sparse matrix in COO format operation";
+  let description = [{
+    The `gpu.create_coo` operation initializes a sparse matrix in COO format
+    with the given sizes from the given index and values buffers. The buffers
+    must already be copied from the host to the device prior to using this
+    operation. The operation returns a handle to the sparse matrix descriptor.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %spmat, %token = gpu.create_coo async [%dep] %rows, %cols, %nnz, %rowIdx,
+        %colIdx, %values : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Index:$rows,
+                   Index:$cols,
+                   Index:$nnz,
+                   AnyMemRef:$rowIdxs,
+                   AnyMemRef:$colIdxs,
+                   AnyMemRef:$values);
+  let results = (outs Res<GPU_SparseHandle>:$spmat, Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $rows `,` $cols `,` $nnz `,` $rowIdxs `,` $colIdxs `,` $values attr-dict
+    `:` type($rowIdxs) `,` type($colIdxs) `,` type($values)
+  }];
+}
+
+def GPU_CreateCsrOp : GPU_Op<"create_csr", [GPU_AsyncOpInterface]> {
+  let summary = "Create sparse matrix in CSR format operation";
+  let description = [{
+    The `gpu.create_csr` operation initializes a sparse matrix in CSR format
+    with the given sizes from the given position, index, and values buffers.
+    The buffers must already be copied from the host to the device prior to
+    using this operation. The operation returns a handle to the sparse
+    matrix descriptor.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %spmat, %token = gpu.create_csr async [%dep] %rows, %cols, %nnz, %rowPos,
+        %colIdx, %values : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Index:$rows,
+                   Index:$cols,
+                   Index:$nnz,
+                   AnyMemRef:$rowPos,
+                   AnyMemRef:$colIdxs,
+                   AnyMemRef:$values);
+  let results = (outs Res<GPU_SparseHandle>:$spmat, Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $rows `,` $cols `,` $nnz `,` $rowPos `,` $colIdxs `,` $values attr-dict
+    `:` type($rowPos) `,` type($colIdxs) `,` type($values)
+  }];
+}
+
+def GPU_DestroySpMatOp : GPU_Op<"destroy_sp_mat", [GPU_AsyncOpInterface]> {
+  let summary = "Destroy sparse matrix operation";
+  let description = [{
+    The `gpu.destroy_sp_mat` operation releases all resources of a sparse
+    matrix represented by a handle that was previously created by a
+    one of the sparse matrix creation operations.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %token = gpu.destroy_sp_mat async [%dep] %spmat
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Arg<GPU_SparseHandle>:$spmat);
+  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) $spmat attr-dict
+  }];
+}
+
+def GPU_SpMVBufferSizeOp : GPU_Op<"spmv_buffer_size", [GPU_AsyncOpInterface]> {
+  let summary = "Precompute buffersize for SpMV operation";
+  let description = [{
+    The `gpu.spmv_buffer_size` operation returns the buffer size required
+    to perform the SpMV operation on the given sparse matrix and dense vectors.
+    The operation expects handles returned by previous sparse operations
+    to construct an environment and the operands for SpMV.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %buffersz, %token = gpu.spmv_buffersize async [%dep] %env, %spmatA, %dnX, %dnY
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   GPU_SparseHandle:$env,
+                   GPU_SparseHandle:$spmatA,
+                   GPU_SparseHandle:$dnX,
+                   GPU_SparseHandle:$dnY);
+  let results = (outs Res<Index>:$bufferSz, Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $env `,` $spmatA `,` $dnX `,` $dnY attr-dict
+  }];
+}
+
+def GPU_SpMVOp : GPU_Op<"spmv", [GPU_AsyncOpInterface]> {
+  let summary = "SpMV operation";
+  let description = [{
+    The `gpu.spmv` operation performs the SpMV operation on the given sparse matrix,
+    dense vectors, and buffer.  The operation expects handles returned by previous
+    sparse operations to construct an environment and the operands for SpMV. The
+    buffer must have been allocated on the device.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %token = gpu.spmv async [%dep] %env, %spmatA, %dnX, %dnY : memref<?xf64>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   GPU_SparseHandle:$env,
+                   GPU_SparseHandle:$spmatA,
+                   GPU_SparseHandle:$dnX,
+                   GPU_SparseHandle:$dnY,
+                   AnyMemRef:$buffer);
+  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $env `,` $spmatA `,` $dnX `,` $dnY `,` $buffer attr-dict `:` type($buffer)
   }];
 }
 

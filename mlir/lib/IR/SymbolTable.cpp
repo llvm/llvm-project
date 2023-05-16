@@ -459,7 +459,7 @@ LogicalResult detail::verifySymbol(Operation *op) {
 
   // Verify the visibility attribute.
   if (Attribute vis = op->getAttr(mlir::SymbolTable::getVisibilityAttrName())) {
-    StringAttr visStrAttr = vis.dyn_cast<StringAttr>();
+    StringAttr visStrAttr = llvm::dyn_cast<StringAttr>(vis);
     if (!visStrAttr)
       return op->emitOpError() << "requires visibility attribute '"
                                << mlir::SymbolTable::getVisibilityAttrName()
@@ -669,7 +669,7 @@ static bool isReferencePrefixOf(SymbolRefAttr subRef, SymbolRefAttr ref) {
 
   // If the references are not pointer equal, check to see if `subRef` is a
   // prefix of `ref`.
-  if (ref.isa<FlatSymbolRefAttr>() ||
+  if (llvm::isa<FlatSymbolRefAttr>(ref) ||
       ref.getRootReference() != subRef.getRootReference())
     return false;
 
@@ -789,7 +789,7 @@ bool SymbolTable::symbolKnownUseEmpty(Operation *symbol, Region *from) {
 /// Generates a new symbol reference attribute with a new leaf reference.
 static SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,
                                         FlatSymbolRefAttr newLeafAttr) {
-  if (oldAttr.isa<FlatSymbolRefAttr>())
+  if (llvm::isa<FlatSymbolRefAttr>(oldAttr))
     return newLeafAttr;
   auto nestedRefs = llvm::to_vector<2>(oldAttr.getNestedReferences());
   nestedRefs.back() = newLeafAttr;

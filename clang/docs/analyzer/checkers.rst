@@ -2317,7 +2317,7 @@ Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
 
 ENV31-C:
 Rule is about the possible problem with `main` function's third argument, environment pointer,
-"envp". When enviornment array is modified using some modification function
+"envp". When environment array is modified using some modification function
 such as putenv, setenv or others, It may happen that memory is reallocated,
 however "envp" is not updated to reflect the changes and points to old memory
 region.

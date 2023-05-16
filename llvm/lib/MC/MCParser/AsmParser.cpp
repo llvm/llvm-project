@@ -5853,24 +5853,23 @@ bool AsmParser::parseDirectivePseudoProbe() {
   int64_t Index;
   int64_t Type;
   int64_t Attr;
+  int64_t Discriminator = 0;
 
-  if (getLexer().is(AsmToken::Integer)) {
-    if (parseIntToken(Guid, "unexpected token in '.pseudoprobe' directive"))
-      return true;
-  }
+  if (parseIntToken(Guid, "unexpected token in '.pseudoprobe' directive"))
+    return true;
 
-  if (getLexer().is(AsmToken::Integer)) {
-    if (parseIntToken(Index, "unexpected token in '.pseudoprobe' directive"))
-      return true;
-  }
+  if (parseIntToken(Index, "unexpected token in '.pseudoprobe' directive"))
+    return true;
 
-  if (getLexer().is(AsmToken::Integer)) {
-    if (parseIntToken(Type, "unexpected token in '.pseudoprobe' directive"))
-      return true;
-  }
+  if (parseIntToken(Type, "unexpected token in '.pseudoprobe' directive"))
+    return true;
 
-  if (getLexer().is(AsmToken::Integer)) {
-    if (parseIntToken(Attr, "unexpected token in '.pseudoprobe' directive"))
+  if (parseIntToken(Attr, "unexpected token in '.pseudoprobe' directive"))
+    return true;
+
+  if (hasDiscriminator(Attr)) {
+    if (parseIntToken(Discriminator,
+                      "unexpected token in '.pseudoprobe' directive"))
       return true;
   }
 
@@ -5912,7 +5911,8 @@ bool AsmParser::parseDirectivePseudoProbe() {
   if (parseEOL())
     return true;
 
-  getStreamer().emitPseudoProbe(Guid, Index, Type, Attr, InlineStack, FnSym);
+  getStreamer().emitPseudoProbe(Guid, Index, Type, Attr, Discriminator,
+                                InlineStack, FnSym);
   return false;
 }
 

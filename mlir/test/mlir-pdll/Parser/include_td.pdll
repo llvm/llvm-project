@@ -21,7 +21,7 @@
 // CHECK-NEXT:   Operands { operands : Variadic<I64> }
 // CHECK-NEXT:   Results { results : Variadic<I64> }
 // CHECK-NEXT: }
-  
+
 // CHECK:      AttributeConstraint `I64Attr` {
 // CHECK-NEXT:   Summary: 64-bit signless integer attribute
 // CHECK-NEXT:   CppClass: ::mlir::IntegerAttr
@@ -32,13 +32,13 @@
 // CHECK-NEXT:   CppClass: ::mlir::IntegerType
 // CHECK-NEXT: }
 
-// CHECK: UserConstraintDecl {{.*}} Name<TestAttrInterface> ResultType<Tuple<>> Code<return ::mlir::success((self.isa<TestAttrInterface>()));>
+// CHECK: UserConstraintDecl {{.*}} Name<TestAttrInterface> ResultType<Tuple<>> Code<return ::mlir::success((::llvm::isa<TestAttrInterface>(self)));>
 // CHECK:  `Inputs`
 // CHECK:    `-VariableDecl {{.*}} Name<self> Type<Attr>
 // CHECK:      `Constraints`
 // CHECK:        `-AttrConstraintDecl
 
-// CHECK: UserConstraintDecl {{.*}} Name<TestTypeInterface> ResultType<Tuple<>> Code<return ::mlir::success((self.isa<TestTypeInterface>()));>
+// CHECK: UserConstraintDecl {{.*}} Name<TestTypeInterface> ResultType<Tuple<>> Code<return ::mlir::success((::llvm::isa<TestTypeInterface>(self)));>
 // CHECK:  `Inputs`
 // CHECK:    `-VariableDecl {{.*}} Name<self> Type<Type>
 // CHECK:      `Constraints`

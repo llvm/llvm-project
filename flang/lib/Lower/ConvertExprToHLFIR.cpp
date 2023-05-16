@@ -948,7 +948,22 @@ GENBIN(Multiply, Real, mlir::arith::MulFOp)
 GENBIN(Multiply, Complex, fir::MulcOp)
 GENBIN(Divide, Integer, mlir::arith::DivSIOp)
 GENBIN(Divide, Real, mlir::arith::DivFOp)
-GENBIN(Divide, Complex, fir::DivcOp)
+
+template <int KIND>
+struct BinaryOp<Fortran::evaluate::Divide<
+    Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>> {
+  using Op = Fortran::evaluate::Divide<
+      Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex, KIND>>;
+  static hlfir::EntityWithAttributes gen(mlir::Location loc,
+                                         fir::FirOpBuilder &builder, const Op &,
+                                         hlfir::Entity lhs, hlfir::Entity rhs) {
+    mlir::Type ty = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Complex, KIND,
+        /*params=*/std::nullopt);
+    return hlfir::EntityWithAttributes{
+        fir::genDivC(builder, loc, ty, lhs, rhs)};
+  }
+};
 
 template <Fortran::common::TypeCategory TC, int KIND>
 struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {

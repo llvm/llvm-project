@@ -532,6 +532,7 @@ namespace std
 #include <__type_traits/result_of.h>
 #include <__type_traits/type_identity.h>
 #include <__type_traits/underlying_type.h>
+#include <__type_traits/unwrap_ref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <cstddef>

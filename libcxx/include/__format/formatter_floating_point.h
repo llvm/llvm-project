@@ -608,10 +608,9 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_floating_point_non_finite(
   return __formatter::__write(__buffer, __last, _VSTD::move(__out_it), __specs);
 }
 
-template <floating_point _Tp, class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__format_floating_point(_Tp __value, auto& __ctx, __format_spec::__parsed_specifications<_CharT> __specs)
-    -> decltype(__ctx.out()) {
+template <floating_point _Tp, class _CharT, class _FormatContext>
+_LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+__format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__parsed_specifications<_CharT> __specs) {
   bool __negative = _VSTD::signbit(__value);
 
   if (!_VSTD::isfinite(__value)) [[unlikely]]
@@ -728,15 +727,15 @@ __format_floating_point(_Tp __value, auto& __ctx, __format_spec::__parsed_specif
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS __formatter_floating_point {
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr auto
-  parse(basic_format_parse_context<_CharT>& __parse_ctx) -> decltype(__parse_ctx.begin()) {
-    auto __result = __parser_.__parse(__parse_ctx, __format_spec::__fields_floating_point);
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_floating_point);
     __format_spec::__process_parsed_floating_point(__parser_);
     return __result;
   }
 
-  template <floating_point _Tp>
-  _LIBCPP_HIDE_FROM_ABI auto format(_Tp __value, auto& __ctx) const -> decltype(__ctx.out()) {
+  template <floating_point _Tp, class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(_Tp __value, _FormatContext& __ctx) const {
     return __formatter::__format_floating_point(__value, __ctx, __parser_.__get_parsed_std_specifications(__ctx));
   }
 

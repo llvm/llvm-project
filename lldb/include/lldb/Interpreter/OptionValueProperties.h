@@ -63,9 +63,6 @@ public:
 
   void Initialize(const PropertyDefinitions &setting_definitions);
 
-  //    bool
-  //    GetQualifiedName (Stream &strm);
-
   // Subclass specific functions
 
   // Get the index of a property given its exact name in this property

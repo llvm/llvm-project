@@ -307,7 +307,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == this->getOperation());
         if (auto shapedType =
-              opOperand->get().getType().template dyn_cast<ShapedType>())
+              ::llvm::dyn_cast<ShapedType>(opOperand->get().getType()))
           return shapedType.getRank();
         return 0;
       }]
@@ -359,7 +359,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == this->getOperation());
         if (auto shapedType =
-              opOperand->get().getType().template dyn_cast<ShapedType>())
+              ::llvm::dyn_cast<ShapedType>(opOperand->get().getType()))
           return shapedType.getShape();
         return {};
       }]
@@ -884,8 +884,8 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
 
     private:
     void setOperandSegmentAt(unsigned idx, unsigned val) {
-      auto attr = (*this)->getAttr("operand_segment_sizes")
-        .cast<DenseIntElementsAttr>();
+      auto attr = ::llvm::cast<DenseIntElementsAttr>(
+                      (*this)->getAttr("operand_segment_sizes"));
       unsigned i = 0;
       auto newAttr = attr.mapValues(IntegerType::get(getContext(), 32),
         [&](const APInt &v) { return (i++ == idx) ? APInt(32, val) : v; });

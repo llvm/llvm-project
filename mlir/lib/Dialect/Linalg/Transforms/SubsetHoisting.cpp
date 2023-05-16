@@ -65,7 +65,7 @@ static FailureOr<tensor::ExtractSliceOp>
 findHoistableMatchingExtractSlice(RewriterBase &rewriter,
                                   tensor::InsertSliceOp insertSliceOp,
                                   BlockArgument srcTensor) {
-  assert(srcTensor.getType().isa<RankedTensorType>() && "not a ranked tensor");
+  assert(isa<RankedTensorType>(srcTensor.getType()) && "not a ranked tensor");
 
   auto forOp = cast<scf::ForOp>(srcTensor.getOwner()->getParentOp());
 
@@ -92,7 +92,7 @@ findHoistableMatchingExtractSlice(RewriterBase &rewriter,
 
       // Skip insert_slice whose vector is defined within the loop: we need to
       // hoist that definition first otherwise dominance violations trigger.
-      if (!extractSliceOp.getSource().isa<BlockArgument>() &&
+      if (!isa<BlockArgument>(extractSliceOp.getSource()) &&
           !forOp.isDefinedOutsideOfLoop(extractSliceOp.getSource())) {
         LLVM_DEBUG(DBGS() << "------transfer_read vector is loop-dependent\n");
         continue;
@@ -119,7 +119,7 @@ static FailureOr<vector::TransferReadOp>
 findHoistableMatchingTransferRead(RewriterBase &rewriter,
                                   vector::TransferWriteOp transferWriteOp,
                                   BlockArgument srcTensor) {
-  if (!srcTensor.getType().isa<RankedTensorType>())
+  if (!isa<RankedTensorType>(srcTensor.getType()))
     return failure();
 
   auto forOp = cast<scf::ForOp>(srcTensor.getOwner()->getParentOp());
@@ -152,7 +152,7 @@ findHoistableMatchingTransferRead(RewriterBase &rewriter,
       // transfer_read may be of a vector that is defined within the loop: we
       // traverse it by virtue of bypassing disjoint subset operations rooted at
       // a bbArg and yielding a matching yield.
-      if (!read.getSource().isa<BlockArgument>() &&
+      if (!isa<BlockArgument>(read.getSource()) &&
           !forOp.isDefinedOutsideOfLoop(read.getSource())) {
         LLVM_DEBUG(DBGS() << "------transfer_read vector appears loop "
                              "dependent but will be tested for disjointness as "

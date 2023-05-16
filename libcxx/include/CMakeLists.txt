@@ -70,9 +70,21 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/pstl_any_all_none_of.h
+  __algorithm/pstl_backend.h
+  __algorithm/pstl_backends/cpu_backend.h
+  __algorithm/pstl_backends/cpu_backends/any_of.h
+  __algorithm/pstl_backends/cpu_backends/backend.h
+  __algorithm/pstl_backends/cpu_backends/fill.h
+  __algorithm/pstl_backends/cpu_backends/find_if.h
+  __algorithm/pstl_backends/cpu_backends/for_each.h
+  __algorithm/pstl_backends/cpu_backends/serial.h
+  __algorithm/pstl_backends/cpu_backends/transform.h
+  __algorithm/pstl_copy.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
+  __algorithm/pstl_frontend_dispatch.h
+  __algorithm/pstl_transform.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
   __algorithm/ranges_all_of.h
@@ -155,6 +167,7 @@ set(files
   __algorithm/ranges_sort_heap.h
   __algorithm/ranges_stable_partition.h
   __algorithm/ranges_stable_sort.h
+  __algorithm/ranges_starts_with.h
   __algorithm/ranges_swap_ranges.h
   __algorithm/ranges_transform.h
   __algorithm/ranges_unique.h
@@ -386,7 +399,6 @@ set(files
   __functional/reference_wrapper.h
   __functional/unary_function.h
   __functional/unary_negate.h
-  __functional/unwrap_ref.h
   __functional/weak_result_type.h
   __fwd/array.h
   __fwd/fstream.h
@@ -532,8 +544,6 @@ set(files
   __pstl/internal/parallel_backend_serial.h
   __pstl/internal/parallel_backend_tbb.h
   __pstl/internal/parallel_backend_utils.h
-  __pstl/internal/parallel_impl.h
-  __pstl/internal/pstl_config.h
   __pstl/internal/unseq_backend_simd.h
   __pstl/internal/utils.h
   __pstl_algorithm
@@ -785,6 +795,7 @@ set(files
   __type_traits/type_identity.h
   __type_traits/type_list.h
   __type_traits/underlying_type.h
+  __type_traits/unwrap_ref.h
   __type_traits/void_t.h
   __undef_macros
   __utility/as_const.h

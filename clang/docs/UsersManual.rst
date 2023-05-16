@@ -810,7 +810,7 @@ compilations steps.
 
   The report file specified in the option is locked for write, so this option
   can be used to collect statistics in parallel builds. The report file is not
-  cleared, new data is appended to it, thus making posible to accumulate build
+  cleared, new data is appended to it, thus making possible to accumulate build
   statistics.
 
   You can also use environment variables to control the process statistics reporting.
@@ -1786,6 +1786,48 @@ floating point semantic models: precise (the default), strict, and fast.
      alias for ``standard``.
    * ``16`` - Forces ``_Float16`` operations to be emitted without using excess
      precision arithmetic.
+
+.. _floating-point-environment:
+
+Accessing the floating point environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Many targets allow floating point operations to be configured to control things
+such as how inexact results should be rounded and how exceptional conditions
+should be handled. This configuration is called the floating point environment.
+C and C++ restrict access to the floating point environment by default, and the
+compiler is allowed to assume that all operations are performed in the default
+environment. When code is compiled in this default mode, operations that depend
+on the environment (such as floating-point arithmetic and `FLT_ROUNDS`) may have
+undefined behavior if the dynamic environment is not the default environment; for
+example, `FLT_ROUNDS` may or may not simply return its default value for the target
+instead of reading the dynamic environment, and floating-point operations may be
+optimized as if the dynamic environment were the default.  Similarly, it is undefined
+behavior to change the floating point environment in this default mode, for example
+by calling the `fesetround` function.
+C provides two pragmas to allow code to dynamically modify the floating point environment:
+
+- ``#pragma STDC FENV_ACCESS ON`` allows dynamic changes to the entire floating
+  point environment.
+
+- ``#pragma STDC FENV_ROUND FE_DYNAMIC`` allows dynamic changes to just the floating
+  point rounding mode.  This may be more optimizable than ``FENV_ACCESS ON`` because
+  the compiler can still ignore the possibility of floating-point exceptions by default.
+
+Both of these can be used either at the start of a block scope, in which case
+they cover all code in that scope (unless they're turned off in a child scope),
+or at the top level in a file, in which case they cover all subsequent function
+bodies until they're turned off.  Note that it is undefined behavior to enter
+code that is *not* covered by one of these pragmas from code that *is* covered
+by one of these pragmas unless the floating point environment has been restored
+to its default state.  See the C standard for more information about these pragmas.
+
+The command line option ``-frounding-math`` behaves as if the translation unit
+began with ``#pragma STDC FENV_ROUND FE_DYNAMIC``. The command line option
+``-ffp-model=strict`` behaves as if the translation unit began with ``#pragma STDC FENV_ACCESS ON``.
+
+Code that just wants to use a specific rounding mode for specific floating point
+operations can avoid most of the hazards of the dynamic floating point environment
+by using ``#pragma STDC FENV_ROUND`` with a value other than ``FE_DYNAMIC``.
 
 .. _crtfastmath.o:
 
@@ -3912,7 +3954,7 @@ mapping of default visibility to an explicit shared object export
 * ``-mdefault-visibility-export-mapping=none``: no additional export
   information is created for entities with default visibility.
 * ``-mdefault-visibility-export-mapping=explicit``: mark entities for export
-  if they have explict (e.g. via an attribute) default visibility from the
+  if they have explicit (e.g. via an attribute) default visibility from the
   source, including RTTI.
 * ``-mdefault-visibility-export-mapping=all``: set XCOFF exported visibility
   for all entities with default visibility from any source. This gives a

@@ -240,7 +240,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
     if (inputs.size() != lattices.size()) {
       if (point.dyn_cast<Operation *>()) {
         if (!inputs.empty())
-          firstIndex = inputs.front().cast<OpResult>().getResultNumber();
+          firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
         visitNonControlFlowArgumentsImpl(
             branch,
             RegionSuccessor(
@@ -248,7 +248,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
             lattices, firstIndex);
       } else {
         if (!inputs.empty())
-          firstIndex = inputs.front().cast<BlockArgument>().getArgNumber();
+          firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
         Region *region = point.get<Block *>()->getParent();
         visitNonControlFlowArgumentsImpl(
             branch,

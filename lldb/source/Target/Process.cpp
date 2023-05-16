@@ -225,7 +225,7 @@ uint32_t ProcessProperties::GetVirtualAddressableBits() const {
 
 void ProcessProperties::SetVirtualAddressableBits(uint32_t bits) {
   const uint32_t idx = ePropertyVirtualAddressableBits;
-  SetPropertyAtIndex(idx, bits);
+  SetPropertyAtIndex(idx, static_cast<uint64_t>(bits));
 }
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {
   const uint32_t idx = ePropertyPythonOSPluginPath;
@@ -483,10 +483,10 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
   OptionValueSP value_sp =
       m_collection_sp->GetPropertyAtIndex(ePropertyMemCacheLineSize)
           ->GetValue();
-  uint32_t platform_cache_line_size =
+  uint64_t platform_cache_line_size =
       target_sp->GetPlatform()->GetDefaultMemoryCacheLineSize();
   if (!value_sp->OptionWasSet() && platform_cache_line_size != 0)
-    value_sp->SetUInt64Value(platform_cache_line_size);
+    value_sp->SetValueAs(platform_cache_line_size);
 
   RegisterAssertFrameRecognizer(this);
 }

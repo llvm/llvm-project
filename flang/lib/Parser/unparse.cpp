@@ -2042,9 +2042,34 @@ public:
     Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpAllocateClause &x) {
-    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t));
-    Put(":");
+    Walk(
+        std::get<std::optional<OmpAllocateClause::AllocateModifier>>(x.t), ":");
     Walk(std::get<OmpObjectList>(x.t));
+  }
+  void Unparse(const OmpAllocateClause::AllocateModifier &x) {
+    common::visit(
+        common::visitors{
+            [&](const OmpAllocateClause::AllocateModifier::Allocator &y) {
+              Walk(y);
+            },
+            [&](const OmpAllocateClause::AllocateModifier::ComplexModifier &y) {
+              Word("ALLOCATOR(");
+              Walk(std::get<OmpAllocateClause::AllocateModifier::Allocator>(
+                  y.t));
+              Put(")");
+              Put(",");
+              Walk(std::get<OmpAllocateClause::AllocateModifier::Align>(y.t));
+            },
+            [&](const OmpAllocateClause::AllocateModifier::Align &y) {
+              Walk(y);
+            },
+        },
+        x.u);
+  }
+  void Unparse(const OmpAllocateClause::AllocateModifier::Align &x) {
+    Word("ALIGN(");
+    Walk(x.v);
+    Put(")");
   }
   void Unparse(const OmpOrderClause &x) {
     Walk(std::get<std::optional<OmpOrderModifier>>(x.t), ":");
@@ -2350,6 +2375,23 @@ public:
     Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();
+  }
+  void Unparse(const OmpEndAllocators &x) {
+    BeginOpenMP();
+    Word("!$OMP END ALLOCATE");
+    Put("\n");
+    EndOpenMP();
+  }
+  void Unparse(const OpenMPAllocatorsConstruct &x) {
+    BeginOpenMP();
+    Word("!$OMP ALLOCATE");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+    Walk(std::get<Statement<AllocateStmt>>(x.t));
+    if (const auto &end = std::get<std::optional<OmpEndAllocators>>(x.t)) {
+      Walk(*end);
+    }
   }
   void Unparse(const OmpCriticalDirective &x) {
     BeginOpenMP();

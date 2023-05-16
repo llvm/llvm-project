@@ -76,6 +76,12 @@ constexpr bool test() {
     assert(std::ranges::next(io.begin(), 10) == io.end());
   }
 
+  {
+    std::ranges::iota_view<int, std::unreachable_sentinel_t> iv1;
+    // There should be only one overload available and {} resolves to unreachable_sentinel_t
+    [[maybe_unused]] std::ranges::iota_view<int, std::unreachable_sentinel_t> iv2(iv1.begin(), {});
+  }
+
   return true;
 }
 

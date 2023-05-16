@@ -34,10 +34,9 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
-static cl::opt<bool> ZeroDivCheck(
-    "loongarch-check-zero-division", cl::Hidden,
-    cl::desc("Trap on integer division by zero."),
-    cl::init(false));
+static cl::opt<bool> ZeroDivCheck("loongarch-check-zero-division", cl::Hidden,
+                                  cl::desc("Trap on integer division by zero."),
+                                  cl::init(false));
 
 LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                                                  const LoongArchSubtarget &STI)
@@ -2070,8 +2069,8 @@ void LoongArchTargetLowering::analyzeInputArgs(
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Ins[i].Flags,
            CCInfo, /*IsFixed=*/true, IsRet, ArgTy)) {
-      LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
-                        << ArgVT << '\n');
+      LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type " << ArgVT
+                        << '\n');
       llvm_unreachable("");
     }
   }
@@ -2088,8 +2087,8 @@ void LoongArchTargetLowering::analyzeOutputArgs(
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Outs[i].Flags,
            CCInfo, Outs[i].IsFixed, IsRet, OrigTy)) {
-      LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
-                        << ArgVT << "\n");
+      LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type " << ArgVT
+                        << "\n");
       llvm_unreachable("");
     }
   }
@@ -2177,14 +2176,15 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
 }
 
 static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
-                            CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                             CCValAssign::LocInfo LocInfo,
+                             ISD::ArgFlagsTy ArgFlags, CCState &State) {
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, SpLim
     //                        s0    s1  s2  s3  s4  s5  s6  s7  s8
     static const MCPhysReg GPRList[] = {
-        LoongArch::R23, LoongArch::R24, LoongArch::R25, LoongArch::R26, LoongArch::R27,
-        LoongArch::R28, LoongArch::R29, LoongArch::R30, LoongArch::R31};
+        LoongArch::R23, LoongArch::R24, LoongArch::R25,
+        LoongArch::R26, LoongArch::R27, LoongArch::R28,
+        LoongArch::R29, LoongArch::R30, LoongArch::R31};
     if (unsigned Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
@@ -2235,7 +2235,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     if (!MF.getSubtarget().hasFeature(LoongArch::FeatureBasicF) ||
         !MF.getSubtarget().hasFeature(LoongArch::FeatureBasicD))
       report_fatal_error(
-        "GHC calling convention requires the F and D extensions");
+          "GHC calling convention requires the F and D extensions");
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -2638,7 +2638,9 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(LoongArchISD::TAIL, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(LoongArchISD::TAIL, DL, NodeTys, Ops);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    return Ret;
   }
 
   Chain = DAG.getNode(LoongArchISD::CALL, DL, NodeTys, Ops);

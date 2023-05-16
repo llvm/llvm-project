@@ -112,7 +112,7 @@ static Value genVectorLoad(PatternRewriter &rewriter, Location loc, VL vl,
                            Value mem, ArrayRef<Value> idxs, Value vmask) {
   VectorType vtp = vectorType(vl, mem);
   Value pass = constantZero(rewriter, loc, vtp);
-  if (idxs.back().getType().isa<VectorType>()) {
+  if (llvm::isa<VectorType>(idxs.back().getType())) {
     SmallVector<Value> scalarArgs(idxs.begin(), idxs.end());
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
@@ -129,7 +129,7 @@ static Value genVectorLoad(PatternRewriter &rewriter, Location loc, VL vl,
 /// the last index, i.e. back().
 static void genVectorStore(PatternRewriter &rewriter, Location loc, Value mem,
                            ArrayRef<Value> idxs, Value vmask, Value rhs) {
-  if (idxs.back().getType().isa<VectorType>()) {
+  if (llvm::isa<VectorType>(idxs.back().getType())) {
     SmallVector<Value> scalarArgs(idxs.begin(), idxs.end());
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
@@ -260,7 +260,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     // innermost loop simply pass through as well.
     // Example:
     //   a[i][j] for both i and j
-    if (auto arg = sub.dyn_cast<BlockArgument>()) {
+    if (auto arg = llvm::dyn_cast<BlockArgument>(sub)) {
       if (isInvariantArg(arg, block) == innermost)
         return false;
       if (codegen)
@@ -298,8 +298,8 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
         Location loc = forOp.getLoc();
         Value vload =
             genVectorLoad(rewriter, loc, vl, load.getMemRef(), idxs2, vmask);
-        Type etp = vload.getType().cast<VectorType>().getElementType();
-        if (!etp.isa<IndexType>()) {
+        Type etp = llvm::cast<VectorType>(vload.getType()).getElementType();
+        if (!llvm::isa<IndexType>(etp)) {
           if (etp.getIntOrFloatBitWidth() < 32)
             vload = rewriter.create<arith::ExtUIOp>(
                 loc, vectorType(vl, rewriter.getI32Type()), vload);
@@ -318,7 +318,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
       Value inv = load.getOperand(0);
       Value idx = load.getOperand(1);
       if (isInvariantValue(inv, block)) {
-        if (auto arg = idx.dyn_cast<BlockArgument>()) {
+        if (auto arg = llvm::dyn_cast<BlockArgument>(idx)) {
           if (isInvariantArg(arg, block) || !innermost)
             return false;
           if (codegen)
@@ -369,7 +369,7 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
   if (!VectorType::isValidElementType(exp.getType()))
     return false;
   // A block argument is invariant/reduction/index.
-  if (auto arg = exp.dyn_cast<BlockArgument>()) {
+  if (auto arg = llvm::dyn_cast<BlockArgument>(exp)) {
     if (arg == forOp.getInductionVar()) {
       // We encountered a single, innermost index inside the computation,
       // such as a[i] = i, which must convert to [i, i+1, ...].

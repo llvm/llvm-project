@@ -316,14 +316,15 @@ ArrayAttr Builder::getAffineMapArrayAttr(ArrayRef<AffineMap> values) {
 }
 
 TypedAttr Builder::getZeroAttr(Type type) {
-  if (type.isa<FloatType>())
+  if (llvm::isa<FloatType>(type))
     return getFloatAttr(type, 0.0);
-  if (type.isa<IndexType>())
+  if (llvm::isa<IndexType>(type))
     return getIndexAttr(0);
-  if (auto integerType = type.dyn_cast<IntegerType>())
-    return getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), 0));
-  if (type.isa<RankedTensorType, VectorType>()) {
-    auto vtType = type.cast<ShapedType>();
+  if (auto integerType = llvm::dyn_cast<IntegerType>(type))
+    return getIntegerAttr(type,
+                          APInt(llvm::cast<IntegerType>(type).getWidth(), 0));
+  if (llvm::isa<RankedTensorType, VectorType>(type)) {
+    auto vtType = llvm::cast<ShapedType>(type);
     auto element = getZeroAttr(vtType.getElementType());
     if (!element)
       return {};

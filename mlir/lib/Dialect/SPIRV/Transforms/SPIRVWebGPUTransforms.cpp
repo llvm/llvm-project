@@ -41,7 +41,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 Attribute getScalarOrSplatAttr(Type type, int64_t value) {
   APInt sizedValue(getElementTypeOrSelf(type).getIntOrFloatBitWidth(), value);
-  if (auto intTy = type.dyn_cast<IntegerType>())
+  if (auto intTy = dyn_cast<IntegerType>(type))
     return IntegerAttr::get(intTy, sizedValue);
 
   return SplatElementsAttr::get(cast<ShapedType>(type), sizedValue);
@@ -149,7 +149,7 @@ struct ExpandMulExtendedPattern final : OpRewritePattern<MulExtendedOp> {
 
     // Currently, WGSL only supports 32-bit integer types. Any other integer
     // types should already have been promoted/demoted to i32.
-    auto elemTy = getElementTypeOrSelf(lhs.getType()).cast<IntegerType>();
+    auto elemTy = cast<IntegerType>(getElementTypeOrSelf(lhs.getType()));
     if (elemTy.getIntOrFloatBitWidth() != 32)
       return rewriter.notifyMatchFailure(
           loc,

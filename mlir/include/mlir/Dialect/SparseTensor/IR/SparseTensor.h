@@ -95,7 +95,7 @@ template <typename T>
 inline RankedTensorType getRankedTensorType(T &&t) {
   assert(static_cast<bool>(std::forward<T>(t)) &&
          "getRankedTensorType got null argument");
-  return std::forward<T>(t).getType().template cast<RankedTensorType>();
+  return cast<RankedTensorType>(std::forward<T>(t).getType());
 }
 
 /// Convenience method to abbreviate casting `getType()`.
@@ -103,7 +103,7 @@ template <typename T>
 inline MemRefType getMemRefType(T &&t) {
   assert(static_cast<bool>(std::forward<T>(t)) &&
          "getMemRefType got null argument");
-  return std::forward<T>(t).getType().template cast<MemRefType>();
+  return cast<MemRefType>(std::forward<T>(t).getType());
 }
 
 /// Convenience method to get a sparse encoding attribute from a type.

@@ -59,10 +59,18 @@ ExternalProject_Add(google-benchmark-libc
           -DBENCHMARK_ENABLE_WERROR:BOOL=${LLVM_ENABLE_WERROR}
           -DBENCHMARK_FORCE_WERROR:BOOL=OFF
           -DBENCHMARK_USE_LIBCXX:BOOL=OFF
-          -DCMAKE_BUILD_TYPE:STRING=RELEASE
+          -DCMAKE_BUILD_TYPE:STRING=Release
+
+          -DCMAKE_SYSTEM_NAME:STRING=${CMAKE_SYSTEM_NAME}
+          -DCMAKE_SYSTEM_PROCESSOR:STRING=${CMAKE_SYSTEM_PROCESSOR}
           -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
           -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
-          -DCMAKE_CXX_FLAGS:STRING=${BENCHMARK_LIBC_COMPILE_FLAGS}
+          -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+          -DCMAKE_FIND_ROOT_PATH:STRING=${CMAKE_FIND_ROOT_PATH}
+
+          -DBUILD_SHARED_LIBS:BOOL=OFF
+          -DCMAKE_EXE_LINKER_FLAGS:STRING=-static
+
           -DCMAKE_CXX_STANDARD:STRING=14
           -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
         )
@@ -181,12 +189,12 @@ add_executable(libc.benchmarks.memory_functions.opt_host
 target_link_libraries(libc.benchmarks.memory_functions.opt_host
   PRIVATE
   libc-memory-benchmark
-  libc.src.string.memcmp_opt_host
-  libc.src.string.bcmp_opt_host
-  libc.src.string.memcpy_opt_host
-  libc.src.string.memset_opt_host
-  libc.src.string.bzero_opt_host
-  libc.src.string.memmove_opt_host
+  libc.src.string.memcmp_opt_host.__internal__
+  libc.src.string.bcmp_opt_host.__internal__
+  libc.src.string.memcpy_opt_host.__internal__
+  libc.src.string.memset_opt_host.__internal__
+  libc.src.string.bzero_opt_host.__internal__
+  libc.src.string.memmove_opt_host.__internal__
   benchmark_main
 )
 llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)

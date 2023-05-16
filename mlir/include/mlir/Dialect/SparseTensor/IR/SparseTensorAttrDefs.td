@@ -35,9 +35,9 @@ class SparseTensor_Attr<string name,
 def DimensionAttr :
     TypedAttrBase<
       Index, "IntegerAttr",
-      And<[CPred<"$_self.isa<::mlir::IntegerAttr>()">,
-           CPred<"$_self.cast<::mlir::IntegerAttr>().getType()"
-                 ".isa<::mlir::IndexType>()">]>,
+      And<[CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
+           CPred<"::llvm::isa<::mlir::IndexType>("
+                     "::llvm::cast<::mlir::IntegerAttr>($_self).getType())">]>,
       "dimension attribute"> {
   let returnType = [{::mlir::sparse_tensor::Dimension}];
   let convertFromStorage = [{$_self.getValue().getZExtValue()}];
@@ -46,9 +46,9 @@ def DimensionAttr :
 def LevelAttr :
     TypedAttrBase<
       Index, "IntegerAttr",
-      And<[CPred<"$_self.isa<::mlir::IntegerAttr>()">,
-           CPred<"$_self.cast<::mlir::IntegerAttr>().getType()"
-                 ".isa<::mlir::IndexType>()">]>,
+      And<[CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
+           CPred<"::llvm::isa<::mlir::IndexType>("
+                     "::llvm::cast<::mlir::IntegerAttr>($_self).getType())">]>,
       "level attribute"> {
   let returnType = [{::mlir::sparse_tensor::Level}];
   let convertFromStorage = [{$_self.getValue().getZExtValue()}];

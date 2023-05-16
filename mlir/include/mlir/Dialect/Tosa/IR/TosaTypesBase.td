@@ -24,8 +24,8 @@ include "mlir/IR/OpBase.td"
 // Where low and high ends are 0,255 when unsigned, -128,127 when signed, for
 // the 8-bit case.
 class Tosa_QuantizedType<string n, list<int> params, bit signed>
-  : Type<And<[CPred<"$_self.isa<mlir::quant::QuantizedType>()">,
-              CPred<"$_self.cast<mlir::quant::QuantizedType>()" #
+  : Type<And<[CPred<"::llvm::isa<mlir::quant::QuantizedType>($_self)">,
+              CPred<"::llvm::cast<mlir::quant::QuantizedType>($_self)" #
                     ".getStorageTypeIntegralWidth() == " # !head(params)>]>,
     "Q" # !if (signed, "int", "uint") # !head(params) # " type"> {
   string name = n;
@@ -170,7 +170,7 @@ def Tosa_Int64Like : Tosa_TypeLike<[Tosa_Int64], "signless-integer-64-bit-like">
 // Attribute predicates and classes.
 //===----------------------------------------------------------------------===//
 class DenseArrayMaxCt<int n> : AttrConstraint<
-    CPred<"$_self.cast<::mlir::DenseArrayAttr>().size() <= " # n>,
+    CPred<"::llvm::cast<::mlir::DenseArrayAttr>($_self).size() <= " # n>,
     "with at least " # n # " elements">;
 
 def Tosa_Fp32ArrayAttr2 : ConfinedAttr<DenseF32ArrayAttr, [DenseArrayCount<2>]>;
@@ -194,8 +194,8 @@ def Tosa_IntArrayAttrUpto5 : ConfinedAttr<DenseI64ArrayAttr, [DenseArrayMaxCt<5>
 //===----------------------------------------------------------------------===//
 // Supported regimes for tosa.resize.
 def Tosa_ResizeTypeAttr : StringBasedAttr<
-    CPred<"$_self.cast<StringAttr>().getValue() == \"BILINEAR\"  || " #
-          "$_self.cast<StringAttr>().getValue() == \"NEAREST_NEIGHBOR\"">,
+    CPred<"::llvm::cast<StringAttr>($_self).getValue() == \"BILINEAR\"  || " #
+          "::llvm::cast<StringAttr>($_self).getValue() == \"NEAREST_NEIGHBOR\"">,
     "Supported resize/upsampling strategies">;
 
 def Tosa_TensorTypeAttr : TypeAttrBase<"TensorType", "Tensor type attribute">;

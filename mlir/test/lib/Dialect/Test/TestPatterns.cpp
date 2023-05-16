@@ -153,7 +153,7 @@ struct IncrementIntAttribute : public OpRewritePattern<AnyAttrOfOp> {
 
   LogicalResult matchAndRewrite(AnyAttrOfOp op,
                                 PatternRewriter &rewriter) const override {
-    auto intAttr = op.getAttr().dyn_cast<IntegerAttr>();
+    auto intAttr = dyn_cast<IntegerAttr>(op.getAttr());
     if (!intAttr)
       return failure();
     int64_t val = intAttr.getInt();
@@ -192,7 +192,9 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
       return failure();
     if (!toBeHoisted->hasAttr("eligible"))
       return failure();
-    toBeHoisted->moveBefore(op);
+    // Hoisting means removing an op from the enclosing op. I.e., the enclosing
+    // op is modified.
+    rewriter.updateRootInPlace(op, [&]() { toBeHoisted->moveBefore(op); });
     return success();
   }
 };
@@ -316,7 +318,8 @@ private:
       Operation *newOp =
           rewriter.create(op->getLoc(), op->getName().getIdentifier(),
                           op->getOperands(), op->getResultTypes());
-      op->setAttr("skip", rewriter.getBoolAttr(true));
+      rewriter.updateRootInPlace(
+          op, [&]() { op->setAttr("skip", rewriter.getBoolAttr(true)); });
       newOp->setAttr("skip", rewriter.getBoolAttr(true));
 
       return success();
@@ -433,7 +436,7 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
       std::array<Value, 2> values = {{fop.getArgument(i), fop.getArgument(j)}};
       SmallVector<Type, 2> inferredReturnTypes;
       if (succeeded(OpTy::inferReturnTypes(
-              context, std::nullopt, values, op->getAttrDictionary(),
+              context, std::nullopt, values, op->getDiscardableAttrDictionary(),
               op->getPropertiesStorage(), op->getRegions(),
               inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());
@@ -1271,11 +1274,11 @@ struct TestTypeConversionProducer
     Type convertedType = getTypeConverter()
                              ? getTypeConverter()->convertType(resultType)
                              : resultType;
-    if (resultType.isa<FloatType>())
+    if (isa<FloatType>(resultType))
       resultType = rewriter.getF64Type();
     else if (resultType.isInteger(16))
       resultType = rewriter.getIntegerType(64);
-    else if (resultType.isa<test::TestRecursiveType>() &&
+    else if (isa<test::TestRecursiveType>(resultType) &&
              convertedType != resultType)
       resultType = convertedType;
     else
@@ -1430,8 +1433,8 @@ struct TestTypeConversionDriver
           inputs.empty())
         return builder.create<TestTypeProducerOp>(loc, resultType);
       // Allow producing an i64 from an integer.
-      if (resultType.isa<IntegerType>() && inputs.size() == 1 &&
-          inputs[0].getType().isa<IntegerType>())
+      if (isa<IntegerType>(resultType) && inputs.size() == 1 &&
+          isa<IntegerType>(inputs[0].getType()))
         return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
       // Otherwise, fail.
       return nullptr;
@@ -1440,7 +1443,7 @@ struct TestTypeConversionDriver
     // Initialize the conversion target.
     mlir::ConversionTarget target(getContext());
     target.addDynamicallyLegalOp<TestTypeProducerOp>([](TestTypeProducerOp op) {
-      auto recursiveType = op.getType().dyn_cast<test::TestRecursiveType>();
+      auto recursiveType = dyn_cast<test::TestRecursiveType>(op.getType());
       return op.getType().isF64() || op.getType().isInteger(64) ||
              (recursiveType &&
               recursiveType.getName() == "outer_converted_type");

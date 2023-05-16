@@ -612,7 +612,7 @@ static bool IsARMArchitecture(std::vector<StringRef> Args) {
     ++I;
     if (I == Args.size())
       break;
-    if (Args[I].startswith_insensitive("arm"))
+    if (Args[I].starts_with_insensitive("arm"))
       return true;
   }
 

@@ -19,14 +19,12 @@
 // RUN:   -analyzer-output=text \
 // RUN:   -verify=bugpath
 
+#include "Inputs/std-c-library-functions-POSIX.h"
+
 void clang_analyzer_eval(int);
 void clang_analyzer_warnIfReached();
 
 int glob;
-
-#define EOF -1
-
-int isalnum(int);
 
 void test_alnum_concrete(int v) {
   int ret = isalnum(256); // \
@@ -63,8 +61,6 @@ void test_alnum_symbolic2(int x) {
   }
 }
 
-int toupper(int);
-
 void test_toupper_concrete(int v) {
   int ret = toupper(256); // \
   // report-warning{{The 1st argument to 'toupper' is 256 but should be an unsigned char value or EOF}} \
@@ -98,8 +94,6 @@ void test_toupper_symbolic2(int x) {
     (void)ret;
   }
 }
-
-int tolower(int);
 
 void test_tolower_concrete(int v) {
   int ret = tolower(256); // \
@@ -135,8 +129,6 @@ void test_tolower_symbolic2(int x) {
   }
 }
 
-int toascii(int);
-
 void test_toascii_concrete(int v) {
   int ret = toascii(256); // \
   // report-warning{{The 1st argument to 'toascii' is 256 but should be an unsigned char value or EOF}} \
@@ -171,9 +163,6 @@ void test_toascii_symbolic2(int x) {
   }
 }
 
-typedef struct FILE FILE;
-typedef typeof(sizeof(int)) size_t;
-size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 void test_notnull_concrete(FILE *fp) {
   fread(0, sizeof(int), 10, fp); // \
   // report-warning{{The 1st argument to 'fread' is NULL but should not be NULL}} \
@@ -208,7 +197,6 @@ void test_no_node_after_bug(FILE *fp, size_t size, size_t n, void *buf) {
   clang_analyzer_warnIfReached(); // not reachable
 }
 
-typedef __WCHAR_TYPE__ wchar_t;
 // This is one test case for the ARR38-C SEI-CERT rule.
 void ARR38_C_F(FILE *file) {
   enum { BUFFER_SIZE = 1024 };

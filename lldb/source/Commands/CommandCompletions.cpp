@@ -718,10 +718,14 @@ void CommandCompletions::FrameIndexes(CommandInterpreter &interpreter,
     return;
 
   lldb::ThreadSP thread_sp = exe_ctx.GetThreadSP();
+  Debugger &dbg = interpreter.GetDebugger();
   const uint32_t frame_num = thread_sp->GetStackFrameCount();
   for (uint32_t i = 0; i < frame_num; ++i) {
     lldb::StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
     StreamString strm;
+    // Dumping frames can be slow, allow interruption.
+    if (dbg.InterruptRequested())
+      break;
     frame_sp->Dump(&strm, false, true);
     request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
   }

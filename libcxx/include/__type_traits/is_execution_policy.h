@@ -36,10 +36,21 @@ inline constexpr bool __is_parallel_execution_policy_impl = false;
 template <class _Tp>
 inline constexpr bool __is_parallel_execution_policy_v = __is_parallel_execution_policy_impl<__remove_cvref_t<_Tp>>;
 
+namespace execution {
+struct __disable_user_instantiations_tag {
+  explicit __disable_user_instantiations_tag() = default;
+};
+} // namespace execution
+
+// TODO: Remove default argument once algorithms are using the new backend dispatching
+template <class _ExecutionPolicy>
+_LIBCPP_HIDE_FROM_ABI auto
+__remove_parallel_policy(const _ExecutionPolicy& = _ExecutionPolicy{execution::__disable_user_instantiations_tag{}});
+
 // Removes the "parallel" part of an execution policy.
 // For example, turns par_unseq into unseq, and par into seq.
 template <class _ExecutionPolicy>
-_LIBCPP_HIDE_FROM_ABI const auto& __remove_parallel_policy(_ExecutionPolicy&&);
+using __remove_parallel_policy_t = decltype(std::__remove_parallel_policy<_ExecutionPolicy>());
 
 _LIBCPP_END_NAMESPACE_STD
 

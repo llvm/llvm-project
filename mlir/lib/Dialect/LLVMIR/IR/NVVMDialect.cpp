@@ -90,13 +90,13 @@ MmaOp::inferOperandMMAType(Type operandElType, bool isAccumulator) {
     return NVVM::MMATypes::f32;
   if (operandElType.isF32() && !isAccumulator)
     return NVVM::MMATypes::tf32;
-  if (operandElType.isa<IntegerType>()) {
+  if (llvm::isa<IntegerType>(operandElType)) {
     if (isAccumulator)
       return NVVM::MMATypes::s32;
     return std::nullopt;
   }
 
-  if (auto structType = operandElType.dyn_cast<LLVM::LLVMStructType>()) {
+  if (auto structType = llvm::dyn_cast<LLVM::LLVMStructType>(operandElType)) {
     if (structType.getBody().empty())
       return std::nullopt;
     return inferOperandMMAType(structType.getBody()[0], isAccumulator);
@@ -526,9 +526,9 @@ LogicalResult MmaOp::verify() {
 LogicalResult ShflOp::verify() {
   if (!(*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid"))
     return success();
-  auto type = getType().dyn_cast<LLVM::LLVMStructType>();
+  auto type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
   auto elementType = (type && type.getBody().size() == 2)
-                         ? type.getBody()[1].dyn_cast<IntegerType>()
+                         ? llvm::dyn_cast<IntegerType>(type.getBody()[1])
                          : nullptr;
   if (!elementType || elementType.getWidth() != 1)
     return emitError("expected return type to be a two-element struct with "
@@ -600,7 +600,7 @@ inferMMATypeFromMNK(NVVM::MMATypes type, NVVM::MMAFrag frag, int m, int n,
 
 LogicalResult NVVM::WMMALoadOp::verify() {
   unsigned addressSpace =
-      getPtr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
   if (addressSpace != 0 && addressSpace != 1 && addressSpace != 3)
     return emitOpError("expected source pointer in memory "
                        "space 0, 1, 3");
@@ -620,7 +620,7 @@ LogicalResult NVVM::WMMALoadOp::verify() {
 
 LogicalResult NVVM::WMMAStoreOp::verify() {
   unsigned addressSpace =
-      getPtr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
   if (addressSpace != 0 && addressSpace != 1 && addressSpace != 3)
     return emitOpError("expected operands to be a source pointer in memory "
                        "space 0, 1, 3");
@@ -672,7 +672,7 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 
 LogicalResult NVVM::LdMatrixOp::verify() {
   unsigned addressSpace =
-      getPtr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
   if (addressSpace != 3)
     return emitOpError("expected source pointer in memory space 3");
 
@@ -725,13 +725,13 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   // If maxntid and reqntid exist, it must be an array with max 3 dim
   if (attrName == NVVMDialect::getMaxntidAttrName() ||
       attrName == NVVMDialect::getReqntidAttrName()) {
-    auto values = attr.getValue().dyn_cast<ArrayAttr>();
+    auto values = llvm::dyn_cast<ArrayAttr>(attr.getValue());
     if (!values || values.empty() || values.size() > 3)
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
-    for (auto val : attr.getValue().cast<ArrayAttr>()) {
-      if (!val.dyn_cast<IntegerAttr>())
+    for (auto val : llvm::cast<ArrayAttr>(attr.getValue())) {
+      if (!llvm::dyn_cast<IntegerAttr>(val))
         return op->emitError()
                << "'" << attrName
                << "' attribute must be integer array with maximum 3 index";
@@ -740,7 +740,7 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   // If minctasm and maxnreg exist, it must be an array with max 3 dim
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
       attrName == NVVMDialect::getMaxnregAttrName()) {
-    if (!attr.getValue().dyn_cast<IntegerAttr>())
+    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";
   }

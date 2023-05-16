@@ -34,7 +34,7 @@ struct ConstantOpInterface
       return constantOp->emitError("could not infer memory space");
 
     // Only ranked tensors are supported.
-    if (!constantOp.getType().isa<RankedTensorType>())
+    if (!isa<RankedTensorType>(constantOp.getType()))
       return failure();
 
     // Only constants inside a module are supported.
@@ -58,7 +58,7 @@ struct ConstantOpInterface
   bool isWritable(Operation *op, Value value,
                   const AnalysisState &state) const {
     // Memory locations returned by memref::GetGlobalOp may not be written to.
-    assert(value.isa<OpResult>());
+    assert(isa<OpResult>(value));
     return false;
   }
 };
@@ -84,21 +84,21 @@ struct IndexCastOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto castOp = cast<arith::IndexCastOp>(op);
-    auto resultTensorType = castOp.getType().cast<TensorType>();
+    auto resultTensorType = cast<TensorType>(castOp.getType());
 
     FailureOr<Value> source = getBuffer(rewriter, castOp.getIn(), options);
     if (failed(source))
       return failure();
-    auto sourceType = source->getType().cast<BaseMemRefType>();
+    auto sourceType = cast<BaseMemRefType>(source->getType());
 
     // Result type should have same layout and address space as the source type.
     BaseMemRefType resultType;
-    if (auto rankedMemRefType = sourceType.dyn_cast<MemRefType>()) {
+    if (auto rankedMemRefType = dyn_cast<MemRefType>(sourceType)) {
       resultType = MemRefType::get(
           rankedMemRefType.getShape(), resultTensorType.getElementType(),
           rankedMemRefType.getLayout(), rankedMemRefType.getMemorySpace());
     } else {
-      auto unrankedMemrefType = sourceType.cast<UnrankedMemRefType>();
+      auto unrankedMemrefType = cast<UnrankedMemRefType>(sourceType);
       resultType = UnrankedMemRefType::get(resultTensorType.getElementType(),
                                            unrankedMemrefType.getMemorySpace());
     }

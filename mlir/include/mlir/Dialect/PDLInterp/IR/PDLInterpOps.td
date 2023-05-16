@@ -559,7 +559,7 @@ def PDLInterp_ExtractOp
   let builders = [
     OpBuilder<(ins "Value":$range, "unsigned":$index), [{
       build($_builder, $_state,
-            range.getType().cast<pdl::RangeType>().getElementType(),
+            ::llvm::cast<pdl::RangeType>(range.getType()).getElementType(),
             range, index);
     }]>,
   ];
@@ -964,7 +964,7 @@ def PDLInterp_GetValueTypeOp : PDLInterp_Op<"get_value_type", [Pure,
       Type valType = value.getType();
       Type typeType = $_builder.getType<pdl::TypeType>();
       build($_builder, $_state,
-            valType.isa<pdl::RangeType>() ? pdl::RangeType::get(typeType)
+            ::llvm::isa<pdl::RangeType>(valType) ? pdl::RangeType::get(typeType)
                                           : typeType,
             value);
     }]>

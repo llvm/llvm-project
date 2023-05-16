@@ -258,8 +258,7 @@ std::optional<bool> OptionValue::GetBooleanValue() const {
 }
 
 bool OptionValue::SetBooleanValue(bool new_value) {
-  OptionValueBoolean *option_value = GetAsBoolean();
-  if (option_value) {
+  if (OptionValueBoolean *option_value = GetAsBoolean()) {
     option_value->SetCurrentValue(new_value);
     return true;
   }
@@ -272,9 +271,8 @@ std::optional<char> OptionValue::GetCharValue() const {
   return {};
 }
 
-char OptionValue::SetCharValue(char new_value) {
-  OptionValueChar *option_value = GetAsChar();
-  if (option_value) {
+bool OptionValue::SetCharValue(char new_value) {
+  if (OptionValueChar *option_value = GetAsChar()) {
     option_value->SetCurrentValue(new_value);
     return true;
   }
@@ -288,8 +286,7 @@ std::optional<int64_t> OptionValue::GetEnumerationValue() const {
 }
 
 bool OptionValue::SetEnumerationValue(int64_t value) {
-  OptionValueEnumeration *option_value = GetAsEnumeration();
-  if (option_value) {
+  if (OptionValueEnumeration *option_value = GetAsEnumeration()) {
     option_value->SetCurrentValue(value);
     return true;
   }
@@ -297,15 +294,13 @@ bool OptionValue::SetEnumerationValue(int64_t value) {
 }
 
 std::optional<FileSpec> OptionValue::GetFileSpecValue() const {
-  const OptionValueFileSpec *option_value = GetAsFileSpec();
-  if (option_value)
+  if (const OptionValueFileSpec *option_value = GetAsFileSpec())
     return option_value->GetCurrentValue();
   return {};
 }
 
 bool OptionValue::SetFileSpecValue(FileSpec file_spec) {
-  OptionValueFileSpec *option_value = GetAsFileSpec();
-  if (option_value) {
+  if (OptionValueFileSpec *option_value = GetAsFileSpec()) {
     option_value->SetCurrentValue(file_spec, false);
     return true;
   }
@@ -333,8 +328,7 @@ std::optional<lldb::Format> OptionValue::GetFormatValue() const {
 }
 
 bool OptionValue::SetFormatValue(lldb::Format new_value) {
-  OptionValueFormat *option_value = GetAsFormat();
-  if (option_value) {
+  if (OptionValueFormat *option_value = GetAsFormat()) {
     option_value->SetCurrentValue(new_value);
     return true;
   }
@@ -348,8 +342,7 @@ std::optional<lldb::LanguageType> OptionValue::GetLanguageValue() const {
 }
 
 bool OptionValue::SetLanguageValue(lldb::LanguageType new_language) {
-  OptionValueLanguage *option_value = GetAsLanguage();
-  if (option_value) {
+  if (OptionValueLanguage *option_value = GetAsLanguage()) {
     option_value->SetCurrentValue(new_language);
     return true;
   }
@@ -357,15 +350,13 @@ bool OptionValue::SetLanguageValue(lldb::LanguageType new_language) {
 }
 
 const FormatEntity::Entry *OptionValue::GetFormatEntity() const {
-  const OptionValueFormatEntity *option_value = GetAsFormatEntity();
-  if (option_value)
+  if (const OptionValueFormatEntity *option_value = GetAsFormatEntity())
     return &option_value->GetCurrentValue();
   return nullptr;
 }
 
 const RegularExpression *OptionValue::GetRegexValue() const {
-  const OptionValueRegex *option_value = GetAsRegex();
-  if (option_value)
+  if (const OptionValueRegex *option_value = GetAsRegex())
     return option_value->GetCurrentValue();
   return nullptr;
 }
@@ -377,8 +368,7 @@ std::optional<int64_t> OptionValue::GetSInt64Value() const {
 }
 
 bool OptionValue::SetSInt64Value(int64_t new_value) {
-  OptionValueSInt64 *option_value = GetAsSInt64();
-  if (option_value) {
+  if (OptionValueSInt64 *option_value = GetAsSInt64()) {
     option_value->SetCurrentValue(new_value);
     return true;
   }
@@ -392,8 +382,7 @@ std::optional<llvm::StringRef> OptionValue::GetStringValue() const {
 }
 
 bool OptionValue::SetStringValue(llvm::StringRef new_value) {
-  OptionValueString *option_value = GetAsString();
-  if (option_value) {
+  if (OptionValueString *option_value = GetAsString()) {
     option_value->SetCurrentValue(new_value);
     return true;
   }
@@ -407,24 +396,21 @@ std::optional<uint64_t> OptionValue::GetUInt64Value() const {
 }
 
 bool OptionValue::SetUInt64Value(uint64_t new_value) {
-  OptionValueUInt64 *option_value = GetAsUInt64();
-  if (option_value) {
+  if (OptionValueUInt64 *option_value = GetAsUInt64()) {
     option_value->SetCurrentValue(new_value);
     return true;
   }
   return false;
 }
 
-UUID OptionValue::GetUUIDValue() const {
-  const OptionValueUUID *option_value = GetAsUUID();
-  if (option_value)
+std::optional<UUID> OptionValue::GetUUIDValue() const {
+  if (const OptionValueUUID *option_value = GetAsUUID())
     return option_value->GetCurrentValue();
-  return UUID();
+  return {};
 }
 
 bool OptionValue::SetUUIDValue(const UUID &uuid) {
-  OptionValueUUID *option_value = GetAsUUID();
-  if (option_value) {
+  if (OptionValueUUID *option_value = GetAsUUID()) {
     option_value->SetCurrentValue(uuid);
     return true;
   }

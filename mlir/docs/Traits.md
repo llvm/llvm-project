@@ -73,7 +73,7 @@ class MyTrait : public OpTrait::TraitBase<ConcreteType, MyTrait> {
 public:
   /// Override the 'foldTrait' hook to support trait based folding on the
   /// concrete operation.
-  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) { {
+  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
     // ...
   }
 };
@@ -90,7 +90,7 @@ public:
   /// Override the 'foldTrait' hook to support trait based folding on the
   /// concrete operation.
   static LogicalResult foldTrait(Operation *op, ArrayRef<Attribute> operands,
-                                 SmallVectorImpl<OpFoldResult> &results) { {
+                                 SmallVectorImpl<OpFoldResult> &results) {
     // ...
   }
 };

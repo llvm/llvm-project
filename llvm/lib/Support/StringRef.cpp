@@ -191,7 +191,7 @@ size_t StringRef::find(StringRef Str, size_t From) const {
 size_t StringRef::find_insensitive(StringRef Str, size_t From) const {
   StringRef This = substr(From);
   while (This.size() >= Str.size()) {
-    if (This.startswith_insensitive(Str))
+    if (This.starts_with_insensitive(Str))
       return From;
     This = This.drop_front();
     ++From;

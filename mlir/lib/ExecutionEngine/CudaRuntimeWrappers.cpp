@@ -17,6 +17,7 @@
 #include <stdio.h>
 
 #include "cuda.h"
+#include "cusparse.h"
 
 #ifdef _WIN32
 #define MLIR_CUDA_WRAPPERS_EXPORT __declspec(dllexport)
@@ -34,6 +35,15 @@
       name = "<unknown>";                                                      \
     fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
   }(expr)
+
+#define CUSPARSE_REPORT_IF_ERROR(expr)                                         \
+  {                                                                            \
+    cusparseStatus_t status = (expr);                                          \
+    if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
+      fprintf(stderr, "cuSPARSE '%s' failed with '%s'\n", #expr,               \
+              cusparseGetErrorString(status));                                 \
+    }                                                                          \
+  }
 
 thread_local static int32_t defaultDevice = 0;
 
@@ -158,7 +168,9 @@ extern "C" void mgpuMemset32(void *dst, unsigned int value, size_t count,
                                         value, count, stream));
 }
 
+///
 /// Helper functions for writing mlir example code
+///
 
 // Allows to register byte array with the CUDA runtime. Helpful until we have
 // transfer functions implemented.
@@ -210,4 +222,130 @@ mgpuMemHostUnregisterMemRef(int64_t rank,
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
   defaultDevice = device;
+}
+
+///
+/// Wrapper methods for the cuSparse library.
+///
+
+static inline cudaDataType_t dataTp(int32_t width) {
+  switch (width) {
+  case 32:
+    return CUDA_R_32F;
+  default:
+    return CUDA_R_64F;
+  }
+}
+
+static inline cusparseIndexType_t idxTp(int32_t width) {
+  switch (width) {
+  case 32:
+    return CUSPARSE_INDEX_32I;
+  default:
+    return CUSPARSE_INDEX_64I;
+  }
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuCreateSparseEnv(CUstream /*stream*/) {
+  cusparseHandle_t handle = nullptr;
+  CUSPARSE_REPORT_IF_ERROR(cusparseCreate(&handle))
+  return reinterpret_cast<void *>(handle);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuDestroySparseEnv(void *h, CUstream /*stream*/) {
+  cusparseHandle_t handle = reinterpret_cast<cusparseHandle_t>(h);
+  CUSPARSE_REPORT_IF_ERROR(cusparseDestroy(handle))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuCreateDnVec(intptr_t size, void *values, int32_t dw, CUstream /*stream*/) {
+  cusparseDnVecDescr_t vec = nullptr;
+  cudaDataType_t dtp = dataTp(dw);
+  CUSPARSE_REPORT_IF_ERROR(cusparseCreateDnVec(&vec, size, values, dtp))
+  return reinterpret_cast<void *>(vec);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuDestroyDnVec(void *v, CUstream /*stream*/) {
+  cusparseDnVecDescr_t vec = reinterpret_cast<cusparseDnVecDescr_t>(v);
+  CUSPARSE_REPORT_IF_ERROR(cusparseDestroyDnVec(vec))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuCreateDnMat(intptr_t rows, intptr_t cols, void *values, int32_t dw,
+                CUstream /*stream*/) {
+  cusparseDnMatDescr_t mat = nullptr;
+  cudaDataType_t dtp = dataTp(dw);
+  CUSPARSE_REPORT_IF_ERROR(cusparseCreateDnMat(&mat, rows, cols, /*ld=*/cols,
+                                               values, dtp, CUSPARSE_ORDER_ROW))
+  return reinterpret_cast<void *>(mat);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuDestroyDnMat(void *m, CUstream /*stream*/) {
+  cusparseDnMatDescr_t mat = reinterpret_cast<cusparseDnMatDescr_t>(m);
+  CUSPARSE_REPORT_IF_ERROR(cusparseDestroyDnMat(mat))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuCreateCoo(intptr_t rows, intptr_t cols, intptr_t nnz, void *rowIdxs,
+              void *colIdxs, void *values, int32_t iw, int32_t dw,
+              CUstream /*stream*/) {
+  cusparseSpMatDescr_t mat = nullptr;
+  cusparseIndexType_t itp = idxTp(iw);
+  cudaDataType_t dtp = dataTp(dw);
+  CUSPARSE_REPORT_IF_ERROR(cusparseCreateCoo(&mat, rows, cols, nnz, rowIdxs,
+                                             colIdxs, values, itp,
+                                             CUSPARSE_INDEX_BASE_ZERO, dtp))
+  return reinterpret_cast<void *>(mat);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuCreateCsr(intptr_t rows, intptr_t cols, intptr_t nnz, void *rowPos,
+              void *colIdxs, void *values, int32_t pw, int32_t iw, int32_t dw,
+              CUstream /*stream*/) {
+  cusparseSpMatDescr_t mat = nullptr;
+  cusparseIndexType_t ptp = idxTp(pw);
+  cusparseIndexType_t itp = idxTp(iw);
+  cudaDataType_t dtp = dataTp(dw);
+  CUSPARSE_REPORT_IF_ERROR(cusparseCreateCsr(&mat, rows, cols, nnz, rowPos,
+                                             colIdxs, values, ptp, itp,
+                                             CUSPARSE_INDEX_BASE_ZERO, dtp))
+  return reinterpret_cast<void *>(mat);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuDestroySpMat(void *m, CUstream /*stream*/) {
+  cusparseSpMatDescr_t mat = reinterpret_cast<cusparseSpMatDescr_t>(m);
+  CUSPARSE_REPORT_IF_ERROR(cusparseDestroySpMat(mat))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t
+mgpuSpMVBufferSize(void *h, void *a, void *x, void *y, CUstream /*stream*/) {
+  cusparseHandle_t handle = reinterpret_cast<cusparseHandle_t>(h);
+  cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
+  cusparseDnVecDescr_t vecX = reinterpret_cast<cusparseDnVecDescr_t>(x);
+  cusparseDnVecDescr_t vecY = reinterpret_cast<cusparseDnVecDescr_t>(y);
+  double alpha = 1.0;
+  double beta = 1.0;
+  size_t bufferSize = 0;
+  CUSPARSE_REPORT_IF_ERROR(cusparseSpMV_bufferSize(
+      handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, vecX, &beta, vecY,
+      CUDA_R_64F, CUSPARSE_SPMV_ALG_DEFAULT, &bufferSize))
+  return bufferSize == 0 ? 1 : bufferSize; // avoid zero-alloc
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuSpMV(void *h, void *a, void *x, void *y, void *b, CUstream /*stream*/) {
+  cusparseHandle_t handle = reinterpret_cast<cusparseHandle_t>(h);
+  cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
+  cusparseDnVecDescr_t vecX = reinterpret_cast<cusparseDnVecDescr_t>(x);
+  cusparseDnVecDescr_t vecY = reinterpret_cast<cusparseDnVecDescr_t>(y);
+  double alpha = 1.0;
+  double beta = 1.0;
+  CUSPARSE_REPORT_IF_ERROR(
+      cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, vecX,
+                   &beta, vecY, CUDA_R_64F, CUSPARSE_SPMV_ALG_DEFAULT, b))
 }

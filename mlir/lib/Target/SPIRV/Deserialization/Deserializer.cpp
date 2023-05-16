@@ -364,11 +364,11 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   }
 
   Type fnType = getType(operands[3]);
-  if (!fnType || !fnType.isa<FunctionType>()) {
+  if (!fnType || !isa<FunctionType>(fnType)) {
     return emitError(unknownLoc, "unknown function type from <id> ")
            << operands[3];
   }
-  auto functionType = fnType.cast<FunctionType>();
+  auto functionType = cast<FunctionType>(fnType);
 
   if ((isVoidType(resultType) && functionType.getNumResults() != 0) ||
       (functionType.getNumResults() == 1 &&
@@ -562,7 +562,7 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unknown result type <id> : ")
            << operands[wordIndex];
   }
-  auto ptrType = type.dyn_cast<spirv::PointerType>();
+  auto ptrType = dyn_cast<spirv::PointerType>(type);
   if (!ptrType) {
     return emitError(unknownLoc,
                      "expected a result type <id> to be a spirv.ptr, found : ")
@@ -623,7 +623,7 @@ IntegerAttr spirv::Deserializer::getConstantInt(uint32_t id) {
   if (!constInfo) {
     return nullptr;
   }
-  return constInfo->first.dyn_cast<IntegerAttr>();
+  return dyn_cast<IntegerAttr>(constInfo->first);
 }
 
 LogicalResult spirv::Deserializer::processName(ArrayRef<uint32_t> operands) {
@@ -825,7 +825,7 @@ spirv::Deserializer::processArrayType(ArrayRef<uint32_t> operands) {
            << operands[2] << "can only come from normal constant right now";
   }
 
-  if (auto intVal = countInfo->first.dyn_cast<IntegerAttr>()) {
+  if (auto intVal = dyn_cast<IntegerAttr>(countInfo->first)) {
     count = intVal.getValue().getZExtValue();
   } else {
     return emitError(unknownLoc, "OpTypeArray count must come from a "
@@ -1172,7 +1172,7 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
 
   auto resultID = operands[1];
 
-  if (auto intType = resultType.dyn_cast<IntegerType>()) {
+  if (auto intType = dyn_cast<IntegerType>(resultType)) {
     auto bitwidth = intType.getWidth();
     if (failed(checkOperandSizeForBitwidth(bitwidth))) {
       return failure();
@@ -1205,7 +1205,7 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
     return success();
   }
 
-  if (auto floatType = resultType.dyn_cast<FloatType>()) {
+  if (auto floatType = dyn_cast<FloatType>(resultType)) {
     auto bitwidth = floatType.getWidth();
     if (failed(checkOperandSizeForBitwidth(bitwidth))) {
       return failure();
@@ -1295,12 +1295,12 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (auto vectorType = resultType.dyn_cast<VectorType>()) {
+  if (auto vectorType = dyn_cast<VectorType>(resultType)) {
     auto attr = DenseElementsAttr::get(vectorType, elements);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, resultType);
-  } else if (auto arrayType = resultType.dyn_cast<spirv::ArrayType>()) {
+  } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
   } else {
@@ -1444,7 +1444,7 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (resultType.isIntOrFloat() || resultType.isa<VectorType>()) {
+  if (resultType.isIntOrFloat() || isa<VectorType>(resultType)) {
     auto attr = opBuilder.getZeroAttr(resultType);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.

@@ -10,13 +10,15 @@
 #ifndef _PSTL_EXECUTION_IMPL_H
 #define _PSTL_EXECUTION_IMPL_H
 
+#include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_base_of.h>
 
-#include "execution_defs.h"
-#include "pstl_config.h"
+#include <__pstl/internal/execution_defs.h>
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 

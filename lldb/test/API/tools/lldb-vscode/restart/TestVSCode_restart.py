@@ -80,3 +80,37 @@ class TestVSCode_restart(lldbvscode_testcase.VSCodeTestCaseBase):
                         reason, 'breakpoint',
                         'verify stop after restart isn\'t "main" breakpoint')
 
+    @skipIfWindows
+    @skipIfRemote
+    def test_arguments(self):
+        '''
+            Tests that lldb-vscode will use updated launch arguments included
+            with a restart request.
+        '''
+        line_A = line_number('main.c', '// breakpoint A')
+
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        [bp_A] = self.set_source_breakpoints('main.c', [line_A])
+
+        # Verify we hit A, then B.
+        self.vscode.request_configurationDone()
+        self.verify_breakpoint_hit([bp_A])
+
+        # We don't set any arguments in the initial launch request, so argc
+        # should be 1.
+        self.assertEquals(int(self.vscode.get_local_variable_value('argc')),
+                          1, 'argc != 1 before restart')
+
+        # Restart with some extra 'args' and check that the new argc reflects
+        # the updated launch config.
+        self.vscode.request_restart(restartArguments={
+            'arguments': {
+                'program': program,
+                'args': ['a', 'b', 'c', 'd'],
+            }
+        })
+        self.verify_breakpoint_hit([bp_A])
+        self.assertEquals(int(self.vscode.get_local_variable_value('argc')),
+                          5, 'argc != 5 after restart')
+

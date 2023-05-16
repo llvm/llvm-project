@@ -8,7 +8,6 @@ add_mlir_translation_library(MLIROpenACCToLLVMIRTranslation
   MLIRIR
   MLIRLLVMDialect
   MLIROpenACCDialect
-  MLIROpenACCToLLVM
   MLIRSupport
   MLIRTargetLLVMIRExport
   )

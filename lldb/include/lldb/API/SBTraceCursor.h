@@ -20,10 +20,6 @@ public:
   /// Default constructor for an invalid \a SBTraceCursor object.
   SBTraceCursor();
 
-  /// Create a cursor that initially points to the end of the trace, i.e. the
-  /// most recent item.
-  SBTraceCursor(lldb::TraceCursorSP trace_cursor_sp);
-
   /// Set the direction to use in the \a SBTraceCursor::Next() method.
   ///
   /// \param[in] forwards
@@ -169,6 +165,12 @@ public:
   explicit operator bool() const;
 
 protected:
+  friend class SBTrace;
+
+  /// Create a cursor that initially points to the end of the trace, i.e. the
+  /// most recent item.
+  SBTraceCursor(lldb::TraceCursorSP trace_cursor_sp);
+
   lldb::TraceCursorSP m_opaque_sp;
 };
 } // namespace lldb

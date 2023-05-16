@@ -184,7 +184,7 @@ public:
   static bool doneLTO;
 };
 
-// Stub libray (See docs/WebAssembly.rst)
+// Stub library (See docs/WebAssembly.rst)
 class StubFile : public InputFile {
 public:
   explicit StubFile(MemoryBufferRef m) : InputFile(StubKind, m) {}

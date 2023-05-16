@@ -88,9 +88,9 @@ public:
   // Overrides method from AffineExprVisitor.
   void visitDimExpr(AffineDimExpr expr) {
     if (pickedDim == nullptr ||
-        pickIterType == iterTypes[expr.getPosition()]
-                            .cast<linalg::IteratorTypeAttr>()
-                            .getValue()) {
+        pickIterType ==
+            cast<linalg::IteratorTypeAttr>(iterTypes[expr.getPosition()])
+                .getValue()) {
       pickedDim = expr;
     }
   }
@@ -344,7 +344,7 @@ static unsigned getNumNonTrivialIdxExpOnSparseLvls(AffineMap map,
   // we can't use `getRankedTensorType`/`getSparseTensorType` here.
   // However, we don't need to handle `StorageSpecifierType`, so we
   // can use `SparseTensorType` once we guard against non-tensors.
-  const auto rtp = tensor.getType().dyn_cast<RankedTensorType>();
+  const auto rtp = dyn_cast<RankedTensorType>(tensor.getType());
   if (!rtp)
     return 0;
   const SparseTensorType stt(rtp);
@@ -1243,7 +1243,7 @@ static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopOrd at,
   Location loc = op.getLoc();
   if (atStart) {
     auto dynShape = {ShapedType::kDynamic};
-    Type etp = tensor.getType().cast<ShapedType>().getElementType();
+    Type etp = cast<ShapedType>(tensor.getType()).getElementType();
     Type t1 = MemRefType::get(dynShape, etp);
     Type t2 = MemRefType::get(dynShape, builder.getI1Type());
     Type t3 = MemRefType::get(dynShape, builder.getIndexType());
@@ -1833,7 +1833,7 @@ public:
     // required for sparse tensor slice rank reducing too.
     Level maxLvlRank = 0;
     for (auto operand : op.getOperands()) {
-      if (auto rtp = operand.getType().dyn_cast<RankedTensorType>()) {
+      if (auto rtp = dyn_cast<RankedTensorType>(operand.getType())) {
         maxLvlRank = std::max(maxLvlRank, SparseTensorType(rtp).getLvlRank());
       }
     }

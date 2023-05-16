@@ -73,7 +73,7 @@ private:
         [callback = std::forward<FnT>(callback)](
             OpBuilder &builder, Location loc, Type type, Value value,
             SmallVectorImpl<Value> &newValues) -> std::optional<LogicalResult> {
-          if (T derivedType = type.dyn_cast<T>())
+          if (T derivedType = dyn_cast<T>(type))
             return callback(builder, loc, derivedType, value, newValues);
           return std::nullopt;
         };

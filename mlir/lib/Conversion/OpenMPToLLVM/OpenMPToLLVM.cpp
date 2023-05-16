@@ -70,7 +70,7 @@ struct RegionLessOpWithVarOperandsConversion
       Value originalVariableOperand = curOp.getVariableOperand(idx);
       if (!originalVariableOperand)
         return failure();
-      if (originalVariableOperand.getType().isa<MemRefType>()) {
+      if (isa<MemRefType>(originalVariableOperand.getType())) {
         // TODO: Support memref type in variable operands
         return rewriter.notifyMatchFailure(curOp,
                                            "memref is not supported yet");
@@ -101,7 +101,7 @@ struct RegionOpWithVarOperandsConversion : public ConvertOpToLLVMPattern<T> {
       Value originalVariableOperand = curOp.getVariableOperand(idx);
       if (!originalVariableOperand)
         return failure();
-      if (originalVariableOperand.getType().isa<MemRefType>()) {
+      if (isa<MemRefType>(originalVariableOperand.getType())) {
         // TODO: Support memref type in variable operands
         return rewriter.notifyMatchFailure(curOp,
                                            "memref is not supported yet");
@@ -143,7 +143,7 @@ struct ReductionOpConversion : public ConvertOpToLLVMPattern<omp::ReductionOp> {
   LogicalResult
   matchAndRewrite(omp::ReductionOp curOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (curOp.getAccumulator().getType().isa<MemRefType>()) {
+    if (isa<MemRefType>(curOp.getAccumulator().getType())) {
       // TODO: Support memref type in variable operands
       return rewriter.notifyMatchFailure(curOp, "memref is not supported yet");
     }

@@ -1568,6 +1568,14 @@ bool IsIsoCType(const DerivedTypeSpec *derived) {
       IsBuiltinDerivedType(derived, "c_funptr");
 }
 
+bool IsEventType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "event_type");
+}
+
+bool IsLockType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "lock_type");
+}
+
 bool IsTeamType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "team_type");
 }
@@ -1577,8 +1585,7 @@ bool IsBadCoarrayType(const DerivedTypeSpec *derived) {
 }
 
 bool IsEventTypeOrLockType(const DerivedTypeSpec *derivedTypeSpec) {
-  return IsBuiltinDerivedType(derivedTypeSpec, "event_type") ||
-      IsBuiltinDerivedType(derivedTypeSpec, "lock_type");
+  return IsEventType(derivedTypeSpec) || IsLockType(derivedTypeSpec);
 }
 
 int CountLenParameters(const DerivedTypeSpec &type) {

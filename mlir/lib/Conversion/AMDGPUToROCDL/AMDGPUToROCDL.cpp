@@ -48,7 +48,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Location loc = gpuOp.getLoc();
     Value memref = adaptor.getMemref();
     Value unconvertedMemref = gpuOp.getMemref();
-    MemRefType memrefType = unconvertedMemref.getType().cast<MemRefType>();
+    MemRefType memrefType = cast<MemRefType>(unconvertedMemref.getType());
 
     if (chipset.majorVersion < 9)
       return gpuOp.emitOpError("Raw buffer ops require GCN or higher");
@@ -85,13 +85,13 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // so bitcast any floats to integers.
     Type llvmBufferValType = llvmWantedDataType;
     if (atomicCmpData) {
-      if (wantedDataType.isa<VectorType>())
+      if (isa<VectorType>(wantedDataType))
         return gpuOp.emitOpError("vector compare-and-swap does not exist");
-      if (auto floatType = wantedDataType.dyn_cast<FloatType>())
+      if (auto floatType = dyn_cast<FloatType>(wantedDataType))
         llvmBufferValType = this->getTypeConverter()->convertType(
             rewriter.getIntegerType(floatType.getWidth()));
     }
-    if (auto dataVector = wantedDataType.dyn_cast<VectorType>()) {
+    if (auto dataVector = dyn_cast<VectorType>(wantedDataType)) {
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
       uint32_t totalBits = elemBits * dataVector.getNumElements();
       if (totalBits > maxVectorOpWidth)
@@ -312,7 +312,7 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
 static Value mfmaConcatIfNeeded(ConversionPatternRewriter &rewriter,
                                 Location loc, Value input) {
   Type inputType = input.getType();
-  if (auto vectorType = inputType.dyn_cast<VectorType>()) {
+  if (auto vectorType = dyn_cast<VectorType>(inputType)) {
     if (!vectorType.getElementType().isInteger(8))
       return input;
     int64_t numBytes = vectorType.getNumElements();
@@ -342,10 +342,10 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   uint32_t m = mfma.getM(), n = mfma.getN(), k = mfma.getK(),
            b = mfma.getBlocks();
   Type sourceElem = mfma.getSourceA().getType();
-  if (auto sourceType = sourceElem.dyn_cast<VectorType>())
+  if (auto sourceType = dyn_cast<VectorType>(sourceElem))
     sourceElem = sourceType.getElementType();
   Type destElem = mfma.getDestC().getType();
-  if (auto destType = destElem.dyn_cast<VectorType>())
+  if (auto destType = dyn_cast<VectorType>(destElem))
     destElem = destType.getElementType();
 
   if (sourceElem.isF32() && destElem.isF32()) {
@@ -406,7 +406,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
       return ROCDL::mfma_f32_16x16x8bf16::getOperationName();
   }
 
-  if (sourceElem.isa<IntegerType>() && destElem.isInteger(32)) {
+  if (isa<IntegerType>(sourceElem) && destElem.isInteger(32)) {
     if (m == 32 && n == 32 && k == 4 && b == 2)
       return ROCDL::mfma_i32_32x32x4i8::getOperationName();
     if (m == 16 && n == 16 && k == 4 && b == 4)
@@ -435,7 +435,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
     // Known to be correct because there are no scalar f8 instructions and
     // because a length mismatch will have been caught by the verifier.
     Type sourceBElem =
-        mfma.getSourceB().getType().cast<VectorType>().getElementType();
+        cast<VectorType>(mfma.getSourceB().getType()).getElementType();
     if (m == 16 && n == 16 && k == 32 && b == 1) {
       if (sourceBElem.isFloat8E5M2FNUZ())
         return ROCDL::mfma_f32_16x16x32_bf8_bf8::getOperationName();
@@ -453,7 +453,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   if (sourceElem.isFloat8E4M3FNUZ() && destElem.isF32() &&
       chipset.minorVersion >= 0x40) {
     Type sourceBElem =
-        mfma.getSourceB().getType().cast<VectorType>().getElementType();
+        cast<VectorType>(mfma.getSourceB().getType()).getElementType();
     if (m == 16 && n == 16 && k == 32 && b == 1) {
       if (sourceBElem.isFloat8E5M2FNUZ())
         return ROCDL::mfma_f32_16x16x32_fp8_bf8::getOperationName();

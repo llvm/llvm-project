@@ -100,59 +100,17 @@ define float @test_fmaximum(float %x, float %y) nounwind {
 define <4 x float> @test_fmaximum_scalarize(<4 x float> %x, <4 x float> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
 ; SSE2-LABEL: test_fmaximum_scalarize:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3],xmm1[3,3]
-; SSE2-NEXT:    movaps %xmm0, %xmm3
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm0[3,3]
-; SSE2-NEXT:    maxss %xmm2, %xmm3
-; SSE2-NEXT:    movaps %xmm1, %xmm2
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
-; SSE2-NEXT:    movaps %xmm0, %xmm4
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
-; SSE2-NEXT:    maxss %xmm2, %xmm4
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    maxss %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    maxss %xmm1, %xmm0
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; SSE2-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm4[0]
-; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    maxps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fmaximum_scalarize:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmaxss %xmm3, %xmm4, %xmm3
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX-NEXT:    vmaxss %xmm3, %xmm4, %xmm3
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; AVX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_scalarize:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm2
-; X86-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; X86-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; X86-NEXT:    vmaxss %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; X86-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
-; X86-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; X86-NEXT:    vmaxss %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; X86-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> %y)
   ret <4 x float> %r
@@ -631,31 +589,17 @@ define float @test_fminimum(float %x, float %y) nounwind {
 define <2 x double> @test_fminimum_scalarize(<2 x double> %x, <2 x double> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
 ; SSE2-LABEL: test_fminimum_scalarize:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movapd %xmm0, %xmm2
-; SSE2-NEXT:    minsd %xmm1, %xmm2
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    minsd %xmm1, %xmm0
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; SSE2-NEXT:    movapd %xmm2, %xmm0
+; SSE2-NEXT:    minpd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fminimum_scalarize:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vminsd %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
-; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX-NEXT:    vminsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; AVX-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_scalarize:
 ; X86:       # %bb.0:
-; X86-NEXT:    vminsd %xmm1, %xmm0, %xmm2
-; X86-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
-; X86-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; X86-NEXT:    vminsd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; X86-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> %y)
   ret <2 x double> %r
@@ -1034,141 +978,43 @@ define float @test_fminimum_combine_cmps(float %x, float %y) nounwind {
 define <2 x double> @test_fminimum_vector(<2 x double> %x, <2 x double> %y) {
 ; SSE2-LABEL: test_fminimum_vector:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    testq %rax, %rax
-; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    js .LBB20_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    movdqa %xmm4, %xmm5
-; SSE2-NEXT:  .LBB20_2:
-; SSE2-NEXT:    movdqa %xmm5, %xmm2
-; SSE2-NEXT:    cmpunordsd %xmm5, %xmm2
-; SSE2-NEXT:    js .LBB20_4
-; SSE2-NEXT:  # %bb.3:
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:  .LBB20_4:
-; SSE2-NEXT:    movapd %xmm2, %xmm3
-; SSE2-NEXT:    andpd %xmm5, %xmm3
-; SSE2-NEXT:    minsd %xmm4, %xmm5
-; SSE2-NEXT:    andnpd %xmm5, %xmm2
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm1 = xmm1[1,1]
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    testq %rax, %rax
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    js .LBB20_6
-; SSE2-NEXT:  # %bb.5:
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:  .LBB20_6:
-; SSE2-NEXT:    orpd %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm4, %xmm3
-; SSE2-NEXT:    cmpunordsd %xmm4, %xmm3
-; SSE2-NEXT:    movapd %xmm3, %xmm5
-; SSE2-NEXT:    andpd %xmm4, %xmm5
-; SSE2-NEXT:    js .LBB20_8
-; SSE2-NEXT:  # %bb.7:
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:  .LBB20_8:
-; SSE2-NEXT:    minsd %xmm0, %xmm4
-; SSE2-NEXT:    andnpd %xmm4, %xmm3
-; SSE2-NEXT:    orpd %xmm5, %xmm3
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE2-NEXT:    movapd %xmm2, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[3,3]
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    pandn %xmm0, %xmm4
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    por %xmm4, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm1
+; SSE2-NEXT:    minpd %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm3, %xmm0
+; SSE2-NEXT:    cmpunordpd %xmm3, %xmm0
+; SSE2-NEXT:    andpd %xmm0, %xmm3
+; SSE2-NEXT:    andnpd %xmm1, %xmm0
+; SSE2-NEXT:    orpd %xmm3, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_fminimum_vector:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    testq %rax, %rax
-; AVX1-NEXT:    js .LBB20_1
-; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm2
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm3
-; AVX1-NEXT:    jmp .LBB20_3
-; AVX1-NEXT:  .LBB20_1:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm3
-; AVX1-NEXT:  .LBB20_3:
-; AVX1-NEXT:    vminsd %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vcmpunordsd %xmm3, %xmm3, %xmm4
-; AVX1-NEXT:    vblendvpd %xmm4, %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    testq %rax, %rax
-; AVX1-NEXT:    js .LBB20_4
-; AVX1-NEXT:  # %bb.5:
-; AVX1-NEXT:    vmovapd %xmm1, %xmm3
-; AVX1-NEXT:    jmp .LBB20_6
-; AVX1-NEXT:  .LBB20_4:
-; AVX1-NEXT:    vmovapd %xmm0, %xmm3
-; AVX1-NEXT:    vmovapd %xmm1, %xmm0
-; AVX1-NEXT:  .LBB20_6:
-; AVX1-NEXT:    vminsd %xmm3, %xmm0, %xmm1
-; AVX1-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_fminimum_vector:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    testq %rax, %rax
-; AVX512-NEXT:    sets %al
-; AVX512-NEXT:    kmovw %eax, %k1
-; AVX512-NEXT:    vmovdqa %xmm0, %xmm2
-; AVX512-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX512-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vminsd %xmm1, %xmm2, %xmm1
-; AVX512-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
-; AVX512-NEXT:    vmovsd %xmm2, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    testq %rax, %rax
-; AVX512-NEXT:    sets %al
-; AVX512-NEXT:    kmovw %eax, %k1
-; AVX512-NEXT:    vmovapd %xmm3, %xmm2
-; AVX512-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vmovsd %xmm3, %xmm0, %xmm0 {%k1}
-; AVX512-NEXT:    vminsd %xmm2, %xmm0, %xmm2
-; AVX512-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm2[0]
-; AVX512-NEXT:    retq
+; AVX-LABEL: test_fminimum_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendvpd %xmm0, %xmm0, %xmm1, %xmm2
+; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vminpd %xmm2, %xmm0, %xmm1
+; AVX-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_vector:
 ; X86:       # %bb.0:
-; X86-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; X86-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
-; X86-NEXT:    vextractps $3, %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB20_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vmovapd %xmm3, %xmm4
-; X86-NEXT:    jmp .LBB20_3
-; X86-NEXT:  .LBB20_1:
-; X86-NEXT:    vmovapd %xmm2, %xmm4
-; X86-NEXT:    vmovapd %xmm3, %xmm2
-; X86-NEXT:  .LBB20_3:
-; X86-NEXT:    vminsd %xmm4, %xmm2, %xmm3
-; X86-NEXT:    vcmpunordsd %xmm2, %xmm2, %xmm4
-; X86-NEXT:    vblendvpd %xmm4, %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vextractps $1, %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB20_4
-; X86-NEXT:  # %bb.5:
-; X86-NEXT:    vmovapd %xmm1, %xmm3
-; X86-NEXT:    jmp .LBB20_6
-; X86-NEXT:  .LBB20_4:
-; X86-NEXT:    vmovapd %xmm0, %xmm3
-; X86-NEXT:    vmovapd %xmm1, %xmm0
-; X86-NEXT:  .LBB20_6:
-; X86-NEXT:    vminsd %xmm3, %xmm0, %xmm1
-; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; X86-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
-; X86-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; X86-NEXT:    vblendvpd %xmm0, %xmm0, %xmm1, %xmm2
+; X86-NEXT:    vblendvpd %xmm0, %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vminpd %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm2
+; X86-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> %y)
   ret <2 x double> %r
@@ -1177,59 +1023,17 @@ define <2 x double> @test_fminimum_vector(<2 x double> %x, <2 x double> %y) {
 define <4 x float> @test_fmaximum_vector(<4 x float> %x, <4 x float> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
 ; SSE2-LABEL: test_fmaximum_vector:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3],xmm1[3,3]
-; SSE2-NEXT:    movaps %xmm0, %xmm3
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm0[3,3]
-; SSE2-NEXT:    maxss %xmm2, %xmm3
-; SSE2-NEXT:    movaps %xmm1, %xmm2
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
-; SSE2-NEXT:    movaps %xmm0, %xmm4
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
-; SSE2-NEXT:    maxss %xmm2, %xmm4
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    maxss %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    maxss %xmm1, %xmm0
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; SSE2-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm4[0]
-; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    maxps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fmaximum_vector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmaxss %xmm3, %xmm4, %xmm3
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; AVX-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX-NEXT:    vmaxss %xmm3, %xmm4, %xmm3
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; AVX-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_vector:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm2
-; X86-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; X86-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; X86-NEXT:    vmaxss %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[2,3]
-; X86-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
-; X86-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; X86-NEXT:    vmaxss %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; X86-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> %y)
   ret <4 x float> %r
@@ -1238,153 +1042,21 @@ define <4 x float> @test_fmaximum_vector(<4 x float> %x, <4 x float> %y) "no-nan
 define <2 x double> @test_fminimum_vector_zero(<2 x double> %x) {
 ; SSE2-LABEL: test_fminimum_vector_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    testq %rax, %rax
-; SSE2-NEXT:    pxor %xmm4, %xmm4
-; SSE2-NEXT:    js .LBB22_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:  .LBB22_2:
-; SSE2-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-NEXT:    cmpunordsd %xmm4, %xmm1
-; SSE2-NEXT:    js .LBB22_4
-; SSE2-NEXT:  # %bb.3:
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:  .LBB22_4:
-; SSE2-NEXT:    movapd %xmm1, %xmm3
-; SSE2-NEXT:    andpd %xmm4, %xmm3
-; SSE2-NEXT:    minsd %xmm2, %xmm4
-; SSE2-NEXT:    andnpd %xmm4, %xmm1
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    testq %rax, %rax
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    js .LBB22_6
-; SSE2-NEXT:  # %bb.5:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:  .LBB22_6:
-; SSE2-NEXT:    orpd %xmm3, %xmm1
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-NEXT:    cmpunordsd %xmm2, %xmm3
-; SSE2-NEXT:    movapd %xmm3, %xmm4
-; SSE2-NEXT:    andpd %xmm2, %xmm4
-; SSE2-NEXT:    js .LBB22_8
-; SSE2-NEXT:  # %bb.7:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:  .LBB22_8:
-; SSE2-NEXT:    minsd %xmm0, %xmm2
-; SSE2-NEXT:    andnpd %xmm2, %xmm3
-; SSE2-NEXT:    orpd %xmm4, %xmm3
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE2-NEXT:    xorpd %xmm1, %xmm1
+; SSE2-NEXT:    minpd %xmm0, %xmm1
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_fminimum_vector_zero:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    testq %rax, %rax
-; AVX1-NEXT:    js .LBB22_1
-; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm2
-; AVX1-NEXT:    jmp .LBB22_3
-; AVX1-NEXT:  .LBB22_1:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:  .LBB22_3:
-; AVX1-NEXT:    vminsd %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vcmpunordsd %xmm2, %xmm2, %xmm3
-; AVX1-NEXT:    vblendvpd %xmm3, %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    testq %rax, %rax
-; AVX1-NEXT:    js .LBB22_4
-; AVX1-NEXT:  # %bb.5:
-; AVX1-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    jmp .LBB22_6
-; AVX1-NEXT:  .LBB22_4:
-; AVX1-NEXT:    vmovapd %xmm0, %xmm2
-; AVX1-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:  .LBB22_6:
-; AVX1-NEXT:    vminsd %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vblendvpd %xmm3, %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX512F-LABEL: test_fminimum_vector_zero:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    testq %rax, %rax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovsd %xmm0, %xmm0, %xmm1 {%k1} {z}
-; AVX512F-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX512F-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vminsd %xmm1, %xmm0, %xmm1
-; AVX512F-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512F-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512F-NEXT:    vmovq %xmm3, %rax
-; AVX512F-NEXT:    testq %rax, %rax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovsd %xmm3, %xmm3, %xmm0 {%k1} {z}
-; AVX512F-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
-; AVX512F-NEXT:    vminsd %xmm0, %xmm3, %xmm0
-; AVX512F-NEXT:    vcmpunordsd %xmm3, %xmm3, %k1
-; AVX512F-NEXT:    vmovsd %xmm3, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512DQ-LABEL: test_fminimum_vector_zero:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vfpclasssd $5, %xmm0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovsd %xmm0, %xmm0, %xmm1 {%k1} {z}
-; AVX512DQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512DQ-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX512DQ-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512DQ-NEXT:    vminsd %xmm1, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vfpclasssd $5, %xmm3, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovsd %xmm3, %xmm3, %xmm1 {%k1} {z}
-; AVX512DQ-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
-; AVX512DQ-NEXT:    vminsd %xmm1, %xmm3, %xmm1
-; AVX512DQ-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512DQ-NEXT:    retq
+; AVX-LABEL: test_fminimum_vector_zero:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vminpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_vector_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-NEXT:    vextractps $3, %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB22_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; X86-NEXT:    jmp .LBB22_3
-; X86-NEXT:  .LBB22_1:
-; X86-NEXT:    vmovapd %xmm1, %xmm2
 ; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X86-NEXT:  .LBB22_3:
-; X86-NEXT:    vminsd %xmm2, %xmm1, %xmm2
-; X86-NEXT:    vcmpunordsd %xmm1, %xmm1, %xmm3
-; X86-NEXT:    vblendvpd %xmm3, %xmm1, %xmm2, %xmm1
-; X86-NEXT:    vextractps $1, %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB22_4
-; X86-NEXT:  # %bb.5:
-; X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; X86-NEXT:    jmp .LBB22_6
-; X86-NEXT:  .LBB22_4:
-; X86-NEXT:    vmovapd %xmm0, %xmm2
-; X86-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; X86-NEXT:  .LBB22_6:
-; X86-NEXT:    vminsd %xmm2, %xmm0, %xmm2
-; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; X86-NEXT:    vblendvpd %xmm3, %xmm0, %xmm2, %xmm0
-; X86-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-NEXT:    vminpd %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double 0., double 0.>)
   ret <2 x double> %r
@@ -1393,306 +1065,27 @@ define <2 x double> @test_fminimum_vector_zero(<2 x double> %x) {
 define <4 x float> @test_fmaximum_vector_signed_zero(<4 x float> %x) {
 ; SSE2-LABEL: test_fmaximum_vector_signed_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps %xmm0, %xmm3
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm0[3,3]
-; SSE2-NEXT:    movd %xmm3, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movaps %xmm3, %xmm4
-; SSE2-NEXT:    js .LBB23_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    movaps %xmm2, %xmm4
-; SSE2-NEXT:  .LBB23_2:
-; SSE2-NEXT:    movaps %xmm2, %xmm1
-; SSE2-NEXT:    js .LBB23_4
-; SSE2-NEXT:  # %bb.3:
-; SSE2-NEXT:    movaps %xmm3, %xmm1
-; SSE2-NEXT:  .LBB23_4:
-; SSE2-NEXT:    movaps %xmm0, %xmm3
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm0[1]
-; SSE2-NEXT:    movd %xmm3, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movaps %xmm3, %xmm6
-; SSE2-NEXT:    js .LBB23_6
-; SSE2-NEXT:  # %bb.5:
-; SSE2-NEXT:    movaps %xmm2, %xmm6
-; SSE2-NEXT:  .LBB23_6:
-; SSE2-NEXT:    movaps %xmm2, %xmm7
-; SSE2-NEXT:    js .LBB23_8
-; SSE2-NEXT:  # %bb.7:
-; SSE2-NEXT:    movaps %xmm3, %xmm7
-; SSE2-NEXT:  .LBB23_8:
-; SSE2-NEXT:    movaps %xmm4, %xmm5
-; SSE2-NEXT:    cmpunordss %xmm4, %xmm5
-; SSE2-NEXT:    movaps %xmm4, %xmm8
-; SSE2-NEXT:    maxss %xmm1, %xmm8
-; SSE2-NEXT:    movaps %xmm6, %xmm3
-; SSE2-NEXT:    cmpunordss %xmm6, %xmm3
-; SSE2-NEXT:    movaps %xmm6, %xmm1
-; SSE2-NEXT:    maxss %xmm7, %xmm1
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movaps %xmm0, %xmm7
-; SSE2-NEXT:    js .LBB23_10
-; SSE2-NEXT:  # %bb.9:
-; SSE2-NEXT:    movaps %xmm2, %xmm7
-; SSE2-NEXT:  .LBB23_10:
-; SSE2-NEXT:    andps %xmm5, %xmm4
-; SSE2-NEXT:    andnps %xmm8, %xmm5
-; SSE2-NEXT:    andps %xmm3, %xmm6
-; SSE2-NEXT:    andnps %xmm1, %xmm3
-; SSE2-NEXT:    movaps %xmm7, %xmm1
-; SSE2-NEXT:    cmpunordss %xmm7, %xmm1
-; SSE2-NEXT:    movaps %xmm2, %xmm8
-; SSE2-NEXT:    js .LBB23_12
-; SSE2-NEXT:  # %bb.11:
-; SSE2-NEXT:    movaps %xmm0, %xmm8
-; SSE2-NEXT:  .LBB23_12:
-; SSE2-NEXT:    orps %xmm4, %xmm5
-; SSE2-NEXT:    orps %xmm6, %xmm3
-; SSE2-NEXT:    movaps %xmm1, %xmm6
-; SSE2-NEXT:    andps %xmm7, %xmm6
-; SSE2-NEXT:    maxss %xmm8, %xmm7
-; SSE2-NEXT:    andnps %xmm7, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movaps %xmm0, %xmm4
-; SSE2-NEXT:    js .LBB23_14
-; SSE2-NEXT:  # %bb.13:
-; SSE2-NEXT:    movaps %xmm2, %xmm4
-; SSE2-NEXT:  .LBB23_14:
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1]
-; SSE2-NEXT:    orps %xmm6, %xmm1
-; SSE2-NEXT:    movaps %xmm4, %xmm5
-; SSE2-NEXT:    cmpunordss %xmm4, %xmm5
-; SSE2-NEXT:    movaps %xmm5, %xmm6
-; SSE2-NEXT:    andps %xmm4, %xmm6
-; SSE2-NEXT:    js .LBB23_16
-; SSE2-NEXT:  # %bb.15:
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:  .LBB23_16:
-; SSE2-NEXT:    maxss %xmm2, %xmm4
-; SSE2-NEXT:    andnps %xmm4, %xmm5
-; SSE2-NEXT:    orps %xmm6, %xmm5
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1]
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    maxps %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmaximum_vector_signed_zero:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX1-NEXT:    js .LBB23_1
-; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm3
-; AVX1-NEXT:    jmp .LBB23_3
-; AVX1-NEXT:  .LBB23_1:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm2
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm3
-; AVX1-NEXT:  .LBB23_3:
-; AVX1-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm4
-; AVX1-NEXT:    vblendvps %xmm4, %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vmovd %xmm3, %eax
-; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    js .LBB23_4
-; AVX1-NEXT:  # %bb.5:
-; AVX1-NEXT:    vmovdqa %xmm3, %xmm4
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm3
-; AVX1-NEXT:    jmp .LBB23_6
-; AVX1-NEXT:  .LBB23_4:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm4
-; AVX1-NEXT:  .LBB23_6:
-; AVX1-NEXT:    vmaxss %xmm4, %xmm3, %xmm4
-; AVX1-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; AVX1-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX1-NEXT:    vmovd %xmm3, %eax
-; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    js .LBB23_7
-; AVX1-NEXT:  # %bb.8:
-; AVX1-NEXT:    vmovdqa %xmm3, %xmm4
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm3
-; AVX1-NEXT:    jmp .LBB23_9
-; AVX1-NEXT:  .LBB23_7:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm4
-; AVX1-NEXT:  .LBB23_9:
-; AVX1-NEXT:    vmaxss %xmm4, %xmm3, %xmm4
-; AVX1-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; AVX1-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    js .LBB23_10
-; AVX1-NEXT:  # %bb.11:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm3
-; AVX1-NEXT:    jmp .LBB23_12
-; AVX1-NEXT:  .LBB23_10:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm3
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX1-NEXT:  .LBB23_12:
-; AVX1-NEXT:    vmaxss %xmm3, %xmm1, %xmm0
-; AVX1-NEXT:    vcmpunordss %xmm1, %xmm1, %xmm3
-; AVX1-NEXT:    vblendvps %xmm3, %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX1-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512F-LABEL: test_fmaximum_vector_signed_zero:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX512F-NEXT:    vmovaps %xmm1, %xmm2
-; AVX512F-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX512F-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[3,3,3,3]
-; AVX512F-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm0, %xmm2, %xmm0
-; AVX512F-NEXT:    vcmpunordss %xmm2, %xmm2, %k1
-; AVX512F-NEXT:    vmovss %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vmovd %xmm3, %eax
-; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovaps %xmm1, %xmm2
-; AVX512F-NEXT:    vmovss %xmm3, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovss %xmm1, %xmm3, %xmm3 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm3, %xmm2, %xmm3
-; AVX512F-NEXT:    vcmpunordss %xmm2, %xmm2, %k1
-; AVX512F-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
-; AVX512F-NEXT:    vmovd %xmm4, %eax
-; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovaps %xmm1, %xmm2
-; AVX512F-NEXT:    vmovss %xmm4, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovss %xmm1, %xmm4, %xmm4 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm4, %xmm2, %xmm3
-; AVX512F-NEXT:    vcmpunordss %xmm2, %xmm2, %k1
-; AVX512F-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm3[0],xmm0[3]
-; AVX512F-NEXT:    vmovd %xmm5, %eax
-; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovdqa %xmm5, %xmm2
-; AVX512F-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovss %xmm5, %xmm1, %xmm1 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm2, %xmm1, %xmm2
-; AVX512F-NEXT:    vcmpunordss %xmm1, %xmm1, %k1
-; AVX512F-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512DQ-LABEL: test_fmaximum_vector_signed_zero:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %eax
-; AVX512DQ-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX512DQ-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm1, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovaps %xmm3, %xmm2
-; AVX512DQ-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512DQ-NEXT:    vmovss %xmm3, %xmm1, %xmm1 {%k1}
-; AVX512DQ-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm4, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovaps %xmm3, %xmm5
-; AVX512DQ-NEXT:    vmovss %xmm4, %xmm5, %xmm5 {%k1}
-; AVX512DQ-NEXT:    vmovss %xmm3, %xmm4, %xmm4 {%k1}
-; AVX512DQ-NEXT:    vshufps {{.*#+}} xmm6 = xmm0[3,3,3,3]
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm6, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovaps %xmm3, %xmm7
-; AVX512DQ-NEXT:    vmovss %xmm6, %xmm7, %xmm7 {%k1}
-; AVX512DQ-NEXT:    vmovss %xmm3, %xmm6, %xmm6 {%k1}
-; AVX512DQ-NEXT:    kmovw %eax, %k1
-; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm8
-; AVX512DQ-NEXT:    vmovss %xmm3, %xmm8, %xmm8 {%k1}
-; AVX512DQ-NEXT:    vmovss %xmm0, %xmm3, %xmm3 {%k1}
-; AVX512DQ-NEXT:    vmaxss %xmm3, %xmm8, %xmm0
-; AVX512DQ-NEXT:    vmaxss %xmm2, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX512DQ-NEXT:    vmaxss %xmm5, %xmm4, %xmm1
-; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; AVX512DQ-NEXT:    vmaxss %xmm7, %xmm6, %xmm1
-; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; AVX512DQ-NEXT:    retq
+; AVX512-LABEL: test_fmaximum_vector_signed_zero:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX512-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_vector_signed_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    js .LBB23_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vmovdqa %xmm0, %xmm2
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
-; X86-NEXT:    jmp .LBB23_3
-; X86-NEXT:  .LBB23_1:
-; X86-NEXT:    vmovdqa %xmm1, %xmm2
-; X86-NEXT:    vmovdqa %xmm0, %xmm3
-; X86-NEXT:  .LBB23_3:
-; X86-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm4
-; X86-NEXT:    vblendvps %xmm4, %xmm3, %xmm2, %xmm2
-; X86-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; X86-NEXT:    vmovd %xmm3, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB23_4
-; X86-NEXT:  # %bb.5:
-; X86-NEXT:    vmovdqa %xmm3, %xmm4
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
-; X86-NEXT:    jmp .LBB23_6
-; X86-NEXT:  .LBB23_4:
-; X86-NEXT:    vmovdqa %xmm1, %xmm4
-; X86-NEXT:  .LBB23_6:
-; X86-NEXT:    vmaxss %xmm4, %xmm3, %xmm4
-; X86-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; X86-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X86-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; X86-NEXT:    vmovd %xmm3, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB23_7
-; X86-NEXT:  # %bb.8:
-; X86-NEXT:    vmovdqa %xmm3, %xmm4
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
-; X86-NEXT:    jmp .LBB23_9
-; X86-NEXT:  .LBB23_7:
-; X86-NEXT:    vmovdqa %xmm1, %xmm4
-; X86-NEXT:  .LBB23_9:
-; X86-NEXT:    vmaxss %xmm4, %xmm3, %xmm4
-; X86-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; X86-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB23_10
-; X86-NEXT:  # %bb.11:
-; X86-NEXT:    vmovdqa %xmm0, %xmm3
-; X86-NEXT:    jmp .LBB23_12
-; X86-NEXT:  .LBB23_10:
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
-; X86-NEXT:    vmovdqa %xmm0, %xmm1
-; X86-NEXT:  .LBB23_12:
-; X86-NEXT:    vmaxss %xmm3, %xmm1, %xmm0
-; X86-NEXT:    vcmpunordss %xmm1, %xmm1, %xmm3
-; X86-NEXT:    vblendvps %xmm3, %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; X86-NEXT:    vmovaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> <float -0., float -0., float -0., float -0.>)
   ret <4 x float> %r
@@ -1701,167 +1094,98 @@ define <4 x float> @test_fmaximum_vector_signed_zero(<4 x float> %x) {
 define <2 x double> @test_fminimum_vector_partially_zero(<2 x double> %x) {
 ; SSE2-LABEL: test_fminimum_vector_partially_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    testq %rax, %rax
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    js .LBB24_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-NEXT:  .LBB24_2:
-; SSE2-NEXT:    movdqa %xmm3, %xmm1
-; SSE2-NEXT:    cmpunordsd %xmm3, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm4
-; SSE2-NEXT:    andpd %xmm3, %xmm4
-; SSE2-NEXT:    js .LBB24_4
-; SSE2-NEXT:  # %bb.3:
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:  .LBB24_4:
-; SSE2-NEXT:    minsd %xmm2, %xmm3
-; SSE2-NEXT:    andnpd %xmm3, %xmm1
-; SSE2-NEXT:    orpd %xmm4, %xmm1
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE2-NEXT:    minsd %xmm0, %xmm2
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    xorpd %xmm1, %xmm1
+; SSE2-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE2-NEXT:    minpd %xmm0, %xmm1
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_fminimum_vector_partially_zero:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    testq %rax, %rax
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    js .LBB24_1
-; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX1-NEXT:    jmp .LBB24_3
-; AVX1-NEXT:  .LBB24_1:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm2
-; AVX1-NEXT:  .LBB24_3:
-; AVX1-NEXT:    vminsd %xmm2, %xmm1, %xmm2
-; AVX1-NEXT:    vcmpunordsd %xmm1, %xmm1, %xmm3
-; AVX1-NEXT:    vblendvpd %xmm3, %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX1-NEXT:    vminsd %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX512F-LABEL: test_fminimum_vector_partially_zero:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    testq %rax, %rax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovsd %xmm0, %xmm0, %xmm1 {%k1} {z}
-; AVX512F-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX512F-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vminsd %xmm1, %xmm0, %xmm1
-; AVX512F-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512F-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512F-NEXT:    vminsd %xmm3, %xmm0, %xmm0
-; AVX512F-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512DQ-LABEL: test_fminimum_vector_partially_zero:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vfpclasssd $5, %xmm0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovsd %xmm0, %xmm0, %xmm1 {%k1} {z}
-; AVX512DQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512DQ-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX512DQ-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512DQ-NEXT:    vminsd %xmm1, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512DQ-NEXT:    vminsd %xmm3, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512DQ-NEXT:    retq
+; AVX-LABEL: test_fminimum_vector_partially_zero:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; AVX-NEXT:    vminpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_vector_partially_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    vextractps $1, %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X86-NEXT:    js .LBB24_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vmovapd %xmm0, %xmm1
-; X86-NEXT:    jmp .LBB24_3
-; X86-NEXT:  .LBB24_1:
-; X86-NEXT:    vmovapd %xmm0, %xmm2
-; X86-NEXT:  .LBB24_3:
-; X86-NEXT:    vminsd %xmm2, %xmm1, %xmm2
-; X86-NEXT:    vcmpunordsd %xmm1, %xmm1, %xmm3
-; X86-NEXT:    vblendvpd %xmm3, %xmm1, %xmm2, %xmm1
-; X86-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; X86-NEXT:    vminsd %xmm0, %xmm2, %xmm0
-; X86-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X86-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; X86-NEXT:    vminpd %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double 0., double 5.>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @test_fminimum_vector_different_zeros(<2 x double> %x) {
+; SSE2-LABEL: test_fminimum_vector_different_zeros:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[3,3]
+; SSE2-NEXT:    xorps %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
+; SSE2-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
+; SSE2-NEXT:    movdqa %xmm3, %xmm1
+; SSE2-NEXT:    pandn %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm0, %xmm4
+; SSE2-NEXT:    andps %xmm3, %xmm4
+; SSE2-NEXT:    orps %xmm1, %xmm4
+; SSE2-NEXT:    pand %xmm0, %xmm2
+; SSE2-NEXT:    pandn %xmm0, %xmm3
+; SSE2-NEXT:    por %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm1
+; SSE2-NEXT:    minpd %xmm4, %xmm1
+; SSE2-NEXT:    movdqa %xmm3, %xmm0
+; SSE2-NEXT:    cmpunordpd %xmm3, %xmm0
+; SSE2-NEXT:    andpd %xmm0, %xmm3
+; SSE2-NEXT:    andnpd %xmm1, %xmm0
+; SSE2-NEXT:    orpd %xmm3, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: test_fminimum_vector_different_zeros:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; AVX-NEXT:    vblendvpd %xmm0, %xmm0, %xmm1, %xmm2
+; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vminpd %xmm2, %xmm0, %xmm1
+; AVX-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+;
+; X86-LABEL: test_fminimum_vector_different_zeros:
+; X86:       # %bb.0:
+; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; X86-NEXT:    vblendvpd %xmm0, %xmm0, %xmm1, %xmm2
+; X86-NEXT:    vblendvpd %xmm0, %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vminpd %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm2
+; X86-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; X86-NEXT:    retl
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double 0., double -0.>)
   ret <2 x double> %r
 }
 
 define <4 x float> @test_fmaximum_vector_non_zero(<4 x float> %x) {
 ; SSE2-LABEL: test_fmaximum_vector_non_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE2-NEXT:    maxss %xmm1, %xmm2
-; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE2-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE2-NEXT:    maxss %xmm1, %xmm3
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    maxss %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE2-NEXT:    maxss %xmm0, %xmm2
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [5.0E+0,4.0E+0,3.0E+0,2.0E+0]
+; SSE2-NEXT:    maxps %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fmaximum_vector_non_zero:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmaxss %xmm0, %xmm1, %xmm1
-; AVX-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmaxss %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [5.0E+0,4.0E+0,3.0E+0,2.0E+0]
+; AVX-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_vector_non_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vmaxss %xmm0, %xmm1, %xmm1
-; X86-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; X86-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; X86-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; X86-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; X86-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; X86-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; X86-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X86-NEXT:    vmaxss %xmm0, %xmm2, %xmm0
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; X86-NEXT:    vmovaps {{.*#+}} xmm1 = [5.0E+0,4.0E+0,3.0E+0,2.0E+0]
+; X86-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> <float 5., float 4., float 3., float 2.>)
   ret <4 x float> %r
@@ -1870,88 +1194,30 @@ define <4 x float> @test_fmaximum_vector_non_zero(<4 x float> %x) {
 define <2 x double> @test_fminimum_vector_nan(<2 x double> %x) {
 ; SSE2-LABEL: test_fminimum_vector_nan:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    testq %rax, %rax
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    js .LBB26_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:  .LBB26_2:
-; SSE2-NEXT:    movdqa %xmm2, %xmm1
-; SSE2-NEXT:    cmpunordsd %xmm2, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm3
-; SSE2-NEXT:    andpd %xmm2, %xmm3
-; SSE2-NEXT:    js .LBB26_4
-; SSE2-NEXT:  # %bb.3:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:  .LBB26_4:
-; SSE2-NEXT:    minsd %xmm0, %xmm2
-; SSE2-NEXT:    andnpd %xmm2, %xmm1
-; SSE2-NEXT:    orpd %xmm3, %xmm1
-; SSE2-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[0],mem[1]
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE2-NEXT:    xorpd %xmm1, %xmm1
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    minpd %xmm0, %xmm1
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_fminimum_vector_nan:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    testq %rax, %rax
-; AVX1-NEXT:    js .LBB26_1
-; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    jmp .LBB26_3
-; AVX1-NEXT:  .LBB26_1:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:  .LBB26_3:
-; AVX1-NEXT:    vminsd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm2
-; AVX1-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
-; AVX1-NEXT:    retq
-;
-; AVX512F-LABEL: test_fminimum_vector_nan:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    testq %rax, %rax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovsd %xmm0, %xmm0, %xmm1 {%k1} {z}
-; AVX512F-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vminsd %xmm1, %xmm0, %xmm1
-; AVX512F-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512F-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512F-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],mem[1]
-; AVX512F-NEXT:    retq
-;
-; AVX512DQ-LABEL: test_fminimum_vector_nan:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vfpclasssd $5, %xmm0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovsd %xmm0, %xmm0, %xmm1 {%k1} {z}
-; AVX512DQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512DQ-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512DQ-NEXT:    vminsd %xmm1, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
-; AVX512DQ-NEXT:    retq
+; AVX-LABEL: test_fminimum_vector_nan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; AVX-NEXT:    vminpd %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_vector_nan:
 ; X86:       # %bb.0:
-; X86-NEXT:    vextractps $1, %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB26_1
-; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X86-NEXT:    jmp .LBB26_3
-; X86-NEXT:  .LBB26_1:
-; X86-NEXT:    vmovapd %xmm0, %xmm1
-; X86-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; X86-NEXT:  .LBB26_3:
-; X86-NEXT:    vminsd %xmm1, %xmm0, %xmm1
-; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm2
-; X86-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X86-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
+; X86-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; X86-NEXT:    vminpd %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vcmpunordpd %xmm1, %xmm1, %xmm2
+; X86-NEXT:    vblendvpd %xmm2, %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double 0., double 0x7fff000000000000>)
   ret <2 x double> %r
@@ -1960,153 +1226,21 @@ define <2 x double> @test_fminimum_vector_nan(<2 x double> %x) {
 define <2 x double> @test_fminimum_vector_zero_first(<2 x double> %x) {
 ; SSE2-LABEL: test_fminimum_vector_zero_first:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    testq %rax, %rax
-; SSE2-NEXT:    pxor %xmm4, %xmm4
-; SSE2-NEXT:    js .LBB27_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:  .LBB27_2:
-; SSE2-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-NEXT:    cmpunordsd %xmm4, %xmm1
-; SSE2-NEXT:    js .LBB27_4
-; SSE2-NEXT:  # %bb.3:
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:  .LBB27_4:
-; SSE2-NEXT:    movapd %xmm1, %xmm3
-; SSE2-NEXT:    andpd %xmm4, %xmm3
-; SSE2-NEXT:    minsd %xmm2, %xmm4
-; SSE2-NEXT:    andnpd %xmm4, %xmm1
-; SSE2-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    testq %rax, %rax
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    js .LBB27_6
-; SSE2-NEXT:  # %bb.5:
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:  .LBB27_6:
-; SSE2-NEXT:    orpd %xmm3, %xmm1
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-NEXT:    cmpunordsd %xmm2, %xmm3
-; SSE2-NEXT:    movapd %xmm3, %xmm4
-; SSE2-NEXT:    andpd %xmm2, %xmm4
-; SSE2-NEXT:    js .LBB27_8
-; SSE2-NEXT:  # %bb.7:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:  .LBB27_8:
-; SSE2-NEXT:    minsd %xmm0, %xmm2
-; SSE2-NEXT:    andnpd %xmm2, %xmm3
-; SSE2-NEXT:    orpd %xmm4, %xmm3
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE2-NEXT:    xorpd %xmm1, %xmm1
+; SSE2-NEXT:    minpd %xmm0, %xmm1
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_fminimum_vector_zero_first:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    testq %rax, %rax
-; AVX1-NEXT:    js .LBB27_1
-; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm2
-; AVX1-NEXT:    jmp .LBB27_3
-; AVX1-NEXT:  .LBB27_1:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:  .LBB27_3:
-; AVX1-NEXT:    vminsd %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vcmpunordsd %xmm2, %xmm2, %xmm3
-; AVX1-NEXT:    vblendvpd %xmm3, %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    testq %rax, %rax
-; AVX1-NEXT:    js .LBB27_4
-; AVX1-NEXT:  # %bb.5:
-; AVX1-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    jmp .LBB27_6
-; AVX1-NEXT:  .LBB27_4:
-; AVX1-NEXT:    vmovapd %xmm0, %xmm2
-; AVX1-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:  .LBB27_6:
-; AVX1-NEXT:    vminsd %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vblendvpd %xmm3, %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX512F-LABEL: test_fminimum_vector_zero_first:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    testq %rax, %rax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovsd %xmm0, %xmm0, %xmm1 {%k1} {z}
-; AVX512F-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX512F-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vminsd %xmm1, %xmm0, %xmm1
-; AVX512F-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512F-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512F-NEXT:    vmovq %xmm3, %rax
-; AVX512F-NEXT:    testq %rax, %rax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovsd %xmm3, %xmm3, %xmm0 {%k1} {z}
-; AVX512F-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
-; AVX512F-NEXT:    vminsd %xmm0, %xmm3, %xmm0
-; AVX512F-NEXT:    vcmpunordsd %xmm3, %xmm3, %k1
-; AVX512F-NEXT:    vmovsd %xmm3, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512DQ-LABEL: test_fminimum_vector_zero_first:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vfpclasssd $5, %xmm0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovsd %xmm0, %xmm0, %xmm1 {%k1} {z}
-; AVX512DQ-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512DQ-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX512DQ-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512DQ-NEXT:    vminsd %xmm1, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vfpclasssd $5, %xmm3, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovsd %xmm3, %xmm3, %xmm1 {%k1} {z}
-; AVX512DQ-NEXT:    vmovsd %xmm2, %xmm3, %xmm3 {%k1}
-; AVX512DQ-NEXT:    vminsd %xmm1, %xmm3, %xmm1
-; AVX512DQ-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512DQ-NEXT:    retq
+; AVX-LABEL: test_fminimum_vector_zero_first:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vminpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_vector_zero_first:
 ; X86:       # %bb.0:
-; X86-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-NEXT:    vextractps $3, %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB27_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; X86-NEXT:    jmp .LBB27_3
-; X86-NEXT:  .LBB27_1:
-; X86-NEXT:    vmovapd %xmm1, %xmm2
 ; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X86-NEXT:  .LBB27_3:
-; X86-NEXT:    vminsd %xmm2, %xmm1, %xmm2
-; X86-NEXT:    vcmpunordsd %xmm1, %xmm1, %xmm3
-; X86-NEXT:    vblendvpd %xmm3, %xmm1, %xmm2, %xmm1
-; X86-NEXT:    vextractps $1, %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB27_4
-; X86-NEXT:  # %bb.5:
-; X86-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; X86-NEXT:    jmp .LBB27_6
-; X86-NEXT:  .LBB27_4:
-; X86-NEXT:    vmovapd %xmm0, %xmm2
-; X86-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; X86-NEXT:  .LBB27_6:
-; X86-NEXT:    vminsd %xmm2, %xmm0, %xmm2
-; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; X86-NEXT:    vblendvpd %xmm3, %xmm0, %xmm2, %xmm0
-; X86-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-NEXT:    vminpd %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0., double 0.>, <2 x double> %x)
   ret <2 x double> %r
@@ -2116,63 +1250,26 @@ define <2 x double> @test_fminimum_vector_signed_zero(<2 x double> %x) {
 ; SSE2-LABEL: test_fminimum_vector_signed_zero:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movapd %xmm0, %xmm1
-; SSE2-NEXT:    cmpunordsd %xmm0, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm2
-; SSE2-NEXT:    andpd %xmm0, %xmm2
-; SSE2-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; SSE2-NEXT:    movapd %xmm0, %xmm4
-; SSE2-NEXT:    minsd %xmm3, %xmm4
-; SSE2-NEXT:    andnpd %xmm4, %xmm1
-; SSE2-NEXT:    orpd %xmm2, %xmm1
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; SSE2-NEXT:    minpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    movapd %xmm0, %xmm2
-; SSE2-NEXT:    cmpunordsd %xmm0, %xmm2
-; SSE2-NEXT:    movapd %xmm2, %xmm4
-; SSE2-NEXT:    andpd %xmm0, %xmm4
-; SSE2-NEXT:    minsd %xmm3, %xmm0
-; SSE2-NEXT:    andnpd %xmm0, %xmm2
-; SSE2-NEXT:    orpd %xmm4, %xmm2
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    cmpunordpd %xmm0, %xmm2
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    andnpd %xmm1, %xmm2
+; SSE2-NEXT:    orpd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_fminimum_vector_signed_zero:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vminsd %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vblendvpd %xmm3, %xmm0, %xmm2, %xmm2
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX1-NEXT:    vminsd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_fminimum_vector_signed_zero:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vminsd %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512-NEXT:    vminsd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    retq
+; AVX-LABEL: test_fminimum_vector_signed_zero:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm1
+; AVX-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
+; AVX-NEXT:    vblendvpd %xmm1, %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimum_vector_signed_zero:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    vminsd %xmm1, %xmm0, %xmm2
-; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; X86-NEXT:    vblendvpd %xmm3, %xmm0, %xmm2, %xmm2
-; X86-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; X86-NEXT:    vminsd %xmm1, %xmm0, %xmm1
-; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm3
-; X86-NEXT:    vblendvpd %xmm3, %xmm0, %xmm1, %xmm0
-; X86-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; X86-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm1
+; X86-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm2
+; X86-NEXT:    vblendvpd %xmm1, %xmm0, %xmm2, %xmm0
 ; X86-NEXT:    retl
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double -0., double -0.>)
   ret <2 x double> %r
@@ -2181,306 +1278,27 @@ define <2 x double> @test_fminimum_vector_signed_zero(<2 x double> %x) {
 define <4 x float> @test_fmaximum_vector_signed_zero_first(<4 x float> %x) {
 ; SSE2-LABEL: test_fmaximum_vector_signed_zero_first:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps %xmm0, %xmm3
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm0[3,3]
-; SSE2-NEXT:    movd %xmm3, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movaps %xmm3, %xmm4
-; SSE2-NEXT:    js .LBB29_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    movaps %xmm2, %xmm4
-; SSE2-NEXT:  .LBB29_2:
-; SSE2-NEXT:    movaps %xmm2, %xmm1
-; SSE2-NEXT:    js .LBB29_4
-; SSE2-NEXT:  # %bb.3:
-; SSE2-NEXT:    movaps %xmm3, %xmm1
-; SSE2-NEXT:  .LBB29_4:
-; SSE2-NEXT:    movaps %xmm0, %xmm3
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm0[1]
-; SSE2-NEXT:    movd %xmm3, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movaps %xmm3, %xmm6
-; SSE2-NEXT:    js .LBB29_6
-; SSE2-NEXT:  # %bb.5:
-; SSE2-NEXT:    movaps %xmm2, %xmm6
-; SSE2-NEXT:  .LBB29_6:
-; SSE2-NEXT:    movaps %xmm2, %xmm7
-; SSE2-NEXT:    js .LBB29_8
-; SSE2-NEXT:  # %bb.7:
-; SSE2-NEXT:    movaps %xmm3, %xmm7
-; SSE2-NEXT:  .LBB29_8:
-; SSE2-NEXT:    movaps %xmm4, %xmm5
-; SSE2-NEXT:    cmpunordss %xmm4, %xmm5
-; SSE2-NEXT:    movaps %xmm4, %xmm8
-; SSE2-NEXT:    maxss %xmm1, %xmm8
-; SSE2-NEXT:    movaps %xmm6, %xmm3
-; SSE2-NEXT:    cmpunordss %xmm6, %xmm3
-; SSE2-NEXT:    movaps %xmm6, %xmm1
-; SSE2-NEXT:    maxss %xmm7, %xmm1
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movaps %xmm0, %xmm7
-; SSE2-NEXT:    js .LBB29_10
-; SSE2-NEXT:  # %bb.9:
-; SSE2-NEXT:    movaps %xmm2, %xmm7
-; SSE2-NEXT:  .LBB29_10:
-; SSE2-NEXT:    andps %xmm5, %xmm4
-; SSE2-NEXT:    andnps %xmm8, %xmm5
-; SSE2-NEXT:    andps %xmm3, %xmm6
-; SSE2-NEXT:    andnps %xmm1, %xmm3
-; SSE2-NEXT:    movaps %xmm7, %xmm1
-; SSE2-NEXT:    cmpunordss %xmm7, %xmm1
-; SSE2-NEXT:    movaps %xmm2, %xmm8
-; SSE2-NEXT:    js .LBB29_12
-; SSE2-NEXT:  # %bb.11:
-; SSE2-NEXT:    movaps %xmm0, %xmm8
-; SSE2-NEXT:  .LBB29_12:
-; SSE2-NEXT:    orps %xmm4, %xmm5
-; SSE2-NEXT:    orps %xmm6, %xmm3
-; SSE2-NEXT:    movaps %xmm1, %xmm6
-; SSE2-NEXT:    andps %xmm7, %xmm6
-; SSE2-NEXT:    maxss %xmm8, %xmm7
-; SSE2-NEXT:    andnps %xmm7, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movaps %xmm0, %xmm4
-; SSE2-NEXT:    js .LBB29_14
-; SSE2-NEXT:  # %bb.13:
-; SSE2-NEXT:    movaps %xmm2, %xmm4
-; SSE2-NEXT:  .LBB29_14:
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1]
-; SSE2-NEXT:    orps %xmm6, %xmm1
-; SSE2-NEXT:    movaps %xmm4, %xmm5
-; SSE2-NEXT:    cmpunordss %xmm4, %xmm5
-; SSE2-NEXT:    movaps %xmm5, %xmm6
-; SSE2-NEXT:    andps %xmm4, %xmm6
-; SSE2-NEXT:    js .LBB29_16
-; SSE2-NEXT:  # %bb.15:
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:  .LBB29_16:
-; SSE2-NEXT:    maxss %xmm2, %xmm4
-; SSE2-NEXT:    andnps %xmm4, %xmm5
-; SSE2-NEXT:    orps %xmm6, %xmm5
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1]
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    maxps %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmaximum_vector_signed_zero_first:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX1-NEXT:    js .LBB29_1
-; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm3
-; AVX1-NEXT:    jmp .LBB29_3
-; AVX1-NEXT:  .LBB29_1:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm2
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm3
-; AVX1-NEXT:  .LBB29_3:
-; AVX1-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm4
-; AVX1-NEXT:    vblendvps %xmm4, %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vmovd %xmm3, %eax
-; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    js .LBB29_4
-; AVX1-NEXT:  # %bb.5:
-; AVX1-NEXT:    vmovdqa %xmm3, %xmm4
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm3
-; AVX1-NEXT:    jmp .LBB29_6
-; AVX1-NEXT:  .LBB29_4:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm4
-; AVX1-NEXT:  .LBB29_6:
-; AVX1-NEXT:    vmaxss %xmm4, %xmm3, %xmm4
-; AVX1-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; AVX1-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX1-NEXT:    vmovd %xmm3, %eax
-; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    js .LBB29_7
-; AVX1-NEXT:  # %bb.8:
-; AVX1-NEXT:    vmovdqa %xmm3, %xmm4
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm3
-; AVX1-NEXT:    jmp .LBB29_9
-; AVX1-NEXT:  .LBB29_7:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm4
-; AVX1-NEXT:  .LBB29_9:
-; AVX1-NEXT:    vmaxss %xmm4, %xmm3, %xmm4
-; AVX1-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; AVX1-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    js .LBB29_10
-; AVX1-NEXT:  # %bb.11:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm3
-; AVX1-NEXT:    jmp .LBB29_12
-; AVX1-NEXT:  .LBB29_10:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm3
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm1
-; AVX1-NEXT:  .LBB29_12:
-; AVX1-NEXT:    vmaxss %xmm3, %xmm1, %xmm0
-; AVX1-NEXT:    vcmpunordss %xmm1, %xmm1, %xmm3
-; AVX1-NEXT:    vblendvps %xmm3, %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX1-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512F-LABEL: test_fmaximum_vector_signed_zero_first:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX512F-NEXT:    vmovaps %xmm1, %xmm2
-; AVX512F-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX512F-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[3,3,3,3]
-; AVX512F-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm0, %xmm2, %xmm0
-; AVX512F-NEXT:    vcmpunordss %xmm2, %xmm2, %k1
-; AVX512F-NEXT:    vmovss %xmm2, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vmovd %xmm3, %eax
-; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovaps %xmm1, %xmm2
-; AVX512F-NEXT:    vmovss %xmm3, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovss %xmm1, %xmm3, %xmm3 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm3, %xmm2, %xmm3
-; AVX512F-NEXT:    vcmpunordss %xmm2, %xmm2, %k1
-; AVX512F-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
-; AVX512F-NEXT:    vmovd %xmm4, %eax
-; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovaps %xmm1, %xmm2
-; AVX512F-NEXT:    vmovss %xmm4, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovss %xmm1, %xmm4, %xmm4 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm4, %xmm2, %xmm3
-; AVX512F-NEXT:    vcmpunordss %xmm2, %xmm2, %k1
-; AVX512F-NEXT:    vmovss %xmm2, %xmm3, %xmm3 {%k1}
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm3[0],xmm0[3]
-; AVX512F-NEXT:    vmovd %xmm5, %eax
-; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sets %al
-; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovdqa %xmm5, %xmm2
-; AVX512F-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovss %xmm5, %xmm1, %xmm1 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm2, %xmm1, %xmm2
-; AVX512F-NEXT:    vcmpunordss %xmm1, %xmm1, %k1
-; AVX512F-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512DQ-LABEL: test_fmaximum_vector_signed_zero_first:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %eax
-; AVX512DQ-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX512DQ-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm1, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovaps %xmm3, %xmm2
-; AVX512DQ-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512DQ-NEXT:    vmovss %xmm3, %xmm1, %xmm1 {%k1}
-; AVX512DQ-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm4, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovaps %xmm3, %xmm5
-; AVX512DQ-NEXT:    vmovss %xmm4, %xmm5, %xmm5 {%k1}
-; AVX512DQ-NEXT:    vmovss %xmm3, %xmm4, %xmm4 {%k1}
-; AVX512DQ-NEXT:    vshufps {{.*#+}} xmm6 = xmm0[3,3,3,3]
-; AVX512DQ-NEXT:    vfpclassss $3, %xmm6, %k0
-; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovaps %xmm3, %xmm7
-; AVX512DQ-NEXT:    vmovss %xmm6, %xmm7, %xmm7 {%k1}
-; AVX512DQ-NEXT:    vmovss %xmm3, %xmm6, %xmm6 {%k1}
-; AVX512DQ-NEXT:    kmovw %eax, %k1
-; AVX512DQ-NEXT:    vmovaps %xmm0, %xmm8
-; AVX512DQ-NEXT:    vmovss %xmm3, %xmm8, %xmm8 {%k1}
-; AVX512DQ-NEXT:    vmovss %xmm0, %xmm3, %xmm3 {%k1}
-; AVX512DQ-NEXT:    vmaxss %xmm3, %xmm8, %xmm0
-; AVX512DQ-NEXT:    vmaxss %xmm2, %xmm1, %xmm1
-; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX512DQ-NEXT:    vmaxss %xmm5, %xmm4, %xmm1
-; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; AVX512DQ-NEXT:    vmaxss %xmm7, %xmm6, %xmm1
-; AVX512DQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; AVX512DQ-NEXT:    retq
+; AVX512-LABEL: test_fmaximum_vector_signed_zero_first:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX512-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_vector_signed_zero_first:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    js .LBB29_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vmovdqa %xmm0, %xmm2
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
-; X86-NEXT:    jmp .LBB29_3
-; X86-NEXT:  .LBB29_1:
-; X86-NEXT:    vmovdqa %xmm1, %xmm2
-; X86-NEXT:    vmovdqa %xmm0, %xmm3
-; X86-NEXT:  .LBB29_3:
-; X86-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm4
-; X86-NEXT:    vblendvps %xmm4, %xmm3, %xmm2, %xmm2
-; X86-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; X86-NEXT:    vmovd %xmm3, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB29_4
-; X86-NEXT:  # %bb.5:
-; X86-NEXT:    vmovdqa %xmm3, %xmm4
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
-; X86-NEXT:    jmp .LBB29_6
-; X86-NEXT:  .LBB29_4:
-; X86-NEXT:    vmovdqa %xmm1, %xmm4
-; X86-NEXT:  .LBB29_6:
-; X86-NEXT:    vmaxss %xmm4, %xmm3, %xmm4
-; X86-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; X86-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X86-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; X86-NEXT:    vmovd %xmm3, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB29_7
-; X86-NEXT:  # %bb.8:
-; X86-NEXT:    vmovdqa %xmm3, %xmm4
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
-; X86-NEXT:    jmp .LBB29_9
-; X86-NEXT:  .LBB29_7:
-; X86-NEXT:    vmovdqa %xmm1, %xmm4
-; X86-NEXT:  .LBB29_9:
-; X86-NEXT:    vmaxss %xmm4, %xmm3, %xmm4
-; X86-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; X86-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB29_10
-; X86-NEXT:  # %bb.11:
-; X86-NEXT:    vmovdqa %xmm0, %xmm3
-; X86-NEXT:    jmp .LBB29_12
-; X86-NEXT:  .LBB29_10:
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
-; X86-NEXT:    vmovdqa %xmm0, %xmm1
-; X86-NEXT:  .LBB29_12:
-; X86-NEXT:    vmaxss %xmm3, %xmm1, %xmm0
-; X86-NEXT:    vcmpunordss %xmm1, %xmm1, %xmm3
-; X86-NEXT:    vblendvps %xmm3, %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; X86-NEXT:    vmovaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> <float -0., float -0., float -0., float -0.>, <4 x float> %x)
   ret <4 x float> %r
@@ -2489,114 +1307,30 @@ define <4 x float> @test_fmaximum_vector_signed_zero_first(<4 x float> %x) {
 define <4 x float> @test_fmaximum_vector_zero(<4 x float> %x) {
 ; SSE2-LABEL: test_fmaximum_vector_zero:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    maxps %xmm1, %xmm2
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
-; SSE2-NEXT:    movaps %xmm1, %xmm4
-; SSE2-NEXT:    cmpunordss %xmm1, %xmm4
-; SSE2-NEXT:    movaps %xmm4, %xmm3
-; SSE2-NEXT:    andps %xmm1, %xmm3
-; SSE2-NEXT:    xorps %xmm2, %xmm2
-; SSE2-NEXT:    maxss %xmm2, %xmm1
-; SSE2-NEXT:    andnps %xmm1, %xmm4
-; SSE2-NEXT:    orps %xmm3, %xmm4
-; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE2-NEXT:    movaps %xmm1, %xmm3
-; SSE2-NEXT:    cmpunordss %xmm1, %xmm3
-; SSE2-NEXT:    movaps %xmm3, %xmm5
-; SSE2-NEXT:    andps %xmm1, %xmm5
-; SSE2-NEXT:    maxss %xmm2, %xmm1
-; SSE2-NEXT:    andnps %xmm1, %xmm3
-; SSE2-NEXT:    orps %xmm5, %xmm3
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
-; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    cmpunordss %xmm0, %xmm1
-; SSE2-NEXT:    movaps %xmm1, %xmm4
-; SSE2-NEXT:    andps %xmm0, %xmm4
-; SSE2-NEXT:    movaps %xmm0, %xmm5
-; SSE2-NEXT:    maxss %xmm2, %xmm5
-; SSE2-NEXT:    andnps %xmm5, %xmm1
-; SSE2-NEXT:    orps %xmm4, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movaps %xmm0, %xmm4
-; SSE2-NEXT:    cmpunordss %xmm0, %xmm4
-; SSE2-NEXT:    movaps %xmm4, %xmm5
-; SSE2-NEXT:    andps %xmm0, %xmm5
-; SSE2-NEXT:    maxss %xmm2, %xmm0
-; SSE2-NEXT:    andnps %xmm0, %xmm4
-; SSE2-NEXT:    orps %xmm5, %xmm4
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    cmpunordps %xmm0, %xmm1
+; SSE2-NEXT:    andps %xmm1, %xmm0
+; SSE2-NEXT:    andnps %xmm2, %xmm1
+; SSE2-NEXT:    orps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX1-LABEL: test_fmaximum_vector_zero:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmaxss %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vblendvps %xmm3, %xmm0, %xmm2, %xmm2
-; AVX1-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
-; AVX1-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; AVX1-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; AVX1-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX1-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
-; AVX1-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; AVX1-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX1-NEXT:    vmaxss %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vblendvps %xmm3, %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_fmaximum_vector_zero:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
-; AVX512-NEXT:    vcmpunordss %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovss %xmm3, %xmm4, %xmm4 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[2,3]
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX512-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
-; AVX512-NEXT:    vcmpunordss %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovss %xmm3, %xmm4, %xmm4 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm4[0],xmm2[3]
-; AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm1[0]
-; AVX512-NEXT:    retq
+; AVX-LABEL: test_fmaximum_vector_zero:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum_vector_zero:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm2
-; X86-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm3
-; X86-NEXT:    vblendvps %xmm3, %xmm0, %xmm2, %xmm2
-; X86-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; X86-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
-; X86-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; X86-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X86-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; X86-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
-; X86-NEXT:    vcmpunordss %xmm3, %xmm3, %xmm5
-; X86-NEXT:    vblendvps %xmm5, %xmm3, %xmm4, %xmm3
-; X86-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm1
-; X86-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm3
-; X86-NEXT:    vblendvps %xmm3, %xmm0, %xmm1, %xmm0
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; X86-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm2
+; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> <float 0., float 0., float 0., float 0.>)
   ret <4 x float> %r

@@ -1137,10 +1137,8 @@ genUserCall(PreparedActualArguments &loweredActuals,
         mlir::Type boxTy = fir::dyn_cast_ptrEleTy(argTy);
         assert(boxTy && boxTy.isa<fir::BaseBoxType>() &&
                "must be a fir.box type");
-        mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
-        mlir::Value nullBox = fir::factory::createUnallocatedBox(
-            builder, loc, boxTy, /*nonDeferredParams=*/{});
-        builder.create<fir::StoreOp>(loc, nullBox, boxStorage);
+        mlir::Value boxStorage =
+            fir::factory::genNullBoxStorage(builder, loc, boxTy);
         caller.placeInput(arg, boxStorage);
         continue;
       }
@@ -1238,6 +1236,26 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
           loc, converter, actual, stmtCtx, getActualFortranElementType()));
       continue;
     case fir::LowerIntrinsicArgAs::Inquired:
+      if (const Fortran::lower::SomeExpr *expr =
+              callContext.procRef.UnwrapArgExpr(arg.index())) {
+        if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+                *expr)) {
+          // NULL() pointer without a MOLD must be passed as a deallocated
+          // pointer (see table 16.5 in Fortran 2018 standard).
+          // !fir.box<!fir.ptr<none>> should always be valid in this context.
+          mlir::Type noneTy = mlir::NoneType::get(builder.getContext());
+          mlir::Type nullPtrTy = fir::PointerType::get(noneTy);
+          mlir::Type boxTy = fir::BoxType::get(nullPtrTy);
+          mlir::Value boxStorage =
+              fir::factory::genNullBoxStorage(builder, loc, boxTy);
+          hlfir::EntityWithAttributes nullBoxEntity =
+              extendedValueToHlfirEntity(loc, builder, boxStorage,
+                                         ".tmp.null_box");
+          operands.emplace_back(Fortran::lower::translateToExtendedValue(
+              loc, builder, nullBoxEntity, stmtCtx));
+          continue;
+        }
+      }
       // Place hlfir.expr in memory, and unbox fir.boxchar. Other entities
       // are translated to fir::ExtendedValue without transformation (notably,
       // pointers/allocatable are not dereferenced).
@@ -1258,8 +1276,8 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
     scalarResultType = hlfir::getFortranElementType(*callContext.resultType);
   const std::string intrinsicName = callContext.getProcedureName();
   // Let the intrinsic library lower the intrinsic procedure call.
-  auto [resultExv, mustBeFreed] = genIntrinsicCall(
-      callContext.getBuilder(), loc, intrinsicName, scalarResultType, operands);
+  auto [resultExv, mustBeFreed] =
+      genIntrinsicCall(builder, loc, intrinsicName, scalarResultType, operands);
   if (!fir::getBase(resultExv))
     return std::nullopt;
   hlfir::EntityWithAttributes resultEntity = extendedValueToHlfirEntity(
@@ -1409,6 +1427,19 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
         builder.create<hlfir::TransposeOp>(loc, resultTy, operands[0]);
 
     return {hlfir::EntityWithAttributes{transposeOp.getResult()}};
+  }
+  if (intrinsicName == "any") {
+    llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
+    assert(operands.size() == 2);
+    // dim argument can be NULL if not given
+    mlir::Value mask = operands[0];
+    mlir::Value dim = operands[1];
+    if (dim)
+      dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+    mlir::Type resultTy = computeResultType(mask, *callContext.resultType);
+    hlfir::AnyOp anyOp = builder.create<hlfir::AnyOp>(loc, resultTy, mask, dim);
+
+    return {hlfir::EntityWithAttributes{anyOp.getResult()}};
   }
 
   // TODO add hlfir operations for other transformational intrinsics here

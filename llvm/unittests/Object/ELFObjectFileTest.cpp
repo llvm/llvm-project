@@ -661,10 +661,10 @@ Sections:
             Metadata:      0x8
 )");
 
-  BBAddrMap E1 = {0x11111, {{1, 0x0, 0x1, 0x2}}};
-  BBAddrMap E2 = {0x22222, {{2, 0x0, 0x2, 0x4}}};
-  BBAddrMap E3 = {0x33333, {{0, 0x0, 0x3, 0x6}}};
-  BBAddrMap E4 = {0x44444, {{0, 0x0, 0x4, 0x8}}};
+  BBAddrMap E1 = {0x11111, {{1, 0x0, 0x1, {false, true, false, false}}}};
+  BBAddrMap E2 = {0x22222, {{2, 0x0, 0x2, {false, false, true, false}}}};
+  BBAddrMap E3 = {0x33333, {{0, 0x0, 0x3, {false, true, true, false}}}};
+  BBAddrMap E4 = {0x44444, {{0, 0x0, 0x4, {false, false, false, true}}}};
 
   std::vector<BBAddrMap> Section0BBAddrMaps = {E4};
   std::vector<BBAddrMap> Section1BBAddrMaps = {E3};

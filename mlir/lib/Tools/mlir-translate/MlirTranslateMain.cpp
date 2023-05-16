@@ -14,6 +14,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/Support/InitLLVM.h"
@@ -63,7 +64,13 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerTranslationCLOptions();
+  registerDefaultTimingManagerCLOptions();
   llvm::cl::ParseCommandLineOptions(argc, argv, toolName);
+
+  // Initialize the timing manager.
+  DefaultTimingManager tm;
+  applyDefaultTimingManagerCLOptions(tm);
+  TimingScope timing = tm.getRootScope();
 
   std::string errorMessage;
   std::unique_ptr<llvm::MemoryBuffer> input;
@@ -103,6 +110,9 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
       }
 
       const Translation *translationRequested = translationsRequested[i];
+      TimingScope translationTiming =
+          timing.nest(translationRequested->getDescription());
+
       MLIRContext context;
       context.allowUnregisteredDialects(allowUnregisteredDialects);
       context.printOpOnDiagnostic(!verifyDiagnostics);

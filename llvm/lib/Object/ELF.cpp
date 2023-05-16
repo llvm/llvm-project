@@ -674,6 +674,7 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
 
   DataExtractor::Cursor Cur(0);
   Error ULEBSizeErr = Error::success();
+  Error MetadataDecodeErr = Error::success();
   // Helper to extract and decode the next ULEB128 value as uint32_t.
   // Returns zero and sets ULEBSizeErr if the ULEB128 value exceeds the uint32_t
   // limit.
@@ -694,7 +695,8 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
   };
 
   uint8_t Version = 0;
-  while (!ULEBSizeErr && Cur && Cur.tell() < Content.size()) {
+  while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
+         Cur.tell() < Content.size()) {
     if (Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
       Version = Data.getU8(Cur);
       if (!Cur)
@@ -722,24 +724,32 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
     std::vector<BBAddrMap::BBEntry> BBEntries;
     uint32_t PrevBBEndOffset = 0;
     for (uint32_t BlockIndex = 0;
-         !ULEBSizeErr && Cur && (BlockIndex < NumBlocks); ++BlockIndex) {
+         !MetadataDecodeErr && !ULEBSizeErr && Cur && (BlockIndex < NumBlocks);
+         ++BlockIndex) {
       uint32_t ID = Version >= 2 ? ReadULEB128AsUInt32() : BlockIndex;
       uint32_t Offset = ReadULEB128AsUInt32();
       uint32_t Size = ReadULEB128AsUInt32();
-      uint32_t Metadata = ReadULEB128AsUInt32();
+      uint32_t MD = ReadULEB128AsUInt32();
       if (Version >= 1) {
         // Offset is calculated relative to the end of the previous BB.
         Offset += PrevBBEndOffset;
         PrevBBEndOffset = Offset + Size;
       }
-      BBEntries.push_back({ID, Offset, Size, Metadata});
+      Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
+          BBAddrMap::BBEntry::Metadata::decode(MD);
+      if (!MetadataOrErr) {
+        MetadataDecodeErr = MetadataOrErr.takeError();
+        break;
+      }
+      BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
     }
     FunctionEntries.push_back({Address, std::move(BBEntries)});
   }
-  // Either Cur is in the error state, or ULEBSizeError is set (not both), but
-  // we join the two errors here to be safe.
-  if (!Cur || ULEBSizeErr)
-    return joinErrors(Cur.takeError(), std::move(ULEBSizeErr));
+  // Either Cur is in the error state, or we have an error in ULEBSizeErr or
+  // MetadataDecodeErr (but not both), but we join all errors here to be safe.
+  if (!Cur || ULEBSizeErr || MetadataDecodeErr)
+    return joinErrors(joinErrors(Cur.takeError(), std::move(ULEBSizeErr)),
+                      std::move(MetadataDecodeErr));
   return FunctionEntries;
 }
 

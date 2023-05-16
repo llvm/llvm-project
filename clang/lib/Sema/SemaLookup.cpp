@@ -1905,11 +1905,14 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   Module *DeclModule = SemaRef.getOwningModule(D);
   assert(DeclModule && "hidden decl has no owning module");
 
-  // Entities in header like modules are reachable only if they're visible.
-  if (DeclModule->isHeaderLikeModule())
+  // Entities in module map modules are reachable only if they're visible.
+  if (DeclModule->isModuleMapModule())
     return false;
 
-  if (!D->isInAnotherModuleUnit())
+  // If D comes from a module and SemaRef doesn't own a module, it implies D
+  // comes from another TU. In case SemaRef owns a module, we could judge if D
+  // comes from another TU by comparing the module unit.
+  if (SemaRef.isModuleUnitOfCurrentTU(DeclModule))
     return true;
 
   // [module.reach]/p3:
@@ -2424,8 +2427,9 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     bool oldVal;
     DeclContext *Context;
     // Set flag in DeclContext informing debugger that we're looking for qualified name
-    QualifiedLookupInScope(DeclContext *ctx) : Context(ctx) {
-      oldVal = ctx->setUseQualifiedLookup();
+    QualifiedLookupInScope(DeclContext *ctx)
+        : oldVal(ctx->shouldUseQualifiedLookup()), Context(ctx) {
+      ctx->setUseQualifiedLookup();
     }
     ~QualifiedLookupInScope() {
       Context->setUseQualifiedLookup(oldVal);
@@ -3889,7 +3893,7 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
                    "bad export context");
             // .. are attached to a named module M, do not appear in the
             // translation unit containing the point of the lookup..
-            if (D->isInAnotherModuleUnit() &&
+            if (!isModuleUnitOfCurrentTU(FM) &&
                 llvm::any_of(AssociatedClasses, [&](auto *E) {
                   // ... and have the same innermost enclosing non-inline
                   // namespace scope as a declaration of an associated entity

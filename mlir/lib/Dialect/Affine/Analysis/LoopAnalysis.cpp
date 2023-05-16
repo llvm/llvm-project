@@ -162,7 +162,7 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
 /// conservative.
 static bool isAccessIndexInvariant(Value iv, Value index) {
   assert(isAffineForInductionVar(iv) && "iv must be a AffineForOp");
-  assert(index.getType().isa<IndexType>() && "index must be of IndexType");
+  assert(isa<IndexType>(index.getType()) && "index must be of IndexType");
   SmallVector<Operation *, 4> affineApplyOps;
   getReachableAffineApplyOps({index}, affineApplyOps);
 
@@ -262,7 +262,7 @@ static bool isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
 template <typename LoadOrStoreOp>
 static bool isVectorElement(LoadOrStoreOp memoryOp) {
   auto memRefType = memoryOp.getMemRefType();
-  return memRefType.getElementType().template isa<VectorType>();
+  return isa<VectorType>(memRefType.getElementType());
 }
 
 using VectorizableOpFun = std::function<bool(AffineForOp, Operation &)>;

@@ -41,7 +41,7 @@ getBufferizationOptions(bool analysisOnly) {
   options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
                                       const BufferizationOptions &options) {
     return getMemRefTypeWithStaticIdentityLayout(
-        value.getType().cast<TensorType>(), memorySpace);
+        cast<TensorType>(value.getType()), memorySpace);
   };
   if (analysisOnly) {
     options.testAnalysisOnly = true;

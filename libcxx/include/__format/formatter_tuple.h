@@ -50,10 +50,10 @@ struct _LIBCPP_TEMPLATE_VIS __formatter_tuple {
   }
 
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __parse_ctx) {
-    auto __begin = __parser_.__parse(__parse_ctx, __format_spec::__fields_tuple);
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    auto __begin = __parser_.__parse(__ctx, __format_spec::__fields_tuple);
 
-    auto __end = __parse_ctx.end();
+    auto __end = __ctx.end();
     if (__begin != __end) {
       if (*__begin == _CharT('m')) {
         if constexpr (sizeof...(_Args) == 2) {
@@ -71,14 +71,14 @@ struct _LIBCPP_TEMPLATE_VIS __formatter_tuple {
     if (__begin != __end && *__begin != _CharT('}'))
       std::__throw_format_error("The format-spec should consume the input or end with a '}'");
 
-    __parse_ctx.advance_to(__begin);
+    __ctx.advance_to(__begin);
 
     // [format.tuple]/7
     //   ... For each element e in underlying_, if e.set_debug_format()
     //   is a valid expression, calls e.set_debug_format().
     std::__for_each_index_sequence(make_index_sequence<sizeof...(_Args)>(), [&]<size_t _Index> {
       auto& __formatter = std::get<_Index>(__underlying_);
-      __formatter.parse(__parse_ctx);
+      __formatter.parse(__ctx);
       // Unlike the range_formatter we don't guard against evil parsers. Since
       // this format-spec never has a format-spec for the underlying type
       // adding the test would give additional overhead.

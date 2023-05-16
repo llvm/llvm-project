@@ -34,7 +34,7 @@ static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   }
   // Case 2: Check for IntegerAttr.
   Attribute attr = ofr.dyn_cast<Attribute>();
-  if (auto intAttr = attr.dyn_cast_or_null<IntegerAttr>())
+  if (auto intAttr = dyn_cast_or_null<IntegerAttr>(attr))
     return intAttr.getValue().getSExtValue();
   return std::nullopt;
 }
@@ -137,8 +137,8 @@ int64_t ValueBoundsConstraintSet::getPos(Value value,
                                          std::optional<int64_t> dim) const {
 #ifndef NDEBUG
   assertValidValueDim(value, dim);
-  assert((value.isa<OpResult>() ||
-          value.cast<BlockArgument>().getOwner()->isEntryBlock()) &&
+  assert((isa<OpResult>(value) ||
+          cast<BlockArgument>(value).getOwner()->isEntryBlock()) &&
          "unstructured control flow is not supported");
 #endif // NDEBUG
 
@@ -149,7 +149,7 @@ int64_t ValueBoundsConstraintSet::getPos(Value value,
 }
 
 static Operation *getOwnerOfValue(Value value) {
-  if (auto bbArg = value.dyn_cast<BlockArgument>())
+  if (auto bbArg = dyn_cast<BlockArgument>(value))
     return bbArg.getOwner()->getParentOp();
   return value.getDefiningOp();
 }

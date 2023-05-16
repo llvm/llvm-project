@@ -248,6 +248,7 @@ define void @extract_v8i1_v64i1_8(ptr %x, ptr %y) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vlm.v v8, (a0)
+; LMULMAX1-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; LMULMAX1-NEXT:    vslidedown.vi v8, v8, 1
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; LMULMAX1-NEXT:    vsm.v v8, (a1)

@@ -63,10 +63,10 @@ static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
                                          Location loc, Type type,
                                          const APInt &value) {
   TypedAttr attr;
-  if (auto intTy = type.dyn_cast<IntegerType>()) {
+  if (auto intTy = dyn_cast<IntegerType>(type)) {
     attr = rewriter.getIntegerAttr(type, value);
   } else {
-    auto vecTy = type.cast<VectorType>();
+    auto vecTy = cast<VectorType>(type);
     attr = SplatElementsAttr::get(vecTy, value);
   }
 
@@ -78,10 +78,10 @@ static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
                                          Location loc, Type type,
                                          int64_t value) {
   unsigned elementBitWidth = 0;
-  if (auto intTy = type.dyn_cast<IntegerType>())
+  if (auto intTy = dyn_cast<IntegerType>(type))
     elementBitWidth = intTy.getWidth();
   else
-    elementBitWidth = type.cast<VectorType>().getElementTypeBitWidth();
+    elementBitWidth = cast<VectorType>(type).getElementTypeBitWidth();
 
   return createScalarOrSplatConstant(rewriter, loc, type,
                                      APInt(elementBitWidth, value));
@@ -95,7 +95,7 @@ static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
 static Value extractLastDimSlice(ConversionPatternRewriter &rewriter,
                                  Location loc, Value input,
                                  int64_t lastOffset) {
-  ArrayRef<int64_t> shape = input.getType().cast<VectorType>().getShape();
+  ArrayRef<int64_t> shape = cast<VectorType>(input.getType()).getShape();
   assert(lastOffset < shape.back() && "Offset out of bounds");
 
   // Scalarize the result in case of 1D vectors.
@@ -125,7 +125,7 @@ extractLastDimHalves(ConversionPatternRewriter &rewriter, Location loc,
 // `input` is a scalar, this is a noop.
 static Value dropTrailingX1Dim(ConversionPatternRewriter &rewriter,
                                Location loc, Value input) {
-  auto vecTy = input.getType().dyn_cast<VectorType>();
+  auto vecTy = dyn_cast<VectorType>(input.getType());
   if (!vecTy)
     return input;
 
@@ -142,7 +142,7 @@ static Value dropTrailingX1Dim(ConversionPatternRewriter &rewriter,
 /// `input` is a scalar, this is a noop.
 static Value appendX1Dim(ConversionPatternRewriter &rewriter, Location loc,
                          Value input) {
-  auto vecTy = input.getType().dyn_cast<VectorType>();
+  auto vecTy = dyn_cast<VectorType>(input.getType());
   if (!vecTy)
     return input;
 
@@ -159,11 +159,11 @@ static Value appendX1Dim(ConversionPatternRewriter &rewriter, Location loc,
 static Value insertLastDimSlice(ConversionPatternRewriter &rewriter,
                                 Location loc, Value source, Value dest,
                                 int64_t lastOffset) {
-  ArrayRef<int64_t> shape = dest.getType().cast<VectorType>().getShape();
+  ArrayRef<int64_t> shape = cast<VectorType>(dest.getType()).getShape();
   assert(lastOffset < shape.back() && "Offset out of bounds");
 
   // Handle scalar source.
-  if (source.getType().isa<IntegerType>())
+  if (isa<IntegerType>(source.getType()))
     return rewriter.create<vector::InsertOp>(loc, source, dest, lastOffset);
 
   SmallVector<int64_t> offsets(shape.size(), 0);
@@ -215,14 +215,14 @@ struct ConvertConstant final : OpConversionPattern<arith::ConstantOp> {
     unsigned newBitWidth = newType.getElementTypeBitWidth();
     Attribute oldValue = op.getValueAttr();
 
-    if (auto intAttr = oldValue.dyn_cast<IntegerAttr>()) {
+    if (auto intAttr = dyn_cast<IntegerAttr>(oldValue)) {
       auto [low, high] = getHalves(intAttr.getValue(), newBitWidth);
       auto newAttr = DenseElementsAttr::get(newType, {low, high});
       rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, newAttr);
       return success();
     }
 
-    if (auto splatAttr = oldValue.dyn_cast<SplatElementsAttr>()) {
+    if (auto splatAttr = dyn_cast<SplatElementsAttr>(oldValue)) {
       auto [low, high] =
           getHalves(splatAttr.getSplatValue<APInt>(), newBitWidth);
       int64_t numSplatElems = splatAttr.getNumElements();
@@ -238,7 +238,7 @@ struct ConvertConstant final : OpConversionPattern<arith::ConstantOp> {
       return success();
     }
 
-    if (auto elemsAttr = oldValue.dyn_cast<DenseElementsAttr>()) {
+    if (auto elemsAttr = dyn_cast<DenseElementsAttr>(oldValue)) {
       int64_t numElems = elemsAttr.getNumElements();
       SmallVector<APInt> values;
       values.reserve(numElems * 2);
@@ -527,9 +527,8 @@ struct ConvertMaxMin final : OpConversionPattern<SourceOp> {
     Location loc = op->getLoc();
 
     Type oldTy = op.getType();
-    auto newTy = this->getTypeConverter()
-                     ->convertType(oldTy)
-                     .template dyn_cast_or_null<VectorType>();
+    auto newTy = dyn_cast_or_null<VectorType>(
+        this->getTypeConverter()->convertType(oldTy));
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -549,11 +548,11 @@ struct ConvertMaxMin final : OpConversionPattern<SourceOp> {
 
 /// Returns true iff the type is `index` or `vector<...index>`.
 static bool isIndexOrIndexVector(Type type) {
-  if (type.isa<IndexType>())
+  if (isa<IndexType>(type))
     return true;
 
-  if (auto vectorTy = type.dyn_cast<VectorType>())
-    if (vectorTy.getElementType().isa<IndexType>())
+  if (auto vectorTy = dyn_cast<VectorType>(type))
+    if (isa<IndexType>(vectorTy.getElementType()))
       return true;
 
   return false;
@@ -610,7 +609,7 @@ struct ConvertIndexCastIndexToInt final : OpConversionPattern<CastOp> {
     // Emit an index cast over the matching narrow type.
     Type narrowTy =
         rewriter.getIntegerType(typeConverter->getMaxTargetIntBitWidth());
-    if (auto vecTy = resultType.dyn_cast<VectorType>())
+    if (auto vecTy = dyn_cast<VectorType>(resultType))
       narrowTy = VectorType::get(vecTy.getShape(), narrowTy);
 
     // Sign or zero-extend the result. Let the matching conversion pattern
@@ -1116,7 +1115,7 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
 
   // Vector case.
   addConversion([this](VectorType ty) -> std::optional<Type> {
-    auto intTy = ty.getElementType().dyn_cast<IntegerType>();
+    auto intTy = dyn_cast<IntegerType>(ty.getElementType());
     if (!intTy)
       return ty;
 

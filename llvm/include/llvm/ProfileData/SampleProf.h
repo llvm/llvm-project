@@ -800,13 +800,6 @@ public:
     return Count;
   }
 
-  sampleprof_error addBodySamplesForProbe(uint32_t Index, uint64_t Num,
-                                          uint64_t Weight = 1) {
-    SampleRecord S;
-    S.addSamples(Num, Weight);
-    return BodySamples[LineLocation(Index, 0)].merge(S, Weight);
-  }
-
   // Accumulate all call target samples to update the body samples.
   void updateCallsiteSamples() {
     for (auto &I : BodySamples) {

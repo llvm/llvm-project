@@ -39,7 +39,7 @@ whether the required libraries have been built, you can use the
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
 
-If you used **ninja** as your build system then running ``ninja check-cxx`` will run
+If you used **ninja** as your build system, running ``ninja -C <build> check-cxx`` will run
 all the tests in the libc++ testsuite.
 
 .. note::

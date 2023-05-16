@@ -11,7 +11,7 @@
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \
 ; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc \
 ; RUN:   -o %t.native.o -x ir %t.o --save-temps=obj
-; RUN: llvm-dis %t.native.o.0.preopt.bc -o - | FileCheck %s --check-prefix=PUBLIC
+; RUN: llvm-dis %t.native.o.3.import.bc -o - | FileCheck %s --check-prefix=PUBLIC
 
 ; RUN: llvm-lto2 run -thinlto-distributed-indexes %t.o --whole-program-visibility \
 ; RUN:   -o %t2.index \
@@ -20,7 +20,7 @@
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \
 ; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc \
 ; RUN:   -o %t.native.o -x ir %t.o --save-temps=obj
-; RUN: llvm-dis %t.native.o.0.preopt.bc -o - | FileCheck %s --check-prefix=HIDDEN
+; RUN: llvm-dis %t.native.o.3.import.bc -o - | FileCheck %s --check-prefix=HIDDEN
 
 ; PUBLIC-NOT: call {{.*}}@llvm.public.type.test
 ; PUBLIC-NOT: call {{.*}}@llvm.type.test

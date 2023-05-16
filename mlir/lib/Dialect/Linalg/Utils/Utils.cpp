@@ -281,7 +281,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
     auto linalgOp = current.getDefiningOp<LinalgOp>();
     if (!linalgOp)
       break;
-    OpResult opResult = current.cast<OpResult>();
+    OpResult opResult = cast<OpResult>(current);
     current = linalgOp.getDpsInitOperand(opResult.getResultNumber())->get();
   }
   auto padOp = current ? current.getDefiningOp<tensor::PadOp>() : nullptr;
@@ -331,7 +331,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
 GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
                           Value outputTensor,
                           ArrayRef<int64_t> transposeVector) {
-  auto resultTensorType = outputTensor.getType().cast<RankedTensorType>();
+  auto resultTensorType = cast<RankedTensorType>(outputTensor.getType());
   Type elementType = resultTensorType.getElementType();
 
   assert(isPermutationVector(transposeVector) &&
@@ -366,9 +366,9 @@ GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
 }
 
 GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to) {
-  auto memrefTypeTo = to.getType().cast<MemRefType>();
+  auto memrefTypeTo = cast<MemRefType>(to.getType());
 #ifndef NDEBUG
-  auto memrefTypeFrom = from.getType().cast<MemRefType>();
+  auto memrefTypeFrom = cast<MemRefType>(from.getType());
   assert(memrefTypeFrom.getRank() == memrefTypeTo.getRank() &&
          "`from` and `to` memref must have the same rank");
 #endif // NDEBUG
@@ -650,7 +650,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
 static Value materializeTiledShape(OpBuilder &builder, Location loc,
                                    Value valueToTile,
                                    const SliceParameters &sliceParams) {
-  auto shapedType = valueToTile.getType().dyn_cast<ShapedType>();
+  auto shapedType = dyn_cast<ShapedType>(valueToTile.getType());
   auto *sliceOp = TypeSwitch<ShapedType, Operation *>(shapedType)
                       .Case([&](MemRefType) {
                         return builder.create<memref::SubViewOp>(
@@ -685,7 +685,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
                        ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
                        ArrayRef<OpFoldResult> subShapeSizes,
                        bool omitPartialTileCheck) {
-  auto shapedType = valueToTile.getType().dyn_cast<ShapedType>();
+  auto shapedType = dyn_cast<ShapedType>(valueToTile.getType());
   assert(shapedType && "only shaped types can be tiled");
   ArrayRef<int64_t> shape = shapedType.getShape();
   int64_t rank = shapedType.getRank();
@@ -889,7 +889,7 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
     // subdomains explicit.
 
     Type operandType = opOperand.get().getType();
-    if (!isTiled(map, tileSizes) && !(operandType.isa<RankedTensorType>() &&
+    if (!isTiled(map, tileSizes) && !(isa<RankedTensorType>(operandType) &&
                                       linalgOp.isDpsInit(&opOperand))) {
       allSliceParams.push_back(std::nullopt);
       LLVM_DEBUG(llvm::dbgs()
@@ -971,7 +971,7 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
     auto size = it.value();
     curr.push_back(dim);
     auto attr = size.dyn_cast<Attribute>();
-    if (attr && attr.cast<IntegerAttr>().getInt() == 1)
+    if (attr && cast<IntegerAttr>(attr).getInt() == 1)
       continue;
     reassociation.emplace_back(ReassociationIndices{});
     std::swap(reassociation.back(), curr);
@@ -989,7 +989,7 @@ std::optional<TypedAttr> getNeutralElement(Operation *op) {
   // Builder only used as helper for attribute creation.
   OpBuilder b(op->getContext());
   Type resultType = op->getResult(0).getType();
-  if (auto floatType = resultType.dyn_cast<FloatType>()) {
+  if (auto floatType = dyn_cast<FloatType>(resultType)) {
     const llvm::fltSemantics &semantic = floatType.getFloatSemantics();
     if (isa<arith::AddFOp>(op))
       return b.getFloatAttr(resultType, llvm::APFloat::getZero(semantic));

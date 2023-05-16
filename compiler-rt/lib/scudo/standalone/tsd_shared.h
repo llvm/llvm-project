@@ -54,6 +54,15 @@ struct TSDRegistrySharedT {
     Initialized = false;
   }
 
+  void drainCaches(Allocator *Instance) {
+    ScopedLock L(MutexTSDs);
+    for (uptr I = 0; I < NumberOfTSDs; ++I) {
+      TSDs[I].lock();
+      Instance->drainCache(&TSDs[I]);
+      TSDs[I].unlock();
+    }
+  }
+
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
                                      UNUSED bool MinimalInit) {
     if (LIKELY(getCurrentTSD()))

@@ -146,7 +146,7 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
     if (Reloc.Symbol)
       Value += Resolver(Reloc.Symbol);
 
-    Value = Relocation::adjustValue(Reloc.Type, Value,
+    Value = Relocation::encodeValue(Reloc.Type, Value,
                                     SectionAddress + Reloc.Offset);
 
     OS.pwrite(reinterpret_cast<const char *>(&Value),

@@ -37,8 +37,8 @@ struct CastOpInterface
     auto castOp = cast<CastOp>(op);
     assert(value == castOp.getResult() && "invalid value");
 
-    if (castOp.getResult().getType().isa<MemRefType>() &&
-        castOp.getSource().getType().isa<MemRefType>()) {
+    if (llvm::isa<MemRefType>(castOp.getResult().getType()) &&
+        llvm::isa<MemRefType>(castOp.getSource().getType())) {
       cstr.bound(value)[dim] == cstr.getExpr(castOp.getSource(), dim);
     }
   }
@@ -79,7 +79,7 @@ struct RankOpInterface
     auto rankOp = cast<RankOp>(op);
     assert(value == rankOp.getResult() && "invalid value");
 
-    auto memrefType = rankOp.getMemref().getType().dyn_cast<MemRefType>();
+    auto memrefType = llvm::dyn_cast<MemRefType>(rankOp.getMemref().getType());
     if (!memrefType)
       return;
     cstr.bound(value) == memrefType.getRank();

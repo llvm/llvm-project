@@ -16,18 +16,18 @@
 #include "lldb/API/SBDefines.h"
 
 namespace lldb_private {
+class CommandPluginInterfaceImplementation;
 class SBCommandReturnObjectImpl;
+namespace python {
+class SWIGBridge;
 }
+} // namespace lldb_private
 
 namespace lldb {
 
 class LLDB_API SBCommandReturnObject {
 public:
   SBCommandReturnObject();
-
-#ifndef SWIG
-  SBCommandReturnObject(lldb_private::CommandReturnObject &ref);
-#endif
 
   // rvalue ctor+assignment are incompatible with Reproducers.
 
@@ -118,6 +118,11 @@ public:
 protected:
   friend class SBCommandInterpreter;
   friend class SBOptions;
+
+  friend class lldb_private::CommandPluginInterfaceImplementation;
+  friend class lldb_private::python::SWIGBridge;
+
+  SBCommandReturnObject(lldb_private::CommandReturnObject &ref);
 
   lldb_private::CommandReturnObject *operator->() const;
 

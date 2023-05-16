@@ -456,8 +456,8 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   // it's collected.  This happens from canVectorizeWithIfConvert, when the
   // pointer is checked to reference consecutive elements suitable for a
   // masked access.
-  const ValueToValueMap &Strides =
-    LAI ? LAI->getSymbolicStrides() : ValueToValueMap();
+  const auto &Strides =
+    LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
 
   Function *F = TheLoop->getHeader()->getParent();
   bool OptForSize = F->hasOptSize() ||

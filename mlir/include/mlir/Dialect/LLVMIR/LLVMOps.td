@@ -172,7 +172,7 @@ def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
   LLVM_ScalarOrVectorOf<LLVM_AnyFloat>, "fneg", "FNeg">;
 
 // Memory-related operations.
-def LLVM_AllocaOp : LLVM_Op<"alloca", 
+def LLVM_AllocaOp : LLVM_Op<"alloca",
     [DeclareOpInterfaceMethods<PromotableAllocationOpInterface>]>,
   LLVM_MemOpPatterns {
   let arguments = (ins AnyInteger:$arraySize,
@@ -186,7 +186,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
     auto addrSpace = $_resultType->getPointerAddressSpace();
     llvm::Type *elementType = moduleTranslation.convertType(
         $elem_type ? *$elem_type
-                   : op.getType().cast<LLVMPointerType>().getElementType());
+                   : ::llvm::cast<LLVMPointerType>(op.getType()).getElementType());
     auto *inst = builder.CreateAlloca(elementType, addrSpace, $arraySize);
     }] # setAlignmentCode # [{
     inst->setUsedWithInAlloca($inalloca);
@@ -206,7 +206,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
     OpBuilder<(ins "Type":$resultType, "Value":$arraySize,
                "unsigned":$alignment),
     [{
-      assert(!resultType.cast<LLVMPointerType>().isOpaque() &&
+      assert(!::llvm::cast<LLVMPointerType>(resultType).isOpaque() &&
              "pass the allocated type explicitly if opaque pointers are used");
       if (alignment == 0)
         return build($_builder, $_state, resultType, arraySize, IntegerAttr(),
@@ -218,7 +218,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
                CArg<"unsigned", "0">:$alignment),
     [{
       TypeAttr elemTypeAttr =
-          resultType.cast<LLVMPointerType>().isOpaque() ?
+          ::llvm::cast<LLVMPointerType>(resultType).isOpaque() ?
           TypeAttr::get(elementType) : TypeAttr();
       build($_builder, $_state, resultType, arraySize,
             alignment == 0 ? IntegerAttr()
@@ -287,7 +287,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     GEPIndicesAdaptor<decltype($dynamicIndices)>
         gepIndices(op.getRawConstantIndicesAttr(), $dynamicIndices);
     for (PointerUnion<IntegerAttr, llvm::Value*> valueOrAttr : gepIndices) {
-      if (llvm::Value* value = valueOrAttr.dyn_cast<llvm::Value*>())
+      if (llvm::Value* value = ::llvm::dyn_cast<llvm::Value*>(valueOrAttr))
         indices.push_back(value);
       else
         indices.push_back(
@@ -1604,7 +1604,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     /// type if it is not void, or an empty array if the function's return type
     /// is void, as void is not assignable to a value.
     ArrayRef<Type> getCallableResults() {
-      if (getFunctionType().getReturnType().isa<LLVM::LLVMVoidType>())
+      if (::llvm::isa<LLVM::LLVMVoidType>(getFunctionType().getReturnType()))
         return {};
       return getFunctionType().getReturnTypes();
     }

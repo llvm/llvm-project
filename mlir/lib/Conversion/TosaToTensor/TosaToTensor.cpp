@@ -134,8 +134,8 @@ public:
   LogicalResult
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    ShapedType operandTy = adaptor.getInput1().getType().cast<ShapedType>();
-    ShapedType resultTy = reshape.getType().template cast<ShapedType>();
+    ShapedType operandTy = cast<ShapedType>(adaptor.getInput1().getType());
+    ShapedType resultTy = cast<ShapedType>(reshape.getType());
     bool isDynamic = !operandTy.hasStaticShape();
 
     if (isDynamic && resultTy.getRank() != 1) {
@@ -172,8 +172,8 @@ public:
   LogicalResult
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    ShapedType operandTy = adaptor.getInput1().getType().cast<ShapedType>();
-    ShapedType resultTy = reshape.getType().template cast<ShapedType>();
+    ShapedType operandTy = cast<ShapedType>(adaptor.getInput1().getType());
+    ShapedType resultTy = cast<ShapedType>(reshape.getType());
     bool isDynamic = !operandTy.hasStaticShape();
 
     if (isDynamic && operandTy.getRank() != 1) {
@@ -211,8 +211,8 @@ public:
   LogicalResult
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    ShapedType operandTy = adaptor.getInput1().getType().cast<ShapedType>();
-    ShapedType resultTy = reshape.getType().template cast<ShapedType>();
+    ShapedType operandTy = cast<ShapedType>(adaptor.getInput1().getType());
+    ShapedType resultTy = cast<ShapedType>(reshape.getType());
     bool isDynamic = !operandTy.hasStaticShape();
 
     SmallVector<int64_t> intermediateShape;
@@ -247,7 +247,7 @@ public:
     Value input = adaptor.getInput();
     SmallVector<int64_t> strides, sizes;
     ArrayRef<int64_t> starts = sliceOp.getStart();
-    strides.resize(sliceOp.getType().template cast<ShapedType>().getRank(), 1);
+    strides.resize(cast<ShapedType>(sliceOp.getType()).getRank(), 1);
 
     SmallVector<Value> dynSizes;
     for (const auto &i : llvm::enumerate(sliceOp.getSize())) {
@@ -284,7 +284,7 @@ public:
     auto input = padOp.getInput1();
     auto padding = padOp.getPadding();
 
-    ShapedType inputTy = input.getType().cast<ShapedType>();
+    ShapedType inputTy = cast<ShapedType>(input.getType());
     Type elementTy = inputTy.getElementType();
     int64_t rank = inputTy.getRank();
 
@@ -297,11 +297,11 @@ public:
           loc, padOp.getPadConst(), ValueRange({}));
     } else {
       TypedAttr constantAttr;
-      if (elementTy.isa<FloatType>()) {
+      if (isa<FloatType>(elementTy)) {
         constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-      } else if (elementTy.isa<IntegerType>() && !padOp.getQuantizationInfo()) {
+      } else if (isa<IntegerType>(elementTy) && !padOp.getQuantizationInfo()) {
         constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-      } else if (elementTy.isa<IntegerType>() && padOp.getQuantizationInfo()) {
+      } else if (isa<IntegerType>(elementTy) && padOp.getQuantizationInfo()) {
         int64_t value = padOp.getQuantizationInfo()->getInputZp();
         constantAttr = rewriter.getIntegerAttr(elementTy, value);
       }
@@ -355,8 +355,8 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
   LogicalResult
   matchAndRewrite(tosa::ConcatOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto inputType = op.getOperand(0).getType().template cast<ShapedType>();
-    auto resultType = op.getType().dyn_cast<RankedTensorType>();
+    auto inputType = cast<ShapedType>(op.getOperand(0).getType());
+    auto resultType = dyn_cast<RankedTensorType>(op.getType());
 
     Location loc = op.getLoc();
     int axis = op.getAxis();

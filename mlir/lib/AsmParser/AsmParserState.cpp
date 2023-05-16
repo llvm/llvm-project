@@ -73,7 +73,7 @@ void AsmParserState::Impl::resolveSymbolUses() {
     for (auto &it : *opAndUseMapIt.second) {
       symbolOps.clear();
       if (failed(symbolTable.lookupSymbolIn(
-              opAndUseMapIt.first, it.first.cast<SymbolRefAttr>(), symbolOps)))
+              opAndUseMapIt.first, cast<SymbolRefAttr>(it.first), symbolOps)))
         continue;
 
       for (ArrayRef<SMRange> useRange : it.second) {
@@ -301,7 +301,7 @@ void AsmParserState::addUses(Value value, ArrayRef<SMLoc> locations) {
   }
 
   // Otherwise, this is a block argument.
-  BlockArgument arg = value.cast<BlockArgument>();
+  BlockArgument arg = cast<BlockArgument>(value);
   auto existingIt = impl->blocksToIdx.find(arg.getOwner());
   assert(existingIt != impl->blocksToIdx.end() &&
          "expected valid block definition for block argument");

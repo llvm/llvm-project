@@ -116,8 +116,8 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
     public:
       explicit attr_value_iterator(ArrayAttr::iterator it)
           : llvm::mapped_iterator<ArrayAttr::iterator, AttrTy (*)(Attribute)>(
-                it, [](Attribute attr) { return attr.cast<AttrTy>(); }) {}
-      AttrTy operator*() const { return (*this->I).template cast<AttrTy>(); }
+                it, [](Attribute attr) { return ::llvm::cast<AttrTy>(attr); }) {}
+      AttrTy operator*() const { return ::llvm::cast<AttrTy>(*this->I); }
     };
 
   public:
@@ -622,13 +622,13 @@ def Builtin_FloatAttr : Builtin_Attr<"Float", [TypedAttrInterface]> {
       return $_get(type.getContext(), type, value);
     }]>,
     AttrBuilderWithInferredContext<(ins "Type":$type, "double":$value), [{
-      if (type.isF64() || !type.isa<FloatType>())
+      if (type.isF64() || !::llvm::isa<FloatType>(type))
         return $_get(type.getContext(), type, APFloat(value));
 
       // This handles, e.g., F16 because there is no APFloat constructor for it.
       bool unused;
       APFloat val(value);
-      val.convert(type.cast<FloatType>().getFloatSemantics(),
+      val.convert(::llvm::cast<FloatType>(type).getFloatSemantics(),
                   APFloat::rmNearestTiesToEven, &unused);
       return $_get(type.getContext(), type, val);
     }]>
@@ -695,7 +695,7 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", [TypedAttrInterface]> {
         return $_get(type.getContext(), type, apValue);
       }
 
-      IntegerType intTy = type.cast<IntegerType>();
+      IntegerType intTy = ::llvm::cast<IntegerType>(type);
       APInt apValue(intTy.getWidth(), value, intTy.isSignedInteger());
       return $_get(type.getContext(), type, apValue);
     }]>
@@ -848,11 +848,11 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
                                         "DenseElementsAttr":$values), [{
       assert(indices.getType().getElementType().isInteger(64) &&
              "expected sparse indices to be 64-bit integer values");
-      assert((type.isa<RankedTensorType, VectorType>()) &&
+      assert((::llvm::isa<RankedTensorType, VectorType>(type)) &&
              "type must be ranked tensor or vector");
       assert(type.hasStaticShape() && "type must have static shape");
       return $_get(type.getContext(), type,
-                   indices.cast<DenseIntElementsAttr>(), values);
+                   ::llvm::cast<DenseIntElementsAttr>(indices), values);
     }]>,
   ];
   let extraClassDeclaration = [{
@@ -905,7 +905,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
     template <typename T>
     std::enable_if_t<std::is_base_of<Attribute, T>::value, T>
     getZeroValue() const {
-      return getZeroAttr().template cast<T>();
+      return ::llvm::cast<T>(getZeroAttr());
     }
     /// Get a zero for an APInt.
     template <typename T>

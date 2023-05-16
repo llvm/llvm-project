@@ -3004,8 +3004,7 @@ def ftime_trace : Flag<["-"], "ftime-trace">, Group<f_Group>,
 Turn on time profiler. Generates JSON file based on output filename. Results
 can be analyzed with chrome://tracing or `Speedscope App
 <https://www.speedscope.app>`_ for flamegraph visualization.}]>,
-  Flags<[CC1Option, CoreOption]>,
-  MarshallingInfoFlag<FrontendOpts<"TimeTrace">>;
+  Flags<[CoreOption]>;
 def ftime_trace_granularity_EQ : Joined<["-"], "ftime-trace-granularity=">, Group<f_Group>,
   HelpText<"Minimum time granularity (in microseconds) traced by time profiler">,
   Flags<[CC1Option, CoreOption]>,
@@ -3908,6 +3907,9 @@ def maix_struct_return : Flag<["-"], "maix-struct-return">,
 def msvr4_struct_return : Flag<["-"], "msvr4-struct-return">,
   Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Return small structs in registers (PPC32 only)">;
+def mxcoff_roptr : Flag<["-"], "mxcoff-roptr">, Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Place constant objects with relocatable address values in the RO data section and add -bforceimprw to the linker flags (AIX only)">;
+def mno_xcoff_roptr : Flag<["-"], "mno-xcoff-roptr">, Group<m_Group>;
 
 def mvx : Flag<["-"], "mvx">, Group<m_Group>;
 def mno_vx : Flag<["-"], "mno-vx">, Group<m_Group>;

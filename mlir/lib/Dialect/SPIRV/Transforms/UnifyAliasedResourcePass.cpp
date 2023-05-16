@@ -65,16 +65,16 @@ static AliasedResourceMap collectAliasedResources(spirv::ModuleOp moduleOp) {
 /// `!spirv.ptr<!spirv.struct<!spirv.rtarray<...>>>`. Returns null type
 /// otherwise.
 static Type getRuntimeArrayElementType(Type type) {
-  auto ptrType = type.dyn_cast<spirv::PointerType>();
+  auto ptrType = dyn_cast<spirv::PointerType>(type);
   if (!ptrType)
     return {};
 
-  auto structType = ptrType.getPointeeType().dyn_cast<spirv::StructType>();
+  auto structType = dyn_cast<spirv::StructType>(ptrType.getPointeeType());
   if (!structType || structType.getNumElements() != 1)
     return {};
 
   auto rtArrayType =
-      structType.getElementType(0).dyn_cast<spirv::RuntimeArrayType>();
+      dyn_cast<spirv::RuntimeArrayType>(structType.getElementType(0));
   if (!rtArrayType)
     return {};
 
@@ -97,7 +97,7 @@ deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
   for (const auto &indexedTypes : llvm::enumerate(types)) {
     spirv::SPIRVType type = indexedTypes.value();
     assert(type.isScalarOrVector());
-    if (auto vectorType = type.dyn_cast<VectorType>()) {
+    if (auto vectorType = dyn_cast<VectorType>(type)) {
       if (vectorType.getNumElements() % 2 != 0)
         return std::nullopt; // Odd-sized vector has special layout
                              // requirements.
@@ -277,7 +277,7 @@ void ResourceAliasAnalysis::recordIfUnifiable(
     if (!elementType)
       return; // Unexpected resource variable type.
 
-    auto type = elementType.cast<spirv::SPIRVType>();
+    auto type = cast<spirv::SPIRVType>(elementType);
     if (!type.isScalarOrVector())
       return; // Unexpected resource element type.
 
@@ -370,7 +370,7 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
 
     Location loc = acOp.getLoc();
 
-    if (srcElemType.isIntOrFloat() && dstElemType.isa<VectorType>()) {
+    if (srcElemType.isIntOrFloat() && isa<VectorType>(dstElemType)) {
       // The source indices are for a buffer with scalar element types. Rewrite
       // them into a buffer with vector element types. We need to scale the last
       // index for the vector as a whole, then add one level of index for inside
@@ -398,7 +398,7 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
     }
 
     if ((srcElemType.isIntOrFloat() && dstElemType.isIntOrFloat()) ||
-        (srcElemType.isa<VectorType>() && dstElemType.isa<VectorType>())) {
+        (isa<VectorType>(srcElemType) && isa<VectorType>(dstElemType))) {
       // The source indices are for a buffer with larger bitwidth scalar/vector
       // element types. Rewrite them into a buffer with smaller bitwidth element
       // types. We only need to scale the last index.
@@ -433,10 +433,10 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
   LogicalResult
   matchAndRewrite(spirv::LoadOp loadOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto srcPtrType = loadOp.getPtr().getType().cast<spirv::PointerType>();
-    auto srcElemType = srcPtrType.getPointeeType().cast<spirv::SPIRVType>();
-    auto dstPtrType = adaptor.getPtr().getType().cast<spirv::PointerType>();
-    auto dstElemType = dstPtrType.getPointeeType().cast<spirv::SPIRVType>();
+    auto srcPtrType = cast<spirv::PointerType>(loadOp.getPtr().getType());
+    auto srcElemType = cast<spirv::SPIRVType>(srcPtrType.getPointeeType());
+    auto dstPtrType = cast<spirv::PointerType>(adaptor.getPtr().getType());
+    auto dstElemType = cast<spirv::SPIRVType>(dstPtrType.getPointeeType());
 
     Location loc = loadOp.getLoc();
     auto newLoadOp = rewriter.create<spirv::LoadOp>(loc, adaptor.getPtr());
@@ -454,7 +454,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
     }
 
     if ((srcElemType.isIntOrFloat() && dstElemType.isIntOrFloat()) ||
-        (srcElemType.isa<VectorType>() && dstElemType.isa<VectorType>())) {
+        (isa<VectorType>(srcElemType) && isa<VectorType>(dstElemType))) {
       // The source and destination have scalar types of different bitwidths, or
       // vector types of different component counts. For such cases, we load
       // multiple smaller bitwidth values and construct a larger bitwidth one.
@@ -495,13 +495,13 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       // type.
 
       Type vectorType = srcElemType;
-      if (!srcElemType.isa<VectorType>())
+      if (!isa<VectorType>(srcElemType))
         vectorType = VectorType::get({ratio}, dstElemType);
 
       // If both the source and destination are vector types, we need to make
       // sure the scalar type is the same for composite construction later.
-      if (auto srcElemVecType = srcElemType.dyn_cast<VectorType>())
-        if (auto dstElemVecType = dstElemType.dyn_cast<VectorType>()) {
+      if (auto srcElemVecType = dyn_cast<VectorType>(srcElemType))
+        if (auto dstElemVecType = dyn_cast<VectorType>(dstElemType)) {
           if (srcElemVecType.getElementType() !=
               dstElemVecType.getElementType()) {
             int64_t count =
@@ -515,7 +515,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       Value vectorValue = rewriter.create<spirv::CompositeConstructOp>(
           loc, vectorType, components);
 
-      if (!srcElemType.isa<VectorType>())
+      if (!isa<VectorType>(srcElemType))
         vectorValue =
             rewriter.create<spirv::BitcastOp>(loc, srcElemType, vectorValue);
       rewriter.replaceOp(loadOp, vectorValue);
@@ -534,9 +534,9 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
   matchAndRewrite(spirv::StoreOp storeOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcElemType =
-        storeOp.getPtr().getType().cast<spirv::PointerType>().getPointeeType();
+        cast<spirv::PointerType>(storeOp.getPtr().getType()).getPointeeType();
     auto dstElemType =
-        adaptor.getPtr().getType().cast<spirv::PointerType>().getPointeeType();
+        cast<spirv::PointerType>(adaptor.getPtr().getType()).getPointeeType();
     if (!srcElemType.isIntOrFloat() || !dstElemType.isIntOrFloat())
       return rewriter.notifyMatchFailure(storeOp, "not scalar type");
     if (!areSameBitwidthScalarType(srcElemType, dstElemType))

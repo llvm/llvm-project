@@ -217,7 +217,7 @@ define i1 @extractelt_nxv1i1_idx0(<vscale x 1 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v8
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 1 x i8>, <vscale x 1 x i8>* %x
   %b = icmp eq <vscale x 1 x i8> %a, zeroinitializer
@@ -232,7 +232,7 @@ define i1 @extractelt_nxv2i1_idx0(<vscale x 2 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v8
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 2 x i8>, <vscale x 2 x i8>* %x
   %b = icmp eq <vscale x 2 x i8> %a, zeroinitializer
@@ -247,7 +247,7 @@ define i1 @extractelt_nxv4i1_idx0(<vscale x 4 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v8
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 4 x i8>, <vscale x 4 x i8>* %x
   %b = icmp eq <vscale x 4 x i8> %a, zeroinitializer
@@ -262,7 +262,7 @@ define i1 @extractelt_nxv8i1_idx0(<vscale x 8 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v8
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 8 x i8>, <vscale x 8 x i8>* %x
   %b = icmp eq <vscale x 8 x i8> %a, zeroinitializer
@@ -277,7 +277,7 @@ define i1 @extractelt_nxv16i1_idx0(<vscale x 16 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmseq.vi v10, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v10
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 16 x i8>, <vscale x 16 x i8>* %x
   %b = icmp eq <vscale x 16 x i8> %a, zeroinitializer
@@ -292,7 +292,7 @@ define i1 @extractelt_nxv32i1_idx0(<vscale x 32 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmseq.vi v12, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v12
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 32 x i8>, <vscale x 32 x i8>* %x
   %b = icmp eq <vscale x 32 x i8> %a, zeroinitializer
@@ -307,7 +307,7 @@ define i1 @extractelt_nxv64i1_idx0(<vscale x 64 x i8>* %x) nounwind {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vi v16, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v16
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 64 x i8>, <vscale x 64 x i8>* %x
   %b = icmp eq <vscale x 64 x i8> %a, zeroinitializer

@@ -15,7 +15,6 @@ add_flang_library(FIRTransforms
   SimplifyIntrinsics.cpp
   AddDebugFoundation.cpp
   PolymorphicOpConversion.cpp
-  OpenACC/OpenACCDataOperandConversion.cpp
   LoopVersioning.cpp
 
   DEPENDS

@@ -235,7 +235,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   SmallVector<UnrankedMemRefDescriptor> unrankedMemrefs;
   SmallVector<unsigned> unrankedAddressSpaces;
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
-    if (auto memRefType = origTypes[i].dyn_cast<UnrankedMemRefType>()) {
+    if (auto memRefType = dyn_cast<UnrankedMemRefType>(origTypes[i])) {
       unrankedMemrefs.emplace_back(operands[i]);
       FailureOr<unsigned> addressSpace =
           getTypeConverter()->getMemRefAddressSpace(memRefType);
@@ -276,7 +276,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   unsigned unrankedMemrefPos = 0;
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
     Type type = origTypes[i];
-    if (!type.isa<UnrankedMemRefType>())
+    if (!isa<UnrankedMemRefType>(type))
       continue;
     Value allocationSize = sizes[unrankedMemrefPos++];
     UnrankedMemRefDescriptor desc(operands[i]);

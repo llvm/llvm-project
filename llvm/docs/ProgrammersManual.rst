@@ -2475,7 +2475,7 @@ choice for representing sets which have lots of very short ranges. E.g. the set
 Useful Utility Functions
 ========================
 
-LLVM implements a number of general utility functions used acrossed the
+LLVM implements a number of general utility functions used across the
 codebase. You can find the most common ones in ``STLExtras.h``
 (`doxygen <https://llvm.org/doxygen/STLExtras_8h.html>`__). Some of these wrap
 well-known C++ standard library functions, while others are unique to LLVM.

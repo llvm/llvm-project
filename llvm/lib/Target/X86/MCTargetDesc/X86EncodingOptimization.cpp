@@ -13,12 +13,19 @@
 #include "X86EncodingOptimization.h"
 #include "X86BaseInfo.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 
 using namespace llvm;
 
-bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI) {
+static bool shouldExchange(const MCInst &MI, unsigned OpIdx1, unsigned OpIdx2) {
+  return !X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx1).getReg()) &&
+         X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx2).getReg());
+}
+
+bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
   unsigned OpIdx1, OpIdx2;
   unsigned NewOpc;
+  unsigned Opcode = MI.getOpcode();
 #define FROM_TO(FROM, TO, IDX1, IDX2)                                          \
   case X86::FROM:                                                              \
     NewOpc = X86::TO;                                                          \
@@ -27,8 +34,26 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI) {
     break;
 #define TO_REV(FROM) FROM_TO(FROM, FROM##_REV, 0, 1)
   switch (MI.getOpcode()) {
-  default:
-    return false;
+  default: {
+    // If the instruction is a commutable arithmetic instruction we might be
+    // able to commute the operands to get a 2 byte VEX prefix.
+    uint64_t TSFlags = Desc.TSFlags;
+    if (!Desc.isCommutable() || (TSFlags & X86II::EncodingMask) != X86II::VEX ||
+        (TSFlags & X86II::OpMapMask) != X86II::TB ||
+        (TSFlags & X86II::FormMask) != X86II::MRMSrcReg ||
+        (TSFlags & X86II::REX_W) || !(TSFlags & X86II::VEX_4V) ||
+        MI.getNumOperands() != 3)
+      return false;
+    // These two are not truly commutable.
+    if (Opcode == X86::VMOVHLPSrr || Opcode == X86::VUNPCKHPDrr)
+      return false;
+    OpIdx1 = 1;
+    OpIdx2 = 2;
+    if (!shouldExchange(MI, OpIdx1, OpIdx2))
+      return false;
+    std::swap(MI.getOperand(OpIdx1), MI.getOperand(OpIdx2));
+    return true;
+  }
     // Commute operands to get a smaller encoding by using VEX.R instead of
     // VEX.B if one of the registers is extended, but other isn't.
     FROM_TO(VMOVZPQILo2PQIrr, VMOVPQI2QIrr, 0, 1)
@@ -51,8 +76,7 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI) {
 #undef TO_REV
 #undef FROM_TO
   }
-  if (X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx1).getReg()) ||
-      !X86II::isX86_64ExtendedReg(MI.getOperand(OpIdx2).getReg()))
+  if (!shouldExchange(MI, OpIdx1, OpIdx2))
     return false;
   MI.setOpcode(NewOpc);
   return true;

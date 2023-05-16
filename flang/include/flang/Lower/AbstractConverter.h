@@ -115,6 +115,17 @@ public:
       Fortran::semantics::Symbol::Flag flag, bool collectSymbols = true,
       bool collectHostAssociatedSymbols = false) = 0;
 
+  /// For the given literal constant \p expression, returns a unique name
+  /// that can be used to create a global object to represent this
+  /// literal constant. It will return the same name for equivalent
+  /// literal constant expressions. \p eleTy specifies the data type
+  /// of the constant elements. For array constants it specifies
+  /// the array's element type.
+  virtual llvm::StringRef
+  getUniqueLitName(mlir::Location loc,
+                   std::unique_ptr<Fortran::lower::SomeExpr> expression,
+                   mlir::Type eleTy) = 0;
+
   //===--------------------------------------------------------------------===//
   // Expressions
   //===--------------------------------------------------------------------===//

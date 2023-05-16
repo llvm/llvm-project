@@ -427,7 +427,7 @@ define ptr @tautological_select_like_phi(i32 %tc) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,101) S: [0,101) Exits: 100 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %r = phi ptr [ @constant, %truebb ], [ @another_constant, %falsebb ]
-; CHECK-NEXT:    --> @constant U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: @constant LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:    --> %r U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,102) S: [1,102) Exits: 101 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @tautological_select_like_phi

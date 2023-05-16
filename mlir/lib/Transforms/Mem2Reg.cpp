@@ -99,7 +99,7 @@ MemorySlotPromoter::MemorySlotPromoter(
       info(std::move(info)) {
 #ifndef NDEBUG
   auto isResultOrNewBlockArgument = [&]() {
-    if (BlockArgument arg = slot.ptr.dyn_cast<BlockArgument>())
+    if (BlockArgument arg = dyn_cast<BlockArgument>(slot.ptr))
       return arg.getOwner()->getParentOp() == allocator;
     return slot.ptr.getDefiningOp() == allocator;
   };

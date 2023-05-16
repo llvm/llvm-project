@@ -375,7 +375,7 @@ int main(int argc, char **argv) {
   // enable parsing of OpenACC
   if (enableOpenACC) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
-    options.predefinitions.emplace_back("_OPENACC", "201911");
+    options.predefinitions.emplace_back("_OPENACC", "202011");
   }
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;

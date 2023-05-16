@@ -90,6 +90,33 @@ def InferResultsImpliedOp : TestOp<"infer_results_implied_op"> {
   let results = (outs I32:$integer, F64:$flt, Index:$index);
 }
 
+def InferShapedTypeComponentsOp : TestOp<"infer_shaped_type_components_op",
+  [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                             ["inferReturnTypeComponents"]>]> {
+  let arguments = (ins AnyTensor:$operand);
+  let results = (outs AnyTensor:$result);
+
+  let extraClassDefinition = [{
+    ::mlir::LogicalResult $cppClass::inferReturnTypeComponents(
+      ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
+      ::mlir::ValueShapeRange operands, ::mlir::DictionaryAttr attributes,
+      ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+      ::llvm::SmallVectorImpl<
+        ::mlir::ShapedTypeComponents>& inferredShapedTypeComponents) {
+      $cppClass::Adaptor adaptor(operands, attributes, properties, regions);
+      auto operandType =
+          adaptor.getOperand().getType().cast<::mlir::ShapedType>();
+      if (operandType.hasRank()) {
+        inferredShapedTypeComponents.emplace_back(operandType.getShape(),
+            operandType.getElementType());
+      } else {
+        inferredShapedTypeComponents.emplace_back(operandType.getElementType());
+      }
+      return ::mlir::success();
+    }
+  }];
+}
+
 def SameOperandAndResultTypeOp : TestOp<"same_operand_and_result_type_op",
                                         [SameOperandsAndResultType]> {
   let arguments = (ins Variadic<AnyType>);

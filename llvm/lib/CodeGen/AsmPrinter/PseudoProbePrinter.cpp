@@ -42,8 +42,13 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
     ReversedInlineStack.emplace_back(CallerGuid, CallerProbeId);
     InlinedAt = InlinedAt->getInlinedAt();
   }
-
+  uint64_t Discriminator = 0;
+  // For now only block probes have FS discriminators. See
+  // MIRFSDiscriminator.cpp for more details.
+  if (DebugLoc &&
+      !DILocation::isPseudoProbeDiscriminator(DebugLoc->getDiscriminator()))
+    Discriminator = DebugLoc->getDiscriminator();
   SmallVector<InlineSite, 8> InlineStack(llvm::reverse(ReversedInlineStack));
-  Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, InlineStack,
-                                    Asm->CurrentFnSym);
+  Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, Discriminator,
+                                    InlineStack, Asm->CurrentFnSym);
 }

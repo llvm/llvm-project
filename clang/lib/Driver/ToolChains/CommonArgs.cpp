@@ -131,15 +131,33 @@ static void renderRemarksHotnessOptions(const ArgList &Args,
                            "opt-remarks-hotness-threshold=" + A->getValue()));
 }
 
+static bool shouldIgnoreUnsupportedTargetFeature(const Arg &TargetFeatureArg,
+                                                 llvm::Triple T,
+                                                 StringRef Processor) {
+  // Warn no-cumode for AMDGCN processors not supporing WGP mode.
+  if (!T.isAMDGPU())
+    return false;
+  auto GPUKind = T.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Processor)
+                              : llvm::AMDGPU::parseArchR600(Processor);
+  auto GPUFeatures = T.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
+                                  : llvm::AMDGPU::getArchAttrR600(GPUKind);
+  if (GPUFeatures & llvm::AMDGPU::FEATURE_WGP)
+    return false;
+  return TargetFeatureArg.getOption().matches(options::OPT_mno_cumode);
+}
+
 void tools::addPathIfExists(const Driver &D, const Twine &Path,
                             ToolChain::path_list &Paths) {
   if (D.getVFS().exists(Path))
     Paths.push_back(Path.str());
 }
 
-void tools::handleTargetFeaturesGroup(const ArgList &Args,
+void tools::handleTargetFeaturesGroup(const Driver &D,
+                                      const llvm::Triple &Triple,
+                                      const ArgList &Args,
                                       std::vector<StringRef> &Features,
                                       OptSpecifier Group) {
+  std::set<StringRef> Warned;
   for (const Arg *A : Args.filtered(Group)) {
     StringRef Name = A->getOption().getName();
     A->claim();
@@ -148,9 +166,21 @@ void tools::handleTargetFeaturesGroup(const ArgList &Args,
     assert(Name.startswith("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
+    auto Proc = getCPUName(D, Args, Triple);
+    if (shouldIgnoreUnsupportedTargetFeature(*A, Triple, Proc)) {
+      if (Warned.count(Name) == 0) {
+        D.getDiags().Report(
+            clang::diag::warn_drv_unsupported_option_for_processor)
+            << A->getAsString(Args) << Proc;
+        Warned.insert(Name);
+      }
+      continue;
+    }
+
     bool IsNegative = Name.startswith("no-");
     if (IsNegative)
       Name = Name.substr(3);
+
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 }
@@ -232,9 +262,11 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
   Args.AddAllArgValues(CmdArgs, options::OPT_Zlinker_input);
 
   // LIBRARY_PATH are included before user inputs and only supported on native
-  // toolchains.
+  // toolchains. Otherwise only add the '-L' arguments requested by the user.
   if (!TC.isCrossCompiling())
     addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
+  else
+    Args.AddAllArgs(CmdArgs, options::OPT_L);
 
   for (const auto &II : Inputs) {
     // If the current tool chain refers to an OpenMP offloading host, we
@@ -461,9 +493,12 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   }
 }
 
-static void getWebAssemblyTargetFeatures(const ArgList &Args,
+static void getWebAssemblyTargetFeatures(const Driver &D,
+                                         const llvm::Triple &Triple,
+                                         const ArgList &Args,
                                          std::vector<StringRef> &Features) {
-  handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
+  handleTargetFeaturesGroup(D, Triple, Args, Features,
+                            options::OPT_m_wasm_Features_Group);
 }
 
 void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -508,11 +543,11 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     x86::getX86TargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::hexagon:
-    hexagon::getHexagonTargetFeatures(D, Args, Features);
+    hexagon::getHexagonTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
-    getWebAssemblyTargetFeatures(Args, Features);
+    getWebAssemblyTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -713,6 +748,26 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   else if (Args.hasArg(options::OPT_fno_data_sections))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-data-sections=0"));
+
+  if (Args.hasArg(options::OPT_mxcoff_roptr) ||
+      Args.hasArg(options::OPT_mno_xcoff_roptr)) {
+    bool HasRoptr = Args.hasFlag(options::OPT_mxcoff_roptr,
+                                 options::OPT_mno_xcoff_roptr, false);
+    StringRef OptStr = HasRoptr ? "-mxcoff-roptr" : "-mno-xcoff-roptr";
+
+    if (!IsOSAIX)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << OptStr << ToolChain.getTriple().str();
+
+    if (HasRoptr) {
+      if (!Args.hasFlag(options::OPT_fdata_sections,
+                        options::OPT_fno_data_sections, UseSeparateSections))
+        D.Diag(diag::err_roptr_requires_data_sections);
+
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "-mxcoff-roptr"));
+    }
+  }
 
   // Pass an option to enable split machine functions.
   if (auto *A = Args.getLastArg(options::OPT_fsplit_machine_functions,

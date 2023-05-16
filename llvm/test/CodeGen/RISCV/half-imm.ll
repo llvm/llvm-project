@@ -3,10 +3,22 @@
 ; RUN:   -target-abi ilp32f < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfh -verify-machineinstrs \
 ; RUN:   -target-abi lp64f < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+zhinx -verify-machineinstrs \
+; RUN:   -target-abi ilp32 < %s \
+; RUN:   | FileCheck -check-prefix=RV32IZHINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zhinx -verify-machineinstrs \
+; RUN:   -target-abi lp64 < %s \
+; RUN:   | FileCheck -check-prefix=RV64IZHINX %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -target-abi ilp32f < %s | FileCheck -check-prefixes=CHECKIZFHMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -target-abi lp64f < %s | FileCheck -check-prefixes=CHECKIZFHMIN %s
+; RUN: llc -mtriple=riscv32 -mattr=+zhinxmin -verify-machineinstrs \
+; RUN:   -target-abi ilp32 < %s \
+; RUN:   | FileCheck -check-prefixes=CHECKIZHINXMIN %s
+; RUN: llc -mtriple=riscv64 -mattr=+zhinxmin -verify-machineinstrs \
+; RUN:   -target-abi lp64 < %s \
+; RUN:   | FileCheck -check-prefixes=CHECKIZHINXMIN %s
 
 ; TODO: constant pool shouldn't be necessary for RV32IZfh and RV64IZfh
 define half @half_imm() nounwind {
@@ -16,11 +28,29 @@ define half @half_imm() nounwind {
 ; CHECK-NEXT:    flh fa0, %lo(.LCPI0_0)(a0)
 ; CHECK-NEXT:    ret
 ;
+; RV32IZHINX-LABEL: half_imm:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    lui a0, %hi(.LCPI0_0)
+; RV32IZHINX-NEXT:    lh a0, %lo(.LCPI0_0)(a0)
+; RV32IZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: half_imm:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    lui a0, %hi(.LCPI0_0)
+; RV64IZHINX-NEXT:    lh a0, %lo(.LCPI0_0)(a0)
+; RV64IZHINX-NEXT:    ret
+;
 ; CHECKIZFHMIN-LABEL: half_imm:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    lui a0, %hi(.LCPI0_0)
 ; CHECKIZFHMIN-NEXT:    flh fa0, %lo(.LCPI0_0)(a0)
 ; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: half_imm:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    lui a0, %hi(.LCPI0_0)
+; CHECKIZHINXMIN-NEXT:    lh a0, %lo(.LCPI0_0)(a0)
+; CHECKIZHINXMIN-NEXT:    ret
   ret half 3.0
 }
 
@@ -32,6 +62,20 @@ define half @half_imm_op(half %a) nounwind {
 ; CHECK-NEXT:    fadd.h fa0, fa0, fa5
 ; CHECK-NEXT:    ret
 ;
+; RV32IZHINX-LABEL: half_imm_op:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    lui a1, %hi(.LCPI1_0)
+; RV32IZHINX-NEXT:    lh a1, %lo(.LCPI1_0)(a1)
+; RV32IZHINX-NEXT:    fadd.h a0, a0, a1
+; RV32IZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: half_imm_op:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    lui a1, %hi(.LCPI1_0)
+; RV64IZHINX-NEXT:    lh a1, %lo(.LCPI1_0)(a1)
+; RV64IZHINX-NEXT:    fadd.h a0, a0, a1
+; RV64IZHINX-NEXT:    ret
+;
 ; CHECKIZFHMIN-LABEL: half_imm_op:
 ; CHECKIZFHMIN:       # %bb.0:
 ; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
@@ -40,6 +84,14 @@ define half @half_imm_op(half %a) nounwind {
 ; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: half_imm_op:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    lui a1, 260096
+; CHECKIZHINXMIN-NEXT:    fadd.s a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECKIZHINXMIN-NEXT:    ret
   %1 = fadd half %a, 1.0
   ret half %1
 }

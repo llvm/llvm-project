@@ -58,7 +58,7 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
                    StringRef uriScheme, const lsp::URIForFile *uri = nullptr) {
   std::optional<lsp::Location> location;
   loc->walk([&](Location nestedLoc) {
-    FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
+    FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
     if (!fileLoc)
       return WalkResult::advance();
 
@@ -91,7 +91,7 @@ static void collectLocationsFromLoc(Location loc,
                                     const lsp::URIForFile &uri) {
   SetVector<Location> visitedLocs;
   loc->walk([&](Location nestedLoc) {
-    FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
+    FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
     if (!fileLoc || !visitedLocs.insert(nestedLoc))
       return WalkResult::advance();
 

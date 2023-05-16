@@ -88,7 +88,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
     return MemRefType::Builder(oldMemRefType).setShape(newShape).setLayout({});
   };
 
-  auto oldMemRefType = oldMemRef.getType().cast<MemRefType>();
+  auto oldMemRefType = cast<MemRefType>(oldMemRef.getType());
   auto newMemRefType = doubleShape(oldMemRefType);
 
   // The double buffer is allocated right before 'forOp'.

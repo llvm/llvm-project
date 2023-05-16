@@ -418,6 +418,16 @@ More details are listed in the following table:
    <td>OmpUseDevicePtr
    </td>
   </tr>
+  <tr>
+   <td>use_device_addr
+   </td>
+   <td>Yes
+   </td>
+   <td>New Symbol
+   </td>
+   <td>OmpUseDeviceAddr
+   </td>
+  </tr>
 </table>
 
 To determine the right data-sharing attribute,
@@ -535,6 +545,11 @@ use_device_ptr clause are privatized and the device pointers to the
 corresponding list items in the device data environment are assigned into the
 private versions so it is best to follow the representation for privatised
 variables i.e represent them with a new Symbol and `OmpUseDevicePtr` flag.
+If a list item that appears in a use_device_addr clause has corresponding
+storage in the device data environment, references to the list item in the
+associated structured block are converted into references to the corresponding
+list item so following the same i.e. represent them with a new Symbol and
+`OmpUseDeviceAddr` flag.
 
 The basic steps to determine the data-mapping attribute are:
 

@@ -40,7 +40,7 @@ struct DimOfShapedTypeOpInterface : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    OpResult dimValue = dimOp.getSource().template dyn_cast<OpResult>();
+    OpResult dimValue = dyn_cast<OpResult>(dimOp.getSource());
     if (!dimValue)
       return failure();
     auto shapedTypeOp =
@@ -61,8 +61,8 @@ struct DimOfShapedTypeOpInterface : public OpRewritePattern<OpTy> {
       return failure();
 
     Value resultShape = reifiedResultShapes[dimValue.getResultNumber()];
-    auto resultShapeType = resultShape.getType().dyn_cast<RankedTensorType>();
-    if (!resultShapeType || !resultShapeType.getElementType().isa<IndexType>())
+    auto resultShapeType = dyn_cast<RankedTensorType>(resultShape.getType());
+    if (!resultShapeType || !isa<IndexType>(resultShapeType.getElementType()))
       return failure();
 
     Location loc = dimOp->getLoc();
@@ -82,7 +82,7 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    OpResult dimValue = dimOp.getSource().template dyn_cast<OpResult>();
+    OpResult dimValue = dyn_cast<OpResult>(dimOp.getSource());
     if (!dimValue)
       return failure();
     std::optional<int64_t> dimIndex = dimOp.getConstantIndex();

@@ -12,6 +12,18 @@
 @constpackedstruct = internal constant <{[8 x i8]}>  <{[8 x i8] c"\01\00\01\00\01\00\01\00"}>, align 4
 @conststruct = internal constant {i16, [8 x i8]}  {i16 1, [8 x i8] c"\01\00\01\00\01\00\01\00"}, align 4
 
+%struct = type { i128 }
+@global = internal constant %struct { i128 1 }
+; TODO: this should be folded, but currently i128 is not folded.
+define i32 @no-gep-128-struct(i64 %idx){
+; CHECK-LABEL: @no-gep-128-struct(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @global, align 4
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %1 = load i32, ptr @global, align 4
+  ret i32 %1
+}
+
 define i8 @inbounds_gep_load_i8_align2(i64 %idx){
 ; CHECK-LABEL: @inbounds_gep_load_i8_align2(
 ; CHECK-NEXT:    ret i8 1
@@ -48,47 +60,50 @@ define i8 @inbounds_gep_load_i8_align2_volatile(i64 %idx){
 declare ptr @llvm.ptrmask.p0.i64(ptr , i64)
 
 ; can't be folded because ptrmask can change ptr, while preserving provenance
-define i8 @inbounds_gep_load_i8_align2_ptrmasked(i64 %idx, i64 %mask){
-; CHECK-LABEL: @inbounds_gep_load_i8_align2_ptrmasked(
-; CHECK-NEXT:    ret i8 1
+; This invalidates GEP indices analysis
+define i8 @inbounds_gep_load_i16_align1_ptrmasked(i64 %idx, i64 %mask){
+; CHECK-LABEL: @inbounds_gep_load_i16_align1_ptrmasked(
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr @constarray1, i64 [[MASK:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
+; CHECK-NEXT:    ret i8 [[TMP3]]
 ;
   %1 = call ptr @llvm.ptrmask.p0.i64(ptr @constarray1, i64 %mask)
-  %2 = getelementptr inbounds i8, ptr %1, i64 %idx
-  %3 = load i8, ptr %2, align 2
+  %2 = getelementptr inbounds i16, ptr %1, i64 %idx
+  %3 = load i8, ptr %2, align 1
   ret i8 %3
 }
 
-; TODO: this will be ret i32 65537(LE), 16777472(BE)
 define i32 @inbounds_gep_i16_load_i32_align1(i64 %idx){
-; CHECK-LABEL: @inbounds_gep_i16_load_i32_align1(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr @constarray1, i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; LE-LABEL: @inbounds_gep_i16_load_i32_align1(
+; LE-NEXT:    ret i32 65537
+;
+; BE-LABEL: @inbounds_gep_i16_load_i32_align1(
+; BE-NEXT:    ret i32 16777472
 ;
   %1 = getelementptr inbounds i16, ptr @constarray1, i64 %idx
   %2 = load i32, ptr %1, align 1
   ret i32 %2
 }
 
-; TODO: this will be ret i32 65537(LE), 16777472(BE)
 define i32 @inbounds_gep_i32_load_i32_align8(i64 %idx){
-; CHECK-LABEL: @inbounds_gep_i32_load_i32_align8(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr @constarray1, i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; LE-LABEL: @inbounds_gep_i32_load_i32_align8(
+; LE-NEXT:    ret i32 65537
+;
+; BE-LABEL: @inbounds_gep_i32_load_i32_align8(
+; BE-NEXT:    ret i32 16777472
 ;
   %1 = getelementptr inbounds i32, ptr @constarray1, i64 %idx
   %2 = load i32, ptr %1, align 8
   ret i32 %2
 }
 
-; TODO: this will be ret i32 65547(LE), 16777472(BE)
 define i32 @inbounds_gep_i32_load_i32_const_offset(i64 %idx){
-; CHECK-LABEL: @inbounds_gep_i32_load_i32_const_offset(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr @constarray2, i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; LE-LABEL: @inbounds_gep_i32_load_i32_const_offset(
+; LE-NEXT:    ret i32 65537
+;
+; BE-LABEL: @inbounds_gep_i32_load_i32_const_offset(
+; BE-NEXT:    ret i32 16777472
 ;
   %1 = getelementptr inbounds i16, ptr @constarray2, i64 1
   %2 = getelementptr inbounds i32, ptr %1, i64 %idx
@@ -125,13 +140,9 @@ define i32 @gep_load_i32_align2_const_offset_wrap(i64 %idx){
   ret i32 %3
 }
 
-; TODO: this will be ret i32 42
 define i32 @inbounds_gep_i32_load_i32_const_ptr_array(i64 %idx){
 ; CHECK-LABEL: @inbounds_gep_i32_load_i32_const_ptr_array(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr @constptrarray, i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    ret i32 42
 ;
   %1 = getelementptr inbounds ptr, ptr @constptrarray, i64 %idx
   %2 = load ptr, ptr %1, align 4
@@ -163,16 +174,12 @@ define i32 @inbounds_gep_i8_load_i32_align1_packedstruct(i64 %idx){
   ret i32 %2
 }
 
-; TODO: this coould be folded into 65537(LE), 16777472(BE)
 define i32 @inbounds_gep_i32_load_i32_align4_struct_with_const_offset(i64 %idx){
 ; LE-LABEL: @inbounds_gep_i32_load_i32_align4_struct_with_const_offset(
 ; LE-NEXT:    ret i32 65537
 ;
 ; BE-LABEL: @inbounds_gep_i32_load_i32_align4_struct_with_const_offset(
-; BE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr @conststruct, i64 1
-; BE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[IDX:%.*]]
-; BE-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-; BE-NEXT:    ret i32 [[TMP3]]
+; BE-NEXT:    ret i32 16777472
 ;
   %1 = getelementptr inbounds i16, ptr @conststruct, i64 1
   %2 = getelementptr inbounds i32, ptr %1, i64 %idx

@@ -215,7 +215,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
                typeSample.getContext()->getLoadedDialect<BuiltinDialect>() &&
            "unexpected data layout entry for built-in type");
 
-    auto interface = typeSample.cast<DataLayoutTypeInterface>();
+    auto interface = llvm::cast<DataLayoutTypeInterface>(typeSample);
     if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second))
       return failure();
 
@@ -250,7 +250,7 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
   // Only combine with attributes of the same kind.
   // TODO: reconsider this when the need arises.
   if (llvm::any_of(specs, [](DataLayoutSpecInterface spec) {
-        return !spec.isa<DataLayoutSpecAttr>();
+        return !llvm::isa<DataLayoutSpecAttr>(spec);
       }))
     return {};
 
@@ -334,7 +334,7 @@ public:
                             Location loc) const final {
     StringRef entryName = entry.getKey().get<StringAttr>().strref();
     if (entryName == DLTIDialect::kDataLayoutEndiannessKey) {
-      auto value = entry.getValue().dyn_cast<StringAttr>();
+      auto value = llvm::dyn_cast<StringAttr>(entry.getValue());
       if (value &&
           (value.getValue() == DLTIDialect::kDataLayoutEndiannessBig ||
            value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle))
@@ -383,7 +383,7 @@ void DLTIDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
   if (attr.getName() == DLTIDialect::kDataLayoutAttrName) {
-    if (!attr.getValue().isa<DataLayoutSpecAttr>()) {
+    if (!llvm::isa<DataLayoutSpecAttr>(attr.getValue())) {
       return op->emitError() << "'" << DLTIDialect::kDataLayoutAttrName
                              << "' is expected to be a #dlti.dl_spec attribute";
     }

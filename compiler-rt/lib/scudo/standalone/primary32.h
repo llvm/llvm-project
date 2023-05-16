@@ -737,6 +737,9 @@ private:
         Sci->AllocatedUser -
         (Sci->Stats.PoppedBlocks - Sci->Stats.PushedBlocks) * BlockSize;
 
+    if (UNLIKELY(BytesInFreeList == 0))
+      return 0;
+
     bool MaySkip = false;
 
     if (BytesInFreeList <= Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint) {

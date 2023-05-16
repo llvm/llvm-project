@@ -227,7 +227,7 @@
 ! CHECK:         %[[VAL_185:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_176]]) {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:         br ^bb24
 ! CHECK:       ^bb24:
-! CHECK:         %[[VAL_186:.*]] = fir.address_of(@_QQro.3xi4.b7f1b733471804c07debf489e49d9c2f) : !fir.ref<!fir.array<3xi32>>
+! CHECK:         %[[VAL_186:.*]] = fir.address_of(@_QQro.3xi4.0) : !fir.ref<!fir.array<3xi32>>
 ! CHECK:         br ^bb25(%[[VAL_6]], %[[VAL_11]] : index, index)
 ! CHECK:       ^bb25(%[[VAL_187:.*]]: index, %[[VAL_188:.*]]: index):
 ! CHECK:         %[[VAL_189:.*]] = arith.cmpi sgt, %[[VAL_188]], %[[VAL_6]] : index

@@ -21,7 +21,6 @@ unittest("LLVMExegesisX86Tests") {
     "//llvm/tools/llvm-exegesis/lib",
   ]
   sources = [
-    "AssemblerTest.cpp",
     "BenchmarkResultTest.cpp",
     "RegisterAliasingTest.cpp",
     "SchedClassResolutionTest.cpp",

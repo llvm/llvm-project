@@ -63,7 +63,7 @@ FailureOr<WarpMatrixInfo> nvgpu::getWarpMatrixInfo(Operation *op) {
     info.vectorType = writeOp.getVectorType();
   } else if (isa<vector::TransferReadOp, vector::ContractionOp,
                  vector::ExtractStridedSliceOp, arith::ConstantOp>(op)) {
-    info.vectorType = op->getResult(0).getType().cast<VectorType>();
+    info.vectorType = cast<VectorType>(op->getResult(0).getType());
   } else {
     return op->emitError()
            << "unhandled operation type in nvgpu.mma.sync conversion path";

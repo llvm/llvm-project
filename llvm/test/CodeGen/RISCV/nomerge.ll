@@ -44,6 +44,10 @@ define void @foo_tail(i1 %i) nounwind {
 ; CHECK-LABEL: foo_tail:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    beqz a0, .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    tail bar@plt
+; CHECK-NEXT:  .LBB1_2: # %if.else
 ; CHECK-NEXT:    tail bar@plt
 entry:
   br i1 %i, label %if.then, label %if.else

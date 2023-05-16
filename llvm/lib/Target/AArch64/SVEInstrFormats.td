@@ -506,6 +506,18 @@ class SVE_2_Op_Imm_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
 : Pat<(vtd (op vt1:$Op1, (vt2 ImmTy:$Op2))),
       (inst $Op1, ImmTy:$Op2)>;
 
+multiclass SVE2p1_Cntp_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
+                           Instruction inst> {
+  def : Pat<(vtd (op vt1:$Op1, (i32 2))), (inst $Op1, 0)>;
+  def : Pat<(vtd (op vt1:$Op1, (i32 4))), (inst $Op1, 1)>;
+}
+
+multiclass SVE2p1_While_PN_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
+                               Instruction inst> {
+  def : Pat<(vtd (op vt1:$Op1, vt1:$Op2, (i32 2))), (inst $Op1, $Op2, 0)>;
+  def : Pat<(vtd (op vt1:$Op1, vt1:$Op2, (i32 4))), (inst $Op1, $Op2, 1)>;
+}
+
 class SVE_3_Op_Imm_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
                        ValueType vt2, ValueType vt3, Operand ImmTy,
                        Instruction inst>
@@ -9158,9 +9170,9 @@ multiclass sve2p1_two_way_dot_vvi<string mnemonic, bit u, SDPatternOperator intr
   def : SVE_4_Op_Imm_Pat<nxv4i32, intrinsic, nxv4i32, nxv8i16, nxv8i16, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME)>;
 }
 
-class sve2p1_ptrue_pn<string mnemonic, bits<2> sz, PNRP8to15RegOp pnrty>
+class sve2p1_ptrue_pn<string mnemonic, bits<2> sz, PNRP8to15RegOp pnrty, SDPatternOperator op>
     : I<(outs pnrty:$PNd), (ins ), mnemonic, "\t$PNd",
-        "", []>, Sched<[]> {
+        "", [(set pnrty:$PNd, (op))]>, Sched<[]> {
   bits<3> PNd;
   let Inst{31-24}  = 0b00100101;
   let Inst{23-22} = sz;
@@ -9172,10 +9184,10 @@ class sve2p1_ptrue_pn<string mnemonic, bits<2> sz, PNRP8to15RegOp pnrty>
 
 
 multiclass sve2p1_ptrue_pn<string mnemonic> {
- def _B : sve2p1_ptrue_pn<mnemonic, 0b00, PNR8_p8to15>;
- def _H : sve2p1_ptrue_pn<mnemonic, 0b01, PNR16_p8to15>;
- def _S : sve2p1_ptrue_pn<mnemonic, 0b10, PNR32_p8to15>;
- def _D : sve2p1_ptrue_pn<mnemonic, 0b11, PNR64_p8to15>;
+ def _B : sve2p1_ptrue_pn<mnemonic, 0b00, PNR8_p8to15, int_aarch64_sve_ptrue_c8>;
+ def _H : sve2p1_ptrue_pn<mnemonic, 0b01, PNR16_p8to15, int_aarch64_sve_ptrue_c16>;
+ def _S : sve2p1_ptrue_pn<mnemonic, 0b10, PNR32_p8to15, int_aarch64_sve_ptrue_c32>;
+ def _D : sve2p1_ptrue_pn<mnemonic, 0b11, PNR64_p8to15, int_aarch64_sve_ptrue_c64>;
 }
 
 
@@ -9543,6 +9555,11 @@ multiclass sve2p1_pcount_pn<string mnemonic, bits<3> opc> {
   def _H : sve2p1_pcount_pn<mnemonic, opc, 0b01, PNR16>;
   def _S : sve2p1_pcount_pn<mnemonic, opc, 0b10, PNR32>;
   def _D : sve2p1_pcount_pn<mnemonic, opc, 0b11, PNR64>;
+
+  defm : SVE2p1_Cntp_Pat<i64, int_aarch64_sve_cntp_c8,  aarch64svcount, !cast<Instruction>(NAME # _B)>;
+  defm : SVE2p1_Cntp_Pat<i64, int_aarch64_sve_cntp_c16, aarch64svcount, !cast<Instruction>(NAME # _H)>;
+  defm : SVE2p1_Cntp_Pat<i64, int_aarch64_sve_cntp_c32, aarch64svcount, !cast<Instruction>(NAME # _S)>;
+  defm : SVE2p1_Cntp_Pat<i64, int_aarch64_sve_cntp_c64, aarch64svcount, !cast<Instruction>(NAME # _D)>;
 }
 
 
@@ -9579,6 +9596,15 @@ multiclass sve2p1_int_while_rr_pn<string mnemonic, bits<3> opc> {
  def _H : sve2p1_int_while_rr_pn<mnemonic, 0b01, opc, PNR16_p8to15>;
  def _S : sve2p1_int_while_rr_pn<mnemonic, 0b10, opc, PNR32_p8to15>;
  def _D : sve2p1_int_while_rr_pn<mnemonic, 0b11, opc, PNR64_p8to15>;
+
+ defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c8"),
+                            i64, !cast<Instruction>(NAME # _B)>;
+ defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c16"),
+                            i64, !cast<Instruction>(NAME # _H)>;
+ defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c32"),
+                            i64, !cast<Instruction>(NAME # _S)>;
+ defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c64"),
+                            i64, !cast<Instruction>(NAME # _D)>;
 }
 
 

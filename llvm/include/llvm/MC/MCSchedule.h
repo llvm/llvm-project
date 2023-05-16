@@ -63,9 +63,14 @@ struct MCProcResourceDesc {
 struct MCWriteProcResEntry {
   uint16_t ProcResourceIdx;
   uint16_t Cycles;
+  /// Cycle at which the resource will be grabbed by an instruction,
+  /// relatively to the cycle in which the instruction is issued
+  /// (assuming no stalls inbetween).
+  uint16_t StartAtCycle;
 
   bool operator==(const MCWriteProcResEntry &Other) const {
-    return ProcResourceIdx == Other.ProcResourceIdx && Cycles == Other.Cycles;
+    return ProcResourceIdx == Other.ProcResourceIdx && Cycles == Other.Cycles &&
+           StartAtCycle == Other.StartAtCycle;
   }
 };
 

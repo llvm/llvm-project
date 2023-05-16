@@ -58,7 +58,7 @@ static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
                                  Location loc, Value allocatedPtr,
                                  MemRefType memRefType, Type elementPtrType,
                                  LLVMTypeConverter &typeConverter) {
-  auto allocatedPtrTy = allocatedPtr.getType().cast<LLVM::LLVMPointerType>();
+  auto allocatedPtrTy = cast<LLVM::LLVMPointerType>(allocatedPtr.getType());
   unsigned memrefAddrSpace = *typeConverter.getMemRefAddressSpace(memRefType);
   if (allocatedPtrTy.getAddressSpace() != memrefAddrSpace)
     allocatedPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
@@ -114,10 +114,10 @@ unsigned AllocationOpLLVMLowering::getMemRefEltSizeInBytes(
     layout = &analysis->getAbove(op);
   }
   Type elementType = memRefType.getElementType();
-  if (auto memRefElementType = elementType.dyn_cast<MemRefType>())
+  if (auto memRefElementType = dyn_cast<MemRefType>(elementType))
     return getTypeConverter()->getMemRefDescriptorSize(memRefElementType,
                                                        *layout);
-  if (auto memRefElementType = elementType.dyn_cast<UnrankedMemRefType>())
+  if (auto memRefElementType = dyn_cast<UnrankedMemRefType>(elementType))
     return getTypeConverter()->getUnrankedMemRefDescriptorSize(
         memRefElementType, *layout);
   return layout->getTypeSize(elementType);

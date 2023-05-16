@@ -465,7 +465,7 @@ static void printResultsValueType(OpAsmPrinter &p, ResultsOp op,
 }
 
 LogicalResult ResultsOp::verify() {
-  if (!getIndex() && getType().isa<pdl::ValueType>()) {
+  if (!getIndex() && llvm::isa<pdl::ValueType>(getType())) {
     return emitOpError() << "expected `pdl.range<value>` result type when "
                             "no index is specified, but got: "
                          << getType();

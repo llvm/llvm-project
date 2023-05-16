@@ -483,6 +483,9 @@ public:
   /// Whether input profile contains ShouldBeInlined contexts.
   bool profileIsPreInlined() const { return ProfileIsPreInlined; }
 
+  /// Whether input profile is flow-sensitive.
+  bool profileIsFS() const { return ProfileIsFS; }
+
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
     return nullptr;
   };
@@ -636,9 +639,6 @@ protected:
   /// Read the string index and check whether it overflows the table.
   template <typename T> inline ErrorOr<size_t> readStringIndex(T &Table);
 
-  /// Return true if we've reached the end of file.
-  bool at_eof() const { return Data >= End; }
-
   /// Read the next function profile instance.
   std::error_code readFuncProfile(const uint8_t *Start);
 
@@ -756,15 +756,20 @@ protected:
   // placeholder for subclasses to dispatch their own section readers.
   virtual std::error_code readCustomSection(const SecHdrTableEntry &Entry) = 0;
 
+  /// Determine which container readFuncOffsetTable() should populate, the list
+  /// FuncOffsetList or the map FuncOffsetTable.
+  bool useFuncOffsetList() const;
+
   std::unique_ptr<ProfileSymbolList> ProfSymList;
 
   /// The table mapping from function context to the offset of its
   /// FunctionSample towards file start.
+  /// At most one of FuncOffsetTable and FuncOffsetList is populated.
   DenseMap<SampleContext, uint64_t> FuncOffsetTable;
 
-  /// Function offset mapping ordered by contexts.
-  std::unique_ptr<std::vector<std::pair<SampleContext, uint64_t>>>
-      OrderedFuncOffsets;
+  /// The list version of FuncOffsetTable. This is used if every entry is
+  /// being accessed.
+  std::vector<std::pair<SampleContext, uint64_t>> FuncOffsetList;
 
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
@@ -772,8 +777,6 @@ protected:
   /// If SkipFlatProf is true, skip the sections with
   /// SecFlagFlat flag.
   bool SkipFlatProf = false;
-
-  bool FuncOffsetsOrdered = false;
 
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,

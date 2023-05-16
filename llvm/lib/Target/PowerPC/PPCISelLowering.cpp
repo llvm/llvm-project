@@ -5629,7 +5629,9 @@ SDValue PPCTargetLowering::FinishCall(
     assert(CallOpc == PPCISD::TC_RETURN &&
            "Unexpected call opcode for a tail call.");
     DAG.getMachineFunction().getFrameInfo().setHasTailCall();
-    return DAG.getNode(CallOpc, dl, MVT::Other, Ops);
+    SDValue Ret = DAG.getNode(CallOpc, dl, MVT::Other, Ops);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CFlags.NoMerge);
+    return Ret;
   }
 
   std::array<EVT, 2> ReturnTypes = {{MVT::Other, MVT::Glue}};

@@ -22,7 +22,7 @@ MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Transform, transform,
 //===---------------------------------------------------------------------===//
 
 bool mlirTypeIsATransformAnyOpType(MlirType type) {
-  return unwrap(type).isa<transform::AnyOpType>();
+  return isa<transform::AnyOpType>(unwrap(type));
 }
 
 MlirType mlirTransformAnyOpTypeGet(MlirContext ctx) {
@@ -34,7 +34,7 @@ MlirType mlirTransformAnyOpTypeGet(MlirContext ctx) {
 //===---------------------------------------------------------------------===//
 
 bool mlirTypeIsATransformOperationType(MlirType type) {
-  return unwrap(type).isa<transform::OperationType>();
+  return isa<transform::OperationType>(unwrap(type));
 }
 
 MlirType mlirTransformOperationTypeGet(MlirContext ctx,
@@ -44,5 +44,5 @@ MlirType mlirTransformOperationTypeGet(MlirContext ctx,
 }
 
 MlirStringRef mlirTransformOperationTypeGetOperationName(MlirType type) {
-  return wrap(unwrap(type).cast<transform::OperationType>().getOperationName());
+  return wrap(cast<transform::OperationType>(unwrap(type)).getOperationName());
 }

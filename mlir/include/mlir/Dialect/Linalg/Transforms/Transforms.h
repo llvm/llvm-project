@@ -1313,9 +1313,6 @@ void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
 /// \see rewriteInIm2Col for more details.
 void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 
-void populatePadTensorTilingPatterns(RewritePatternSet &patterns,
-                                     const LinalgTilingOptions &options);
-
 /// Populates `patterns` with patterns that vectorize tensor.pad.
 /// These patterns are meant to apply in a complementary fashion. Benefits
 /// are used to encode a certain ordering of pattern application. To avoid

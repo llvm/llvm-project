@@ -663,13 +663,14 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
 }
 
 PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
-                               StringLiteral *SL)
+                               bool IsTransparent, StringLiteral *SL)
     : Expr(PredefinedExprClass, FNTy, VK_LValue, OK_Ordinary) {
   PredefinedExprBits.Kind = IK;
   assert((getIdentKind() == IK) &&
          "IdentKind do not fit in PredefinedExprBitfields!");
   bool HasFunctionName = SL != nullptr;
   PredefinedExprBits.HasFunctionName = HasFunctionName;
+  PredefinedExprBits.IsTransparent = IsTransparent;
   PredefinedExprBits.Loc = L;
   if (HasFunctionName)
     setFunctionName(SL);
@@ -683,11 +684,11 @@ PredefinedExpr::PredefinedExpr(EmptyShell Empty, bool HasFunctionName)
 
 PredefinedExpr *PredefinedExpr::Create(const ASTContext &Ctx, SourceLocation L,
                                        QualType FNTy, IdentKind IK,
-                                       StringLiteral *SL) {
+                                       bool IsTransparent, StringLiteral *SL) {
   bool HasFunctionName = SL != nullptr;
   void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(HasFunctionName),
                            alignof(PredefinedExpr));
-  return new (Mem) PredefinedExpr(L, FNTy, IK, SL);
+  return new (Mem) PredefinedExpr(L, FNTy, IK, IsTransparent, SL);
 }
 
 PredefinedExpr *PredefinedExpr::CreateEmpty(const ASTContext &Ctx,

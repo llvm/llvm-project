@@ -1048,7 +1048,7 @@ protected:
 
     if (m_memory_options.m_string.OptionWasSet()) {
       llvm::StringRef str =
-          m_memory_options.m_string.GetStringValue().value_or("");
+          m_memory_options.m_string.GetValueAs<llvm::StringRef>().value_or("");
       if (str.empty()) {
         result.AppendError("search string must have non-zero length.");
         return false;
@@ -1059,8 +1059,9 @@ protected:
       ValueObjectSP result_sp;
       if ((eExpressionCompleted ==
            process->GetTarget().EvaluateExpression(
-               m_memory_options.m_expr.GetStringValue().value_or(""), frame,
-               result_sp)) &&
+               m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(
+                   ""),
+               frame, result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
         std::optional<uint64_t> size =

@@ -231,7 +231,7 @@ public:
       Value vectorMask = maskableOp.getMaskingOp().getMask();
       auto maskCastedType = VectorType::get(
           vectorShape,
-          vectorMask.getType().cast<VectorType>().getElementType());
+          llvm::cast<VectorType>(vectorMask.getType()).getElementType());
       newVectorMask =
           rewriter.create<vector::ShapeCastOp>(loc, maskCastedType, vectorMask);
     }
@@ -413,7 +413,7 @@ struct OneDimMultiReductionToTwoDim
                                       srcVectorType.getElementType());
     auto accType =
         VectorType::get(ArrayRef<int64_t>{1}, srcVectorType.getElementType());
-    assert(!multiReductionOp.getDestType().isa<VectorType>() &&
+    assert(!llvm::isa<VectorType>(multiReductionOp.getDestType()) &&
            "multi_reduction with a single dimension expects a scalar result");
 
     // If the unique dim is reduced and we insert a parallel in front, we need a
@@ -427,7 +427,7 @@ struct OneDimMultiReductionToTwoDim
         loc, accType, multiReductionOp.getAcc());
     Value castMask;
     if (maskableOp.isMasked()) {
-      auto maskType = mask.getType().cast<ShapedType>();
+      auto maskType = llvm::cast<ShapedType>(mask.getType());
       auto castMaskType =
           VectorType::get(ArrayRef<int64_t>{1, maskType.getShape().back()},
                           maskType.getElementType());

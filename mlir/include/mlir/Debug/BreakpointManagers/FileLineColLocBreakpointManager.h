@@ -95,7 +95,7 @@ private:
   std::optional<Breakpoint *> matchFromLocation(Location initialLoc) const {
     std::optional<Breakpoint *> match = std::nullopt;
     initialLoc->walk([&](Location loc) {
-      auto fileLoc = loc.dyn_cast<FileLineColLoc>();
+      auto fileLoc = dyn_cast<FileLineColLoc>(loc);
       if (!fileLoc)
         return WalkResult::advance();
       StringRef file = fileLoc.getFilename();

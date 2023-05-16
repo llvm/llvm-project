@@ -255,11 +255,14 @@ private:
   /// DictionaryAttr for the LLVM dialect.
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
-  /// Returns the builtin type equivalent to be used in attributes for the given
-  /// LLVM IR dialect type.
-  Type getStdTypeForAttr(Type type);
-  /// Returns `value` as an attribute to attach to a GlobalOp.
-  Attribute getConstantAsAttr(llvm::Constant *value);
+  /// Returns the builtin type equivalent to the given LLVM dialect type or
+  /// nullptr if there is no equivalent. The returned type can be used to create
+  /// an attribute for a GlobalOp or a ConstantOp.
+  Type getBuiltinTypeForAttr(Type type);
+  /// Returns `constant` as an attribute to attach to a GlobalOp or ConstantOp
+  /// or nullptr if the constant is not convertible. It supports scalar integer
+  /// and float constants as well as shaped types thereof including strings.
+  Attribute getConstantAsAttr(llvm::Constant *constant);
   /// Returns the topologically sorted set of transitive dependencies needed to
   /// convert the given constant.
   SetVector<llvm::Constant *> getConstantsToConvert(llvm::Constant *constant);

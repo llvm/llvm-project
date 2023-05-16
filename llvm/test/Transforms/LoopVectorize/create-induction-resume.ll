@@ -29,7 +29,6 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c) {
 ; CHECK:       L1.early.exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       L1.exit:
-; CHECK-NEXT:    [[INDUCTION_IV_LCSSA2:%.*]] = phi i32 [ [[INDUCTION_IV]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    [[INDUCTION_IV_LCSSA1:%.*]] = phi i32 [ [[INDUCTION_IV]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    [[L1_EXIT_VAL:%.*]] = phi i32 [ [[L1_SUM_NEXT]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    br label [[L2_HEADER:%.*]]
@@ -45,7 +44,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c) {
 ; CHECK:       L2.Inner.header.preheader:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 12, [[INDUCTION_IV_LCSSA2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 12, [[INDUCTION_IV_LCSSA1]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 1, [[TMP3]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -58,11 +57,11 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[L2_HEADER_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ 13, [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 13, [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[L2_INNER_HEADER:%.*]]
 ; CHECK:       L2.Inner.header:
 ; CHECK-NEXT:    [[L2_ACCUM:%.*]] = phi i32 [ [[L2_ACCUM_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[L2_IV:%.*]] = phi i64 [ [[L2_IV_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ [[BC_RESUME_VAL3]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[L2_IV:%.*]] = phi i64 [ [[L2_IV_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[L2_ACCUM_NEXT]] = sub i32 [[L2_ACCUM]], [[L1_EXIT_VAL]]
 ; CHECK-NEXT:    [[L2_DUMMY_BUT_NEED_IT:%.*]] = sext i32 [[L2_ACCUM_NEXT]] to i64
 ; CHECK-NEXT:    [[L2_IV_NEXT]] = add nuw nsw i64 [[L2_IV]], 1

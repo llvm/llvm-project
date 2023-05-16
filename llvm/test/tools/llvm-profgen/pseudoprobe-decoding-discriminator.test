@@ -1,0 +1,62 @@
+; RUN: llvm-profgen --format=text --perfscript=%s  --binary=%S/Inputs/fs-discriminator-probe.perfbin --output=%t --show-pseudo-probe --show-disassembly-only | FileCheck %s
+
+; CHECK:      <quick_sort>:
+; CHECK:       [Probe]: FUNC: quick_sort Index: 1  Type: Block
+; CHECK:       [Probe]: FUNC: quick_sort Index: 1  Discriminator: 15360 Type: Block
+; CHECK: 			 [Probe]:	FUNC: quick_sort Index: 4  Type: IndirectCall
+; CHECK: 		   [Probe]:	FUNC: quick_sort Index: 5  Type: DirectCall
+
+
+; original code:
+; clang -O3 -g -mllvm --enable-fs-discriminator -fdebug-info-for-profiling -fpseudo-probe-for-profiling qsort.c -o a.out
+#include <stdio.h>
+#include <stdlib.h>
+
+void swap(int *a, int *b) {
+	int t = *a;
+	*a = *b;
+	*b = t;
+}
+
+int partition_pivot_last(int* array, int low, int high) {
+	int pivot = array[high];
+	int i = low - 1;
+	for (int j = low; j < high; j++)
+		if (array[j] < pivot)
+			swap(&array[++i], &array[j]);
+	swap(&array[i + 1], &array[high]);
+	return (i + 1);
+}
+
+int partition_pivot_first(int* array, int low, int high) {
+	int pivot = array[low];
+	int i = low + 1;
+	for (int j = low + 1; j <= high; j++)
+		if (array[j] < pivot) { if (j != i) swap(&array[i], &array[j]); i++;}
+	swap(&array[i - 1], &array[low]);
+	return i - 1;
+}
+
+void quick_sort(int* array, int low, int high, int (*partition_func)(int *, int, int)) {
+	if (low < high) {
+		int pi = (*partition_func)(array, low, high);
+		quick_sort(array, low, pi - 1, partition_func);
+		quick_sort(array, pi + 1, high, partition_func);
+	}
+}
+
+int main() {
+	const int size = 200;
+	int sum = 0;
+	int *array = malloc(size * sizeof(int));
+	for(int i = 0; i < 100 * 1000; i++) {
+		for(int j = 0; j < size; j++)
+			array[j] = j % 10 ? rand() % size: j;
+		int (*fptr)(int *, int, int) = i % 3 ? partition_pivot_last : partition_pivot_first;
+		quick_sort(array, 0, size - 1, fptr);
+		sum += array[i % size];
+	}
+	printf("sum=%d\n", sum);
+
+	return 0;
+}

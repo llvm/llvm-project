@@ -81,7 +81,7 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
         return WalkResult::skip();
       }
       Value value = op->getOperand(0);
-      if (value.getType().isa<IndexType>() !=
+      if (isa<IndexType>(value.getType()) !=
           !op->hasAttrOfType<IntegerAttr>("dim")) {
         // Op should have "dim" attribute if and only if the operand is an
         // index-typed value.
@@ -119,7 +119,7 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
       if (reifyToFuncArgs) {
         // Reify in terms of function block arguments.
         stopCondition = stopCondition = [](Value v, std::optional<int64_t> d) {
-          auto bbArg = v.dyn_cast<BlockArgument>();
+          auto bbArg = dyn_cast<BlockArgument>(v);
           if (!bbArg)
             return false;
           return isa<FunctionOpInterface>(
@@ -166,7 +166,7 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
         return WalkResult::skip();
       }
       Value constOp = rewriter.create<arith::ConstantIndexOp>(
-          op->getLoc(), reified->get<Attribute>().cast<IntegerAttr>().getInt());
+          op->getLoc(), cast<IntegerAttr>(reified->get<Attribute>()).getInt());
       rewriter.replaceOp(op, constOp);
       return WalkResult::skip();
     }

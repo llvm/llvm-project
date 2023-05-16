@@ -166,47 +166,6 @@ void PseudoProbeVerifier::verifyProbeFactors(
   }
 }
 
-PseudoProbeManager::PseudoProbeManager(const Module &M) {
-  if (NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName)) {
-    for (const auto *Operand : FuncInfo->operands()) {
-      const auto *MD = cast<MDNode>(Operand);
-      auto GUID =
-          mdconst::dyn_extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
-      auto Hash =
-          mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-      GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
-    }
-  }
-}
-
-const PseudoProbeDescriptor *
-PseudoProbeManager::getDesc(const Function &F) const {
-  auto I = GUIDToProbeDescMap.find(
-      Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
-  return I == GUIDToProbeDescMap.end() ? nullptr : &I->second;
-}
-
-bool PseudoProbeManager::moduleIsProbed(const Module &M) const {
-  return M.getNamedMetadata(PseudoProbeDescMetadataName);
-}
-
-bool PseudoProbeManager::profileIsValid(const Function &F,
-                                        const FunctionSamples &Samples) const {
-  const auto *Desc = getDesc(F);
-  if (!Desc) {
-    LLVM_DEBUG(dbgs() << "Probe descriptor missing for Function " << F.getName()
-                      << "\n");
-    return false;
-  } else {
-    if (Desc->getFunctionHash() != Samples.getFunctionHash()) {
-      LLVM_DEBUG(dbgs() << "Hash mismatch for Function " << F.getName()
-                        << "\n");
-      return false;
-    }
-  }
-  return true;
-}
-
 SampleProfileProber::SampleProfileProber(Function &Func,
                                          const std::string &CurModuleUniqueId)
     : F(&Func), CurModuleUniqueId(CurModuleUniqueId) {
@@ -349,6 +308,14 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
                      Builder.getInt64(PseudoProbeFullDistributionFactor)};
     auto *Probe = Builder.CreateCall(ProbeFn, Args);
     AssignDebugLoc(Probe);
+    // Reset the dwarf discriminator if the debug location comes with any. The
+    // discriminator field may be used by FS-AFDO later in the pipeline.
+    if (auto DIL = Probe->getDebugLoc()) {
+      if (DIL->getDiscriminator()) {
+        DIL = DIL->cloneWithDiscriminator(0);
+        Probe->setDebugLoc(DIL);
+      }
+    }
   }
 
   // Probe both direct calls and indirect calls. Direct calls are probed so that
@@ -361,12 +328,13 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
                         ? (uint32_t)PseudoProbeType::DirectCall
                         : (uint32_t)PseudoProbeType::IndirectCall;
     AssignDebugLoc(Call);
-    // Levarge the 32-bit discriminator field of debug data to store the ID and
-    // type of a callsite probe. This gets rid of the dependency on plumbing a
-    // customized metadata through the codegen pipeline.
-    uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
-        Index, Type, 0, PseudoProbeDwarfDiscriminator::FullDistributionFactor);
     if (auto DIL = Call->getDebugLoc()) {
+      // Levarge the 32-bit discriminator field of debug data to store the ID
+      // and type of a callsite probe. This gets rid of the dependency on
+      // plumbing a customized metadata through the codegen pipeline.
+      uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
+          Index, Type, 0,
+          PseudoProbeDwarfDiscriminator::FullDistributionFactor);
       DIL = DIL->cloneWithDiscriminator(V);
       Call->setDebugLoc(DIL);
     }

@@ -94,13 +94,31 @@ func.func @integer64(%arg0: i64, %arg1: si64, %arg2: ui64) { return }
 
 // -----
 
-// Check that weird bitwidths are not supported.
+// Check that power-of-two sub-byte bitwidths are converted to i32.
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
 } {
 
-// CHECK-NOT: spirv.func @integer4
+// CHECK: spirv.func @integer2(%{{.+}}: i32)
+func.func @integer2(%arg0: i8) { return }
+
+// CHECK: spirv.func @integer4(%{{.+}}: i32)
 func.func @integer4(%arg0: i4) { return }
+
+} // end module
+
+// -----
+
+// Check that other bitwidths are not supported.
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-NOT: spirv.func @integer3
+func.func @integer3(%arg0: i3) { return }
+
+// CHECK-NOT: spirv.func @integer13
+func.func @integer4(%arg0: i13) { return }
 
 // CHECK-NOT: spirv.func @integer128
 func.func @integer128(%arg0: i128) { return }
@@ -109,6 +127,7 @@ func.func @integer128(%arg0: i128) { return }
 func.func @integer42(%arg0: i42) { return }
 
 } // end module
+
 // -----
 
 //===----------------------------------------------------------------------===//
@@ -421,6 +440,16 @@ module attributes {
 // NOEMU-SAME: memref<5xi1, #spirv.storage_class<StorageBuffer>>
 func.func @memref_1bit_type(%arg0: memref<5xi1, #spirv.storage_class<StorageBuffer>>) { return }
 
+// 16 i2 values are tightly packed into one i32 value; so 33 i2 values takes 3 i32 value.
+// CHECK-LABEL: spirv.func @memref_2bit_type
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<3 x i32, stride=4> [0])>, StorageBuffer>
+func.func @memref_2bit_type(%arg0: memref<33xi2, #spirv.storage_class<StorageBuffer>>) { return }
+
+// 8 i4 values are tightly packed into one i32 value; so 16 i4 values takes 2 i32 value.
+// CHECK-LABEL: spirv.func @memref_4bit_type
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<2 x i32, stride=4> [0])>, StorageBuffer>
+func.func @memref_4bit_type(%arg0: memref<16xi4, #spirv.storage_class<StorageBuffer>>) { return }
+
 // CHECK-LABEL: spirv.func @memref_8bit_StorageBuffer
 // CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<4 x i32, stride=4> [0])>, StorageBuffer>
 // NOEMU-LABEL: func @memref_8bit_StorageBuffer
@@ -724,6 +753,14 @@ func.func @unranked_memref(%arg0: memref<*xi32>) { return }
 // NOEMU-LABEL: func @memref_1bit_type
 // NOEMU-SAME: memref<?xi1, #spirv.storage_class<StorageBuffer>>
 func.func @memref_1bit_type(%arg0: memref<?xi1, #spirv.storage_class<StorageBuffer>>) { return }
+
+// CHECK-LABEL: spirv.func @memref_2bit_type
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32, stride=4> [0])>, StorageBuffer>
+func.func @memref_2bit_type(%arg0: memref<?xi2, #spirv.storage_class<StorageBuffer>>) { return }
+
+// CHECK-LABEL: spirv.func @memref_4bit_type
+// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32, stride=4> [0])>, StorageBuffer>
+func.func @memref_4bit_type(%arg0: memref<?xi4, #spirv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: func @dynamic_dim_memref
 // CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32, stride=4> [0])>, StorageBuffer>

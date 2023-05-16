@@ -244,7 +244,7 @@ struct DstValueBoundsOpInterfaceExternalModel
     auto dstOp = cast<DestinationStyleOpInterface>(op);
     assert(value.getDefiningOp() == dstOp);
 
-    Value tiedOperand = dstOp.getTiedOpOperand(value.cast<OpResult>())->get();
+    Value tiedOperand = dstOp.getTiedOpOperand(cast<OpResult>(value))->get();
     cstr.bound(value)[dim] == cstr.getExpr(tiedOperand, dim);
   }
 };

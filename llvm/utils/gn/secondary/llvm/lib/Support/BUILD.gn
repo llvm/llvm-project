@@ -133,6 +133,7 @@ static_library("Support") {
     "StringRef.cpp",
     "StringSaver.cpp",
     "SuffixTree.cpp",
+    "SuffixTreeNode.cpp",
     "SystemUtils.cpp",
     "TarWriter.cpp",
     "ThreadPool.cpp",
