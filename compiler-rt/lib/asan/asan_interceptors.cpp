@@ -199,16 +199,11 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   AsanThread *t = (AsanThread *)arg;
   SetCurrentThread(t);
-  auto self = GetThreadSelf();
-  auto args = asanThreadArgRetval().GetArgs(self);
-  thread_return_t retval = t->ThreadStart(GetTid());
-  asanThreadArgRetval().Finish(self, retval);
-  CHECK_EQ(args.arg_retval, t->get_arg());
-  return retval;
+  return t->ThreadStart(GetTid());
 }
 
-INTERCEPTOR(int, pthread_create, void *thread, void *attr,
-            void *(*start_routine)(void *), void *arg) {
+INTERCEPTOR(int, pthread_create, void *thread,
+    void *attr, void *(*start_routine)(void*), void *arg) {
   EnsureMainThreadIDIsCorrect();
   // Strict init-order checking is thread-hostile.
   if (flags()->strict_init_order)
@@ -228,13 +223,10 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
     // stored by pthread for future reuse even after thread destruction, and
     // the linked list it's stored in doesn't even hold valid pointers to the
     // objects, the latter are calculated by obscure pointer arithmetic.
-#    if CAN_SANITIZE_LEAKS
+#if CAN_SANITIZE_LEAKS
     __lsan::ScopedInterceptorDisabler disabler;
-#    endif
-    asanThreadArgRetval().Create(detached, {start_routine, arg}, [&]() -> uptr {
-      result = REAL(pthread_create)(thread, attr, asan_thread_start, t);
-      return result ? 0 : *(uptr *)(thread);
-    });
+#endif
+    result = REAL(pthread_create)(thread, attr, asan_thread_start, t);
   }
   if (result != 0) {
     // If the thread didn't start delete the AsanThread to avoid leaking it.
@@ -246,48 +238,27 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
 }
 
 INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
-  int result;
-  asanThreadArgRetval().Join((uptr)thread, [&]() {
-    result = REAL(pthread_join)(thread, retval);
-    return !result;
-  });
-  return result;
+  return REAL(pthread_join)(thread, retval);
 }
 
 INTERCEPTOR(int, pthread_detach, void *thread) {
-  int result;
-  asanThreadArgRetval().Detach((uptr)thread, [&](){
-    result = REAL(pthread_detach)(thread);
-    return !result;
-  });
-  return result;
+  return REAL(pthread_detach)(thread);
 }
 
 INTERCEPTOR(int, pthread_exit, void *retval) {
-  asanThreadArgRetval().Finish(GetThreadSelf(), retval);
   return REAL(pthread_exit)(retval);
 }
 
 #    if ASAN_INTERCEPT_TRYJOIN
 INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **ret) {
-  int result;
-  asanThreadArgRetval().Join((uptr)thread, [&]() {
-    result = REAL(pthread_tryjoin_np)(thread, ret);
-    return !result;
-  });
-  return result;
+  return REAL(pthread_tryjoin_np)(thread, ret);
 }
 #    endif
 
 #    if ASAN_INTERCEPT_TIMEDJOIN
 INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
             const struct timespec *abstime) {
-  int result;
-  asanThreadArgRetval().Join((uptr)thread, [&]() {
-    result = REAL(pthread_timedjoin_np)(thread, ret, abstime);
-    return !result;
-  });
-  return result;
+  return REAL(pthread_timedjoin_np)(thread, ret, abstime);
 }
 #    endif
 
