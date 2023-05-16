@@ -286,6 +286,12 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
                        LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_MERGE_VALUES, 1, s128}, LegacyLegalizeActions::Legal);
   LegacyInfo.setAction({G_UNMERGE_VALUES, s128}, LegacyLegalizeActions::Legal);
+
+  getActionDefinitionsBuilder({G_BSWAP})
+    .legalFor({s32, s64})
+    .widenScalarToNextPow2(1, /*Min=*/32)
+    .clampScalar(0, s32, s64);
+
 }
 
 void X86LegalizerInfo::setLegalizerInfoSSE1() {
