@@ -1,14 +1,14 @@
 ; RUN: llc -o - %s | FileCheck %s
 ; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s --check-prefix=DWARF
 ; This test checks that parameters on the stack pointer are correctly
-; referenced by debug info. X86 always uses the CFA when available now.
+; referenced by debug info.
 target triple = "x86_64--"
 
 @glob = external global i64
 @ptr = external global ptr
 %struct.s = type { i32, i32, i32, i32, i32 }
 
-; Simple case: no FP, use CFA, 8 byte offset to RSP.
+; Simple case: no FP, use offset from RSP.
 
 ; CHECK-LABEL: f0:
 ; CHECK-NOT: pushq
@@ -22,14 +22,14 @@ define i32 @f0(ptr byval(%struct.s) align 8 %input) !dbg !8 {
 ; DWARF-LABEL: .debug_info contents:
 
 ; DWARF-LABEL: DW_TAG_subprogram
-; DWARF:   DW_AT_frame_base [DW_FORM_exprloc]      (DW_OP_call_frame_cfa, DW_OP_consts -8, DW_OP_plus)
+; DWARF:   DW_AT_frame_base [DW_FORM_exprloc]      (DW_OP_reg7 RSP)
 ; DWARF:   DW_AT_name [DW_FORM_strp]       ( {{.*}}"f0")
 ; DWARF:   DW_TAG_formal_parameter
 ; DWARF-NEXT:     DW_AT_location [DW_FORM_exprloc]      (DW_OP_fbreg +8)
 ; DWARF-NEXT:     DW_AT_name [DW_FORM_strp]     ( {{.*}}"input")
 
 
-; Dynamic alloca forces a frame pointer, use CFA, 16 byte offset to RBP.
+; Dynamic alloca forces the use of RBP as the base pointer
 
 ; CHECK-LABEL: f1:
 ; CHECK: pushq %rbp
@@ -46,7 +46,7 @@ define i32 @f1(ptr byval(%struct.s) align 8 %input) !dbg !19 {
 }
 
 ; DWARF-LABEL: DW_TAG_subprogram
-; DWARF:   DW_AT_frame_base [DW_FORM_exprloc]      (DW_OP_call_frame_cfa, DW_OP_consts -16, DW_OP_plus)
+; DWARF:   DW_AT_frame_base [DW_FORM_exprloc]      (DW_OP_reg6 RBP)
 ; DWARF:   DW_AT_name [DW_FORM_strp]       ( {{.*}}"f1")
 ; DWARF:   DW_TAG_formal_parameter
 ; DWARF-NEXT:     DW_AT_location [DW_FORM_exprloc]      (DW_OP_fbreg +16)
@@ -69,9 +69,9 @@ define i32 @f2(ptr byval(%struct.s) align 8 %input) !dbg !22 {
   ret i32 42, !dbg !24
 }
 
-; "input" should still be referred to through CFA with a 16 byte offset to RBP.
+; "input" should still be referred to through RBP.
 ; DWARF-LABEL: DW_TAG_subprogram
-; DWARF:   DW_AT_frame_base [DW_FORM_exprloc]      (DW_OP_call_frame_cfa, DW_OP_consts -16, DW_OP_plus)
+; DWARF:   DW_AT_frame_base [DW_FORM_exprloc]      (DW_OP_reg6 RBP)
 ; DWARF:   DW_AT_name [DW_FORM_strp]       ( {{.*}}"f2")
 ; DWARF:   DW_TAG_formal_parameter
 ; DWARF-NEXT:     DW_AT_location [DW_FORM_exprloc]      (DW_OP_fbreg +16)

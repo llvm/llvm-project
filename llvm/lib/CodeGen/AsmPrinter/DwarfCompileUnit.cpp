@@ -531,11 +531,6 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIEImpl(const DISubprogram *SP,
     case TargetFrameLowering::DwarfFrameBase::CFA: {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_call_frame_cfa);
-      if (FrameBase.Location.Offset != 0) {
-        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_consts);
-        addSInt(*Loc, dwarf::DW_FORM_sdata, FrameBase.Location.Offset);
-        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus);
-      }
       addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
       break;
     }
