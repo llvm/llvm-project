@@ -17,8 +17,6 @@ class CharBlock;
 class MessageFixedText;
 struct ChangeTeamStmt;
 struct CoarrayAssociation;
-struct EventPostStmt;
-struct EventWaitStmt;
 struct FormTeamStmt;
 struct ImageSelector;
 struct SyncAllStmt;
@@ -37,8 +35,6 @@ public:
   void Leave(const parser::SyncImagesStmt &);
   void Leave(const parser::SyncMemoryStmt &);
   void Leave(const parser::SyncTeamStmt &);
-  void Leave(const parser::EventPostStmt &);
-  void Leave(const parser::EventWaitStmt &);
   void Leave(const parser::ImageSelector &);
   void Leave(const parser::FormTeamStmt &);
 
