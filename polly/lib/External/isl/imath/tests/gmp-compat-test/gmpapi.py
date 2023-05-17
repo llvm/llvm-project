@@ -13,10 +13,10 @@ class CType:
 
 class GMPAPI:
     def __init__(self, ret_ty, name, *params, **kw):
-        out = kw.get('out', [0])
-        inout = kw.get('inout', [])
-        mixed = kw.get('mixed', False)
-        custom = kw.get('custom', False)
+        out = kw.get("out", [0])
+        inout = kw.get("inout", [])
+        mixed = kw.get("mixed", False)
+        custom = kw.get("custom", False)
         self.name = name
         self.ret_ty = ret_ty
         self.params = params
@@ -27,7 +27,7 @@ class GMPAPI:
         if self.ret_ty != void and not mixed:
             self.out_params = []
         else:
-            self.out_params = out  #param location of the output result
+            self.out_params = out  # param location of the output result
 
     def is_write_only(self, pos):
         if pos in self.out_params and pos not in self.inout_params:
@@ -35,8 +35,9 @@ class GMPAPI:
         return False
 
     def __str__(self):
-        return ("{} {}({})".format(self.ret_ty, self.name, ",".join(
-            map(str, self.params))))
+        return "{} {}({})".format(
+            self.ret_ty, self.name, ",".join(map(str, self.params))
+        )
 
     def __repr__(self):
         return str(self)
@@ -96,7 +97,8 @@ apis = [
         iint,
         size_t,
         mpz_t,
-        custom=True),
+        custom=True,
+    ),
     # The mpz_import signature is a bit of a lie, but it is ok because it is custom
     GMPAPI(
         void,
@@ -108,10 +110,10 @@ apis = [
         iint,
         size_t,
         mpz_t,
-        custom=True),
+        custom=True,
+    ),
     GMPAPI(size_t, "mpz_sizeinbase", mpz_t, iint),
     GMPAPI(charp, "mpz_get_str", charp, iint, mpz_t),
-
     # mpq functions
     GMPAPI(iint, "mpq_set_str", mpq_t, charp, iint, out=[0], mixed=True),
     GMPAPI(void, "mpq_canonicalize", mpq_t, inout=[0]),
