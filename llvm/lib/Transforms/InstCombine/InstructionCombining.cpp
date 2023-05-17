@@ -361,7 +361,7 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
   return true;
 }
 
-// Simplifies IntToPtr/PtrToInt RoundTrip Cast To BitCast.
+// Simplifies IntToPtr/PtrToInt RoundTrip Cast.
 // inttoptr ( ptrtoint (x) ) --> x
 Value *InstCombinerImpl::simplifyIntToPtrRoundTripCast(Value *Val) {
   auto *IntToPtr = dyn_cast<IntToPtrInst>(Val);
@@ -373,10 +373,8 @@ Value *InstCombinerImpl::simplifyIntToPtrRoundTripCast(Value *Val) {
         CastTy->getPointerAddressSpace() ==
             PtrToInt->getSrcTy()->getPointerAddressSpace() &&
         DL.getTypeSizeInBits(PtrToInt->getSrcTy()) ==
-            DL.getTypeSizeInBits(PtrToInt->getDestTy())) {
-      return CastInst::CreateBitOrPointerCast(PtrToInt->getOperand(0), CastTy,
-                                              "", PtrToInt);
-    }
+            DL.getTypeSizeInBits(PtrToInt->getDestTy()))
+      return PtrToInt->getOperand(0);
   }
   return nullptr;
 }
