@@ -62,7 +62,7 @@ def add_version_header(tc):
 feature_test_macros = [ add_version_header(x) for x in [
   {
     "name": "__cpp_lib_adaptor_iterator_pair_constructor",
-    "values": { "c++2b": 202106 },
+    "values": { "c++23": 202106 },
     "headers": ["queue", "stack"],
   }, {
     "name": "__cpp_lib_addressof_constexpr",
@@ -70,7 +70,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["memory"],
   }, {
     "name": "__cpp_lib_allocate_at_least",
-    "values": { "c++2b": 202106 },
+    "values": { "c++23": 202106 },
     "headers": ["memory"],
   }, {
     "name": "__cpp_lib_allocator_traits_is_always_equal",
@@ -94,7 +94,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["utility"],
   }, {
     "name": "__cpp_lib_associative_heterogeneous_erasure",
-    "values": { "c++2b": 202110 },
+    "values": { "c++23": 202110 },
     "headers": ["map", "set", "unordered_map", "unordered_set"],
     "unimplemented": True,
   }, {
@@ -146,7 +146,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
   }, {
     "name": "__cpp_lib_bind_back",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["functional"],
     "unimplemented": True,
   }, {
@@ -180,7 +180,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["cstddef"],
   }, {
     "name": "__cpp_lib_byteswap",
-    "values": { "c++2b": 202110 },
+    "values": { "c++23": 202110 },
     "headers": ["bit"],
   }, {
     "name": "__cpp_lib_char8_t",
@@ -214,15 +214,15 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["algorithm", "utility"],
   }, {
     "name": "__cpp_lib_constexpr_bitset",
-    "values": { "c++2b": 202207 },
+    "values": { "c++23": 202207 },
     "headers": ["bitset"],
   }, {
     "name": "__cpp_lib_constexpr_charconv",
-    "values": { "c++2b": 202207 },
+    "values": { "c++23": 202207 },
     "headers": ["charconv"],
   }, {
     "name": "__cpp_lib_constexpr_cmath",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["cmath", "cstdlib"],
     "unimplemented": True,
   }, {
@@ -243,7 +243,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["iterator"],
   }, {
     "name": "__cpp_lib_constexpr_memory",
-    "values": { "c++20": 201811, "c++2b": 202202 },
+    "values": { "c++20": 201811, "c++23": 202202 },
     "headers": ["memory"],
   }, {
     "name": "__cpp_lib_constexpr_numeric",
@@ -263,7 +263,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["tuple"],
   }, {
     "name": "__cpp_lib_constexpr_typeinfo",
-    "values": { "c++2b": 202106 },
+    "values": { "c++23": 202106 },
     "headers": ["typeinfo"],
   }, {
     "name": "__cpp_lib_constexpr_utility",
@@ -306,7 +306,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_expected",
-    "values": { "c++2b": 202211 },
+    "values": { "c++23": 202211 },
     "headers": ["expected"],
   }, {
     "name": "__cpp_lib_filesystem",
@@ -329,20 +329,20 @@ feature_test_macros = [ add_version_header(x) for x in [
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_format_ranges",
-    "values": { "c++2b": 202207 },
+    "values": { "c++23": 202207 },
     "headers": ["format"],
     "test_suite_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
     "libcxx_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
   }, {
     "name": "__cpp_lib_formatters",
-    "values": { "c++2b": 202302 },
+    "values": { "c++23": 202302 },
     "headers": ["stacktrace", "thread"],
     "test_suite_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
     "libcxx_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_forward_like",
-    "values": { "c++2b": 202207 },
+    "values": { "c++23": 202207 },
     "headers": ["utility"],
   }, {
     "name": "__cpp_lib_gcd_lcm",
@@ -400,7 +400,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["functional"],
   }, {
     "name": "__cpp_lib_invoke_r",
-    "values": { "c++2b": 202106 },
+    "values": { "c++23": 202106 },
     "headers": ["functional"],
   }, {
     "name": "__cpp_lib_is_aggregate",
@@ -438,7 +438,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_is_scoped_enum",
-    "values": { "c++2b": 202011 },
+    "values": { "c++23": 202011 },
     "headers": ["type_traits"],
   }, {
     "name": "__cpp_lib_is_swappable",
@@ -496,7 +496,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_mdspan",
-    "values": { "c++2b": 202207 },
+    "values": { "c++23": 202207 },
     "headers": ["mdspan"],
     "unimplemented": True,
   }, {
@@ -509,7 +509,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["iterator"],
    }, {
     "name": "__cpp_lib_move_only_function",
-    "values": { "c++2b": 202110 },
+    "values": { "c++23": 202110 },
     "headers": ["functional"],
     "unimplemented": True,
   }, {
@@ -530,11 +530,11 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["iterator"],
   }, {
     "name": "__cpp_lib_optional",
-    "values": { "c++17": 201606, "c++2b": 202110 },
+    "values": { "c++17": 201606, "c++23": 202110 },
     "headers": ["optional"],
   }, {
     "name": "__cpp_lib_out_ptr",
-    "values": { "c++2b": 202106 },
+    "values": { "c++23": 202106 },
     "headers": ["memory"],
     "unimplemented": True,
   }, {
@@ -556,46 +556,46 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
   }, {
     "name": "__cpp_lib_ranges_as_rvalue",
-    "values": { "c++2b": 202207 },
+    "values": { "c++23": 202207 },
     "headers": ["ranges"],
   }, {
     "name": "__cpp_lib_ranges_chunk",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["ranges"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_ranges_chunk_by",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["ranges"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_ranges_iota",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["numeric"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_ranges_join_with",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["ranges"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_ranges_slide",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["ranges"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_ranges_starts_ends_with",
-    "values": { "c++2b": 202106 },
+    "values": { "c++23": 202106 },
     "headers": ["algorithm"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_ranges_to_container",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["deque", "forward_list", "list", "map", "priority_queue", "queue", "set", "stack", "string", "unordered_map", "unordered_set", "vector"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_ranges_zip",
-    "values": { "c++2b": 202110 },
+    "values": { "c++23": 202110 },
     "headers": ["ranges", "tuple", "utility"],
     "unimplemented": True,
   }, {
@@ -604,7 +604,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["memory"],
   }, {
     "name": "__cpp_lib_reference_from_temporary",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["type_traits"],
     "unimplemented": True,
   }, {
@@ -674,7 +674,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["span"],
   }, {
     "name": "__cpp_lib_spanstream",
-    "values": { "c++2b": 202106 },
+    "values": { "c++23": 202106 },
     "headers": ["spanstream"],
     "unimplemented": True,
   }, {
@@ -683,7 +683,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["iterator"],
   }, {
     "name": "__cpp_lib_stacktrace",
-    "values": { "c++2b": 202011 },
+    "values": { "c++23": 202011 },
     "headers": ["stacktrace"],
     "unimplemented": True,
   }, {
@@ -692,15 +692,15 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["string", "string_view"],
   }, {
     "name": "__cpp_lib_stdatomic_h",
-    "values": { "c++2b": 202011 },
+    "values": { "c++23": 202011 },
     "headers": ["stdatomic.h"],
   }, {
     "name": "__cpp_lib_string_contains",
-    "values": { "c++2b": 202011 },
+    "values": { "c++23": 202011 },
     "headers": ["string", "string_view"],
   }, {
     "name": "__cpp_lib_string_resize_and_overwrite",
-    "values": { "c++2b": 202110 },
+    "values": { "c++23": 202110 },
     "headers": ["string"],
   }, {
     "name": "__cpp_lib_string_udls",
@@ -735,7 +735,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_to_underlying",
-    "values": { "c++2b": 202102 },
+    "values": { "c++23": 202102 },
     "headers": ["utility"],
   }, {
     "name": "__cpp_lib_transformation_trait_aliases",
@@ -771,7 +771,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["unordered_map"],
   }, {
     "name": "__cpp_lib_unreachable",
-    "values": { "c++2b": 202202 },
+    "values": { "c++23": 202202 },
     "headers": ["utility"],
   }, {
     "name": "__cpp_lib_unwrap_ref",
@@ -819,7 +819,7 @@ lit_markup = {
 }
 
 def get_std_dialects():
-  std_dialects = ['c++14', 'c++17', 'c++20', 'c++2b']
+  std_dialects = ['c++14', 'c++17', 'c++20', 'c++23']
   return list(std_dialects)
 
 def get_first_std(d):
@@ -904,7 +904,7 @@ def produce_macros_definitions():
   macros_definitions = []
   for std in get_std_dialects():
     macros_definitions.append(
-      macro_definition_template.format(std_number=get_std_number(std).replace('2b', '23'),
+      macro_definition_template.format(std_number=get_std_number(std),
                                        macro_definition=produce_macros_definition_for_std(std)))
 
   return '\n\n'.join(macros_definitions)
@@ -1073,7 +1073,6 @@ def generate_std_tests(test_list):
 #endif // TEST_STD_VER > {penultimate_std_number}"""
 
   std_dialects = get_std_dialects()
-  assert not get_std_number(std_dialects[-1]).isnumeric()
 
   other_std_tests = []
   for std in std_dialects[:-1]:

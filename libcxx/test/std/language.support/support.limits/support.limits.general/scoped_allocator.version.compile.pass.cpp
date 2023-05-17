@@ -55,10 +55,10 @@
 #elif TEST_STD_VER > 20
 
 # ifndef __cpp_lib_allocator_traits_is_always_equal
-#   error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++2b"
+#   error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++23"
 # endif
 # if __cpp_lib_allocator_traits_is_always_equal != 201411L
-#   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++2b"
+#   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++23"
 # endif
 
 #endif // TEST_STD_VER > 20

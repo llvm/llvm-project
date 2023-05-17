@@ -1,7 +1,7 @@
-.. _cxx2b-status:
+.. _cxx23-status:
 
 ================================
-libc++ C++2b Status
+libc++ C++23 Status
 ================================
 
 .. include:: ../Helpers/Styles.rst
@@ -14,6 +14,7 @@ Overview
 ================================
 
 In November 2020, the C++ standard committee adopted the first changes to the next version of the C++ standard, known here as "C++2b" (probably to be C++23).
+In February 2023, the C++ standard committee approved this draft, and sent it to ISO for approval as C++23.
 
 This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx23>`__.
 
@@ -27,13 +28,13 @@ The groups that have contributed papers:
 
 .. note:: "Nothing to do" means that no library changes were needed to implement this change.
 
-.. _paper-status-cxx2b:
+.. _paper-status-cxx23:
 
 Paper Status
 ====================================
 
 .. csv-table::
-   :file: Cxx2bPapers.csv
+   :file: Cxx23Papers.csv
    :header-rows: 1
    :widths: auto
 
@@ -48,13 +49,13 @@ Paper Status
       The formatter for ``stacktrace`` is not implemented, since ``stacktrace`` is
       not implemented yet.
 
-.. _issues-status-cxx2b:
+.. _issues-status-cxx23:
 
 Library Working Group Issues Status
 ====================================
 
 .. csv-table::
-   :file: Cxx2bIssues.csv
+   :file: Cxx23Issues.csv
    :header-rows: 1
    :widths: auto
 

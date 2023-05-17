@@ -90,7 +90,7 @@ namespace std {
       basic_string_view& operator=(const basic_string_view&) noexcept = default;
       template<class Allocator>
       constexpr basic_string_view(const charT* str);
-      basic_string_view(nullptr_t) = delete; // C++2b
+      basic_string_view(nullptr_t) = delete; // C++23
       constexpr basic_string_view(const charT* str, size_type len);
       template <class It, class End>
       constexpr basic_string_view(It begin, End end); // C++20
@@ -168,9 +168,9 @@ namespace std {
       constexpr bool ends_with(charT c) const noexcept;               // C++20
       constexpr bool ends_with(const charT* s) const;                 // C++20
 
-      constexpr bool contains(basic_string_view s) const noexcept; // C++2b
-      constexpr bool contains(charT c) const noexcept;             // C++2b
-      constexpr bool contains(const charT* s) const;               // C++2b
+      constexpr bool contains(basic_string_view s) const noexcept; // C++23
+      constexpr bool contains(charT c) const noexcept;             // C++23
+      constexpr bool contains(const charT* s) const;               // C++23
 
      private:
       const_pointer data_;  // exposition only

@@ -78,17 +78,17 @@
 #elif TEST_STD_VER > 20
 
 # ifndef __cpp_lib_complex_udls
-#   error "__cpp_lib_complex_udls should be defined in c++2b"
+#   error "__cpp_lib_complex_udls should be defined in c++23"
 # endif
 # if __cpp_lib_complex_udls != 201309L
-#   error "__cpp_lib_complex_udls should have the value 201309L in c++2b"
+#   error "__cpp_lib_complex_udls should have the value 201309L in c++23"
 # endif
 
 # ifndef __cpp_lib_constexpr_complex
-#   error "__cpp_lib_constexpr_complex should be defined in c++2b"
+#   error "__cpp_lib_constexpr_complex should be defined in c++23"
 # endif
 # if __cpp_lib_constexpr_complex != 201711L
-#   error "__cpp_lib_constexpr_complex should have the value 201711L in c++2b"
+#   error "__cpp_lib_constexpr_complex should have the value 201711L in c++23"
 # endif
 
 #endif // TEST_STD_VER > 20

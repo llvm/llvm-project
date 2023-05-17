@@ -69,10 +69,10 @@
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_execution
-#     error "__cpp_lib_execution should be defined in c++2b"
+#     error "__cpp_lib_execution should be defined in c++23"
 #   endif
 #   if __cpp_lib_execution != 201902L
-#     error "__cpp_lib_execution should have the value 201902L in c++2b"
+#     error "__cpp_lib_execution should have the value 201902L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_execution
