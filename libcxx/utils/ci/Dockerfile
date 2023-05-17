@@ -95,7 +95,8 @@ RUN apt-get update && apt-get install -y llvm-$(($LLVM_HEAD_VERSION - 2))-dev ll
                                      libclang-$(($LLVM_HEAD_VERSION - 2))-dev libclang-$(($LLVM_HEAD_VERSION - 1))-dev libclang-$LLVM_HEAD_VERSION-dev
 
 # Install the most recent GCC, like clang install the previous version as a transition.
-ENV GCC_LATEST_VERSION=12
+ENV GCC_LATEST_VERSION=13
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test
 RUN apt-get update && apt install -y gcc-$((GCC_LATEST_VERSION - 1)) g++-$((GCC_LATEST_VERSION - 1))
 RUN apt-get update && apt install -y gcc-$GCC_LATEST_VERSION g++-$GCC_LATEST_VERSION
 
