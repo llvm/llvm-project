@@ -42,3 +42,6 @@ reverted
 Revert "[SLP][NFC]Add missing finalize params in the CostEstimator, NFC."
         seeing rocThrust SLP aborts in merges, try avoiding
 
+Revert: lots of crashes in FastRegAlloc: Assertion `Reg.isPhysical()' failed.
+  c4a872badb53 FastRegAlloc: Fix implicit operands not rewritten
+
