@@ -3,12 +3,7 @@
 
 define i1 @sdiv_neg_neg_high_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_neg_neg_high_bits(
-; CHECK-NEXT:    [[NUM:%.*]] = or i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[DENUM:%.*]] = or i8 [[Y:%.*]], -125
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[NUM]], [[DENUM]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DIV]], -128
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], -128
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %num = or i8 %x, 128
   %denum = or i8 %y, 131
@@ -20,13 +15,7 @@ define i1 @sdiv_neg_neg_high_bits(i8 %x, i8 %y) {
 
 define i1 @sdiv_pos_neg_high_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_pos_neg_high_bits(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[NUM:%.*]] = or i8 [[XX]], 49
-; CHECK-NEXT:    [[DENUM:%.*]] = or i8 [[Y:%.*]], -15
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[NUM]], [[DENUM]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DIV]], -128
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 127
   %num = or i8 %xx, 49
@@ -58,13 +47,7 @@ define i1 @sdiv_pos_neg_high_bits_fail_maybez(i8 %x, i8 %y) {
 
 define i1 @sdiv_exact_pos_neg_high_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_exact_pos_neg_high_bits(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[NUM:%.*]] = or i8 [[XX]], 49
-; CHECK-NEXT:    [[DENUM:%.*]] = or i8 [[Y:%.*]], -64
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[NUM]], [[DENUM]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DIV]], -128
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 127
   %num = or i8 %xx, 49
@@ -77,14 +60,7 @@ define i1 @sdiv_exact_pos_neg_high_bits(i8 %x, i8 %y) {
 
 define i1 @sdiv_neg_pos_high_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_neg_pos_high_bits(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], -97
-; CHECK-NEXT:    [[NUM:%.*]] = or i8 [[XX]], -127
-; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 15
-; CHECK-NEXT:    [[DENUM:%.*]] = or i8 [[YY]], 9
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[NUM]], [[DENUM]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DIV]], -128
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 159
   %num = or i8 %xx, 129
@@ -117,12 +93,7 @@ define i1 @sdiv_neg_pos_high_bits_fail_maybez(i8 %x, i8 %y) {
 
 define i1 @sdiv_exact_odd_odd(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_exact_odd_odd(
-; CHECK-NEXT:    [[NUM:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[DENUM:%.*]] = or i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[NUM]], [[DENUM]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DIV]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %num = or i8 %x, 1
   %denum = or i8 %y, 1
@@ -134,12 +105,7 @@ define i1 @sdiv_exact_odd_odd(i8 %x, i8 %y) {
 
 define i1 @sdiv_exact_even_odd(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_exact_even_odd(
-; CHECK-NEXT:    [[NUM:%.*]] = and i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[DENUM:%.*]] = or i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[NUM]], [[DENUM]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DIV]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %num = and i8 %x, -2
   %denum = or i8 %y, 1
