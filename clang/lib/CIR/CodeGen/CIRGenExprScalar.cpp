@@ -1644,3 +1644,10 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
         patchVoidOrThrowSites();
       });
 }
+
+mlir::Value CIRGenFunction::buildScalarPrePostIncDec(const UnaryOperator *E,
+                                                     LValue LV, bool isInc,
+                                                     bool isPre) {
+  return ScalarExprEmitter(*this, builder)
+      .buildScalarPrePostIncDec(E, LV, isInc, isPre);
+}
