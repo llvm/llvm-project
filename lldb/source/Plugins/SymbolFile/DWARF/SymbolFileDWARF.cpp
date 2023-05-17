@@ -2962,8 +2962,8 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
     if (log) {
       GetObjectFile()->GetModule()->LogMessage(
           log,
-          "SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(tag=%"
-          "s, name='{0}')",
+          "SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(tag={0}, "
+          "name='{1}')",
           DW_TAG_value_to_name(tag), die.GetName());
     }
 
