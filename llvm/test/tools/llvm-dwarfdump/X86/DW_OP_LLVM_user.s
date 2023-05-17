@@ -2,7 +2,6 @@
 # RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 # FIXME: Is there a better approach than using `DW_CFA_expression EAX <op>`?
-# XFAIL: *
 
 # CHECK:      .eh_frame contents:
 # CHECK:      FDE

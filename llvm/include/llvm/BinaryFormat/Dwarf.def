@@ -925,7 +925,6 @@ HANDLE_DW_OP(0xe5, LLVM_bit_offset, 0, LLVM)
 HANDLE_DW_OP(0xe6, LLVM_call_frame_entry_reg, 0, LLVM)
 HANDLE_DW_OP(0xe7, LLVM_undefined, 0, LLVM)
 HANDLE_DW_OP(0xe8, LLVM_aspace_bregx, 0, LLVM)
-HANDLE_DW_OP(0xe9, LLVM_aspace_implicit_pointer, 0, LLVM)
 HANDLE_DW_OP(0xea, LLVM_piece_end, 0, LLVM)
 HANDLE_DW_OP(0xeb, LLVM_extend, 0, LLVM)
 HANDLE_DW_OP(0xec, LLVM_select_bit_piece, 0, LLVM)
@@ -937,7 +936,7 @@ HANDLE_DW_OP(0xec, LLVM_select_bit_piece, 0, LLVM)
 // DW_OP_LLVM_user acts as an extension multiplexer, opening up the encoding
 // space to accommodate an infinite number of extensions. This better reflects
 // the de-facto permanent allocation of extensions.
-HANDLE_DW_OP(0xef, LLVM_user, 0, LLVM)
+HANDLE_DW_OP(0xe9, LLVM_user, 0, LLVM)
 // "LLVM Vendor Extension" operations under the DW_OP_LLVM_user encoding
 // scheme. This list is authoritative and exhaustive. Once an operation is
 // registered here it cannot be removed nor have its encoding changed. The

@@ -105,13 +105,10 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_LLVM_undefined] = Desc(Op::Dwarf4);
   Descriptions[DW_OP_LLVM_aspace_bregx] =
       Desc(Op::Dwarf4, Op::SizeLEB, Op::SizeLEB);
-  Descriptions[DW_OP_LLVM_aspace_implicit_pointer] =
-      Desc(Op::Dwarf4, Op::SizeRefAddr, Op::SignedSizeLEB);
   Descriptions[DW_OP_LLVM_piece_end] = Desc(Op::Dwarf4);
   Descriptions[DW_OP_LLVM_extend] = Desc(Op::Dwarf4, Op::SizeLEB, Op::SizeLEB);
   Descriptions[DW_OP_LLVM_select_bit_piece] =
       Desc(Op::Dwarf4, Op::SizeLEB, Op::SizeLEB);
-
   Descriptions[DW_OP_addrx] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_constx] = Desc(Op::Dwarf5, Op::SizeLEB);
   Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
