@@ -2028,6 +2028,9 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
     return CheckWebAssemblyBuiltinFunctionCall(TI, BuiltinID, TheCall);
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+    return CheckNVPTXBuiltinFunctionCall(TI, BuiltinID, TheCall);
   }
 }
 
@@ -4810,6 +4813,20 @@ bool Sema::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
     return BuiltinWasmRefNullExtern(TheCall);
   case WebAssembly::BI__builtin_wasm_ref_null_func:
     return BuiltinWasmRefNullFunc(TheCall);
+  }
+
+  return false;
+}
+
+bool Sema::CheckNVPTXBuiltinFunctionCall(const TargetInfo &TI,
+                                         unsigned BuiltinID,
+                                         CallExpr *TheCall) {
+  switch (BuiltinID) {
+  case NVPTX::BI__nvvm_cp_async_ca_shared_global_4:
+  case NVPTX::BI__nvvm_cp_async_ca_shared_global_8:
+  case NVPTX::BI__nvvm_cp_async_ca_shared_global_16:
+  case NVPTX::BI__nvvm_cp_async_cg_shared_global_16:
+    return checkArgCountAtMost(*this, TheCall, 3);
   }
 
   return false;
