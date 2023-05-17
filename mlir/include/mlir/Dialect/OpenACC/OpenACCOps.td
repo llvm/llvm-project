@@ -30,31 +30,33 @@ class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
   Op<OpenACC_Dialect, mnemonic, traits>;
 
 // Reduction operation enumeration.
-def OpenACC_ReductionOpAdd     : I32EnumAttrCase<"redop_add", 0>;
-def OpenACC_ReductionOpMul     : I32EnumAttrCase<"redop_mul", 1>;
-def OpenACC_ReductionOpMax     : I32EnumAttrCase<"redop_max", 2>;
-def OpenACC_ReductionOpMin     : I32EnumAttrCase<"redop_min", 3>;
-def OpenACC_ReductionOpAnd     : I32EnumAttrCase<"redop_and", 4>;
-def OpenACC_ReductionOpOr      : I32EnumAttrCase<"redop_or", 5>;
-def OpenACC_ReductionOpXor     : I32EnumAttrCase<"redop_xor", 6>;
-def OpenACC_ReductionOpLogEqv  : I32EnumAttrCase<"redop_leqv", 7>;
-def OpenACC_ReductionOpLogNeqv : I32EnumAttrCase<"redop_lneqv", 8>;
-def OpenACC_ReductionOpLogAnd  : I32EnumAttrCase<"redop_land", 9>;
-def OpenACC_ReductionOpLogOr   : I32EnumAttrCase<"redop_lor", 10>;
+def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"redop_add", 0>;
+def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"redop_mul", 1>;
+def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"redop_max", 2>;
+def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"redop_min", 3>;
+def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"redop_and", 4>;
+def OpenACC_ReductionOperatorOr      : I32EnumAttrCase<"redop_or", 5>;
+def OpenACC_ReductionOperatorXor     : I32EnumAttrCase<"redop_xor", 6>;
+def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"redop_leqv", 7>;
+def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"redop_lneqv", 8>;
+def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"redop_land", 9>;
+def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"redop_lor", 10>;
 
-def OpenACC_ReductionOp : I32EnumAttr<"ReductionOp",
+def OpenACC_ReductionOperator : I32EnumAttr<"ReductionOperator",
     "built-in reduction operations supported by OpenACC",
-    [OpenACC_ReductionOpAdd, OpenACC_ReductionOpMul, OpenACC_ReductionOpMax,
-     OpenACC_ReductionOpMin, OpenACC_ReductionOpAnd, OpenACC_ReductionOpOr,
-     OpenACC_ReductionOpXor, OpenACC_ReductionOpLogEqv,
-     OpenACC_ReductionOpLogNeqv, OpenACC_ReductionOpLogAnd,
-     OpenACC_ReductionOpLogOr
+    [OpenACC_ReductionOperatorAdd, OpenACC_ReductionOperatorMul,
+     OpenACC_ReductionOperatorMax, OpenACC_ReductionOperatorMin,
+     OpenACC_ReductionOperatorAnd, OpenACC_ReductionOperatorOr,
+     OpenACC_ReductionOperatorXor, OpenACC_ReductionOperatorLogEqv,
+     OpenACC_ReductionOperatorLogNeqv, OpenACC_ReductionOperatorLogAnd,
+     OpenACC_ReductionOperatorLogOr
     ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::acc";
 }
-def OpenACC_ReductionOpAttr : EnumAttr<OpenACC_Dialect, OpenACC_ReductionOp,
-                                       "reduction_op">;
+def OpenACC_ReductionOperatorAttr : EnumAttr<OpenACC_Dialect,
+                                             OpenACC_ReductionOperator,
+                                             "reduction_operator">;
 
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
@@ -428,7 +430,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
                        Optional<I1>:$ifCond,
                        Optional<I1>:$selfCond,
                        UnitAttr:$selfAttr,
-                       OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
                        Variadic<AnyType>:$gangPrivateOperands,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
@@ -493,7 +495,7 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
                        Optional<I1>:$ifCond,
                        Optional<I1>:$selfCond,
                        UnitAttr:$selfAttr,
-                       OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
                        Variadic<AnyType>:$gangPrivateOperands,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
@@ -828,7 +830,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
                        UnitAttr:$hasVector,
                        Variadic<IntOrIndex>:$tileOperands,
                        Variadic<AnyType>:$privateOperands,
-                       OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands);
 
   let results = (outs Variadic<AnyType>:$results);
