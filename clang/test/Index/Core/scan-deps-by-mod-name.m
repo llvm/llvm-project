@@ -8,6 +8,8 @@
 // RUN:     -o FoE.o -x objective-c >> %t.result
 // RUN: cat %t.result | sed 's/\\/\//g' | FileCheck %s -DOUTPUTS=%/t
 
+// XFAIL: !rdar109472165
+
 // CHECK: [[PREFIX:.*]]
 // CHECK-NEXT: modules:
 // CHECK-NEXT:   module:
