@@ -43,8 +43,8 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
     _ForwardOutIterator __result,
     _UnaryOperation __op) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                __is_cpp17_random_access_iterator<_ForwardIterator>::value &&
-                __is_cpp17_random_access_iterator<_ForwardOutIterator>::value) {
+                __has_random_access_iterator_category<_ForwardIterator>::value &&
+                __has_random_access_iterator_category<_ForwardOutIterator>::value) {
     std::__terminate_on_exception([&] {
       std::__par_backend::__parallel_for(
           __first, __last, [__op, __first, __result](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
@@ -54,8 +54,8 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
     });
     return __result + (__last - __first);
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
-                       __is_cpp17_random_access_iterator<_ForwardIterator>::value &&
-                       __is_cpp17_random_access_iterator<_ForwardOutIterator>::value) {
+                       __has_random_access_iterator_category<_ForwardIterator>::value &&
+                       __has_random_access_iterator_category<_ForwardOutIterator>::value) {
     return std::__simd_walk_2(
         __first,
         __last - __first,
@@ -90,9 +90,9 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
     _ForwardOutIterator __result,
     _BinaryOperation __op) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                __is_cpp17_random_access_iterator<_ForwardIterator1>::value &&
-                __is_cpp17_random_access_iterator<_ForwardIterator2>::value &&
-                __is_cpp17_random_access_iterator<_ForwardOutIterator>::value) {
+                __has_random_access_iterator_category<_ForwardIterator1>::value &&
+                __has_random_access_iterator_category<_ForwardIterator2>::value &&
+                __has_random_access_iterator_category<_ForwardOutIterator>::value) {
     std::__terminate_on_exception([&] {
       std::__par_backend::__parallel_for(
           __first1,
@@ -109,9 +109,9 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
     });
     return __result + (__last1 - __first1);
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
-                       __is_cpp17_random_access_iterator<_ForwardIterator1>::value &&
-                       __is_cpp17_random_access_iterator<_ForwardIterator2>::value &&
-                       __is_cpp17_random_access_iterator<_ForwardOutIterator>::value) {
+                       __has_random_access_iterator_category<_ForwardIterator1>::value &&
+                       __has_random_access_iterator_category<_ForwardIterator2>::value &&
+                       __has_random_access_iterator_category<_ForwardOutIterator>::value) {
     return std::__simd_walk_3(
         __first1,
         __last1 - __first1,

@@ -98,8 +98,8 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compa
   static_assert(std::is_copy_constructible_v<_InputIterator1>, "Iterators must be copy constructible.");
   static_assert(std::is_copy_constructible_v<_InputIterator2>, "Iterators must be copy constructible.");
   __three_way_comp_ref_type<_Cmp> __wrapped_comp_ref(__comp);
-  if constexpr (__is_cpp17_random_access_iterator<_InputIterator1>::value &&
-                __is_cpp17_random_access_iterator<_InputIterator2>::value) {
+  if constexpr (__has_random_access_iterator_category<_InputIterator1>::value &&
+                __has_random_access_iterator_category<_InputIterator2>::value) {
     return std::__lexicographical_compare_three_way_fast_path(
         std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), __wrapped_comp_ref);
   } else {
