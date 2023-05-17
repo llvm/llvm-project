@@ -125,7 +125,7 @@ if (FLANG_STANDALONE_BUILD)
 
   option(LLVM_INSTALL_TOOLCHAIN_ONLY
     "Only include toolchain files in the 'install' target." OFF)
-  option(LLVM_FORCE_USE_OLD_HOST_TOOLCHAIN
+  option(LLVM_FORCE_USE_OLD_TOOLCHAIN
     "Set to ON to force using an old, unsupported host toolchain." OFF)
 
 
