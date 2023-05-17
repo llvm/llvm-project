@@ -743,6 +743,10 @@ public:
     return genUnknownLocation();
   }
 
+  const Fortran::semantics::Scope &getCurrentScope() override final {
+    return bridge.getSemanticsContext().FindScope(currentPosition);
+  }
+
   fir::FirOpBuilder &getFirOpBuilder() override final { return *builder; }
 
   mlir::ModuleOp &getModuleOp() override final { return bridge.getModule(); }
@@ -758,7 +762,10 @@ public:
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
     return Fortran::lower::mangle::mangleName(derivedType, scopeBlockIdMap);
   }
-
+  std::string mangleName(std::string &name) override final {
+    return Fortran::lower::mangle::mangleName(name, getCurrentScope(),
+                                              scopeBlockIdMap);
+  }
   const fir::KindMapping &getKindMap() override final {
     return bridge.getKindMap();
   }

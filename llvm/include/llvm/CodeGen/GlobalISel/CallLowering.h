@@ -188,7 +188,7 @@ public:
       if (getAssignFn(State.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
                                         State))
         return true;
-      StackOffset = State.getNextStackOffset();
+      StackSize = State.getStackSize();
       return false;
     }
 
@@ -199,9 +199,8 @@ public:
     /// as AssignFn on most targets.
     CCAssignFn *AssignFnVarArg;
 
-    /// Stack offset for next argument. At the end of argument evaluation, this
-    /// is typically the total stack size.
-    uint64_t StackOffset = 0;
+    /// The size of the currently allocated portion of the stack.
+    uint64_t StackSize = 0;
 
     /// Select the appropriate assignment function depending on whether this is
     /// a variadic call.

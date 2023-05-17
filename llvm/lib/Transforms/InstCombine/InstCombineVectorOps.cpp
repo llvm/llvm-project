@@ -550,9 +550,9 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
           SrcIdx -= LHSWidth;
           Src = SVI->getOperand(1);
         }
-        Type *Int32Ty = Type::getInt32Ty(EI.getContext());
+        Type *Int64Ty = Type::getInt64Ty(EI.getContext());
         return ExtractElementInst::Create(
-            Src, ConstantInt::get(Int32Ty, SrcIdx, false));
+            Src, ConstantInt::get(Int64Ty, SrcIdx, false));
       }
     } else if (auto *CI = dyn_cast<CastInst>(I)) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
@@ -1250,7 +1250,7 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
       return nullptr;
 
   // Create the insert + shuffle.
-  Type *Int64Ty = Type::getInt32Ty(InsElt.getContext());
+  Type *Int64Ty = Type::getInt64Ty(InsElt.getContext());
   PoisonValue *PoisonVec = PoisonValue::get(VecTy);
   Constant *Zero = ConstantInt::get(Int64Ty, 0);
   if (!cast<ConstantInt>(FirstIE->getOperand(2))->isZero())
