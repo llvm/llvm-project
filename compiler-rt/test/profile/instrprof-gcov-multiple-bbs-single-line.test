@@ -1,7 +1,7 @@
 RUN: mkdir -p %t.d
 RUN: cd %t.d
 
-RUN: %clang --coverage -o %t %S/Inputs/instrprof-gcov-multiple-bbs-single-line.c
+RUN: %clang --coverage -o %t %S/Inputs/instrprof-gcov-multiple-bbs-single-line.c -dumpdir ./
 RUN: test -f instrprof-gcov-multiple-bbs-single-line.gcno
 
 RUN: rm -f instrprof-gcov-multiple-bbs-single-line.gcda
