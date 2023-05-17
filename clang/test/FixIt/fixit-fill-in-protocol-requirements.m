@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple=x86_64-apple-macos10.10 -verify -Wno-objc-root-class -serialize-diagnostic-file /dev/null %s
-// RUN: %clang_cc1 -triple=x86_64-apple-macos10.10 -fdiagnostics-parseable-fixits -serialize-diagnostic-file /dev/null %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -triple=x86_64-apple-macos10.12 -fdiagnostics-parseable-fixits -serialize-diagnostic-file /dev/null %s 2>&1 | FileCheck --check-prefix=AVAILABLE %s
+// RUN: %clang_cc1 -triple=x86_64-apple-macos10.10 -verify -Wno-objc-root-class -fallow-editor-placeholders %s
+// RUN: %clang_cc1 -triple=x86_64-apple-macos10.10 -fdiagnostics-parseable-fixits -fallow-editor-placeholders %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64-apple-macos10.12 -fdiagnostics-parseable-fixits -fallow-editor-placeholders %s 2>&1 | FileCheck --check-prefix=AVAILABLE %s
 
 @protocol P1
 
@@ -18,7 +18,7 @@
 
 @end
 
-@implementation I // expected-warning {{warning: class 'I' does not conform to protocols 'P2' and 'P1'}} expected-note {{add stubs for missing protocol requirements}}
+@implementation I // expected-warning {{class 'I' does not conform to protocols 'P2' and 'P1'}} expected-note {{add stubs for missing protocol requirements}}
 
 @end
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:1-[[@LINE-1]]:1}:"- (void)p2Method { \n  <#code#>\n}\n\n- (void)p1Method { \n  <#code#>\n}\n\n"
@@ -29,11 +29,11 @@
 
 @end
 
-@interface I (Category) <P3> // expected-warning {{warning: category 'Category' does not conform to protocols 'P3'}} expected-note {{add stubs for missing protocol requirements}}
+@interface I (Category) <P3>
 
 @end
 
-@implementation I (Category)
+@implementation I (Category) // expected-warning {{category 'Category' does not conform to protocol 'P3'}} expected-note {{add stubs for missing protocol requirements}}
 
 @end
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:1-[[@LINE-1]]:1}:"+ (void)p3ClassMethod { \n  <#code#>\n}\n\n"
@@ -44,14 +44,14 @@
 
 @end
 
-@interface ThreeProtocols <P2, P1, P3> // expected-warning {{class 'ThreeProtocols' does not conform to protocols 'P2', 'P1' and 'P3'}} expected-note {{add stubs for missing protocol requirements}}
+@interface ThreeProtocols <P2, P1, P3>
 @end
-@implementation ThreeProtocols
+@implementation ThreeProtocols // expected-warning {{class 'ThreeProtocols' does not conform to protocols 'P2', 'P1' and 'P3'}} expected-note {{add stubs for missing protocol requirements}}
 @end
 
-@interface FourProtocols <P2, P3, P4> // expected-warning {{class 'ThreeProtocols' does not conform to protocols 'P2', 'P1', 'P3', ...}} expected-note {{add stubs for missing protocol requirements}}
+@interface FourProtocols <P2, P3, P4>
 @end
-@implementation FourProtocols
+@implementation FourProtocols // expected-warning {{class 'FourProtocols' does not conform to protocols 'P2', 'P1', 'P3', ...}} expected-note {{add stubs for missing protocol requirements}}
 @end
 
 // Unavailable methods
@@ -67,7 +67,7 @@
 @interface ImplementsAllAvailable <TakeAvailabilityIntoAccount>
 @end
 
-@implementation ImplementsAllAvailable // No warning!
+@implementation ImplementsAllAvailable // expected-warning {{class 'ImplementsAllAvailable' does not conform to protocol 'TakeAvailabilityIntoAccount'}} expected-note {{add stubs for missing protocol requirements}}
 
 - (void)availableMethod { }
 - (void)deprecatedMethod { }
