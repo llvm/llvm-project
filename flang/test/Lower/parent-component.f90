@@ -146,7 +146,7 @@ contains
 
   ! CHECK: %[[BOX:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QFTp{a:i32}>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.type<_QFTp{a:i32}>>) -> !fir.box<none>
-  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
+  ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDerivedType(%{{.*}}, %[[BOX_NONE]], %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.box<none>, !fir.ref<none>) -> i1
 
   subroutine init_assumed(y)
     type(c) :: y(:)
