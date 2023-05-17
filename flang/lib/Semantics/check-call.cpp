@@ -127,16 +127,20 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
           messages.Say(
               "Actual argument variable length '%jd' does not match the expected length '%jd'"_err_en_US,
               *actualLength, *dummyLength);
-        } else if (*actualLength < *dummyLength &&
-            context.ShouldWarn(common::UsageWarning::ShortCharacterActual)) {
-          if (evaluate::IsVariable(actual)) {
-            messages.Say(
-                "Actual argument variable length '%jd' is less than expected length '%jd'"_warn_en_US,
-                *actualLength, *dummyLength);
-          } else {
-            messages.Say(
-                "Actual argument expression length '%jd' is less than expected length '%jd'"_warn_en_US,
-                *actualLength, *dummyLength);
+        } else if (*actualLength < *dummyLength) {
+          bool isVariable{evaluate::IsVariable(actual)};
+          if (context.ShouldWarn(common::UsageWarning::ShortCharacterActual)) {
+            if (isVariable) {
+              messages.Say(
+                  "Actual argument variable length '%jd' is less than expected length '%jd'"_warn_en_US,
+                  *actualLength, *dummyLength);
+            } else {
+              messages.Say(
+                  "Actual argument expression length '%jd' is less than expected length '%jd'"_warn_en_US,
+                  *actualLength, *dummyLength);
+            }
+          }
+          if (!isVariable) {
             auto converted{ConvertToType(dummy.type.type(), std::move(actual))};
             CHECK(converted);
             actual = std::move(*converted);
