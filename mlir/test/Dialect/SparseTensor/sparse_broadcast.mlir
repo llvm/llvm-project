@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --sparsification --canonicalize --cse | FileCheck %s
 
-#DCSR = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
-#SparseTensor = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#SparseTensor = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ] }>
 
 #trait = {
   indexing_maps = [

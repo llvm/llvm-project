@@ -288,7 +288,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
     if (stt.hasEncoding() && !(isOutputTensor(tid) && isSparseOut)) {
       const auto enc = stt.getEncoding();
       isSparseSlices[tid] = enc.isSlice();
-      for (auto lvlTp : enc.getDimLevelType())
+      for (auto lvlTp : enc.getLvlTypes())
         lvlTypes[tid].push_back(lvlTp);
     } else {
       lvlTypes[tid].assign(lvlRank, DimLevelType::Dense);

@@ -27,8 +27,8 @@
 
 // Reduction in this file _are_ supported by the AArch64 SVE backend
 
-#SV = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
-#DV = #sparse_tensor.encoding<{ dimLevelType = [ "dense"      ] }>
+#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#DV = #sparse_tensor.encoding<{ lvlTypes = [ "dense"      ] }>
 
 #trait_reduction = {
   indexing_maps = [

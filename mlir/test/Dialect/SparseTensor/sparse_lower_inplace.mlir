@@ -8,7 +8,7 @@
 // RUN: --tensor-bufferize --finalizing-bufferize |  \
 // RUN: FileCheck %s --check-prefix=CHECK-LIR
 
-#CSR = #sparse_tensor.encoding<{dimLevelType = [ "dense", "compressed" ]}>
+#CSR = #sparse_tensor.encoding<{lvlTypes = [ "dense", "compressed" ]}>
 
 #trait_matvec = {
   indexing_maps = [

@@ -17,8 +17,8 @@
 
 // UNSUPPORTED: target=aarch64{{.*}}
 
-#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
-#DenseVector = #sparse_tensor.encoding<{dimLevelType = ["dense"]}>
+#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#DenseVector = #sparse_tensor.encoding<{lvlTypes = ["dense"]}>
 
 #trait_vec_op = {
   indexing_maps = [

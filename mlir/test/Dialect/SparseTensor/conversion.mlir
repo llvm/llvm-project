@@ -1,32 +1,32 @@
 // RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"]
+  lvlTypes = ["compressed"]
 }>
 
 #SparseVector64 = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"],
+  lvlTypes = ["compressed"],
   posWidth = 64,
   crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
-  dimLevelType = ["compressed"],
+  lvlTypes = ["compressed"],
   posWidth = 32,
   crdWidth = 32
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  dimLevelType = ["dense", "compressed"]
+  lvlTypes = ["dense", "compressed"]
 }>
 
 #CSC = #sparse_tensor.encoding<{
-  dimLevelType = ["dense", "compressed"],
+  lvlTypes = ["dense", "compressed"],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
 #SparseTensor = #sparse_tensor.encoding<{
-  dimLevelType = ["dense", "compressed", "compressed"],
+  lvlTypes = ["dense", "compressed", "compressed"],
   dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
 }>
 

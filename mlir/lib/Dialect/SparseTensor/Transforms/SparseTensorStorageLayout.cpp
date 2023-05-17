@@ -134,7 +134,7 @@ void sparse_tensor::foreachFieldInSparseTensor(
   if (!(callback(fidx, kind, dim, dlt)))                                       \
     return;
 
-  const auto lvlTypes = enc.getDimLevelType();
+  const auto lvlTypes = enc.getLvlTypes();
   const Level lvlRank = enc.getLvlRank();
   const Level cooStart = getCOOStart(enc);
   const Level end = cooStart == lvlRank ? cooStart : cooStart + 1;

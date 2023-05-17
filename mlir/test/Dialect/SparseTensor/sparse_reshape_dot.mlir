@@ -1,12 +1,12 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops --sparsification --cse --canonicalize | FileCheck %s
 
-#COO_2D = #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
-#COO_3D = #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
+#COO_2D = #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
+#COO_3D = #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
 
 
 // CHECK-LABEL:   func.func @sparse_reshape_fused(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<5x6xf32>,
-// CHECK-SAME:      %[[VAL_1:.*]]: tensor<6x2x3xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed-nu", "singleton-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>>) -> tensor<?x?x?xf32> {
+// CHECK-SAME:      %[[VAL_1:.*]]: tensor<6x2x3xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>>) -> tensor<?x?x?xf32> {
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant false
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 5 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 3 : index
