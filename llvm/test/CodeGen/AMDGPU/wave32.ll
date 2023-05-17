@@ -2858,26 +2858,23 @@ define void @callee_no_stack_with_call() #1 {
 ; GFX1032-NEXT:    s_mov_b32 s33, s32
 ; GFX1032-NEXT:    s_or_saveexec_b32 s17, -1
 ; GFX1032-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GFX1032-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s17
 ; GFX1032-NEXT:    s_addk_i32 s32, 0x200
-; GFX1032-NEXT:    v_writelane_b32 v41, s16, 0
+; GFX1032-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX1032-NEXT:    s_getpc_b64 s[16:17]
 ; GFX1032-NEXT:    s_add_u32 s16, s16, external_void_func_void@gotpcrel32@lo+4
 ; GFX1032-NEXT:    s_addc_u32 s17, s17, external_void_func_void@gotpcrel32@hi+12
-; GFX1032-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX1032-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; GFX1032-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX1032-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX1032-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX1032-NEXT:    v_readlane_b32 s30, v40, 0
-; GFX1032-NEXT:    v_readlane_b32 s4, v41, 0
+; GFX1032-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX1032-NEXT:    s_or_saveexec_b32 s5, -1
-; GFX1032-NEXT:    s_clause 0x1
-; GFX1032-NEXT:    buffer_load_dword v40, off, s[0:3], s33
-; GFX1032-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4
+; GFX1032-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s5
 ; GFX1032-NEXT:    s_addk_i32 s32, 0xfe00
@@ -2892,26 +2889,23 @@ define void @callee_no_stack_with_call() #1 {
 ; GFX1064-NEXT:    s_mov_b32 s33, s32
 ; GFX1064-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX1064-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GFX1064-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_mov_b64 exec, s[18:19]
 ; GFX1064-NEXT:    s_addk_i32 s32, 0x400
-; GFX1064-NEXT:    v_writelane_b32 v41, s16, 0
+; GFX1064-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX1064-NEXT:    s_getpc_b64 s[16:17]
 ; GFX1064-NEXT:    s_add_u32 s16, s16, external_void_func_void@gotpcrel32@lo+4
 ; GFX1064-NEXT:    s_addc_u32 s17, s17, external_void_func_void@gotpcrel32@hi+12
-; GFX1064-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX1064-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; GFX1064-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX1064-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX1064-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX1064-NEXT:    v_readlane_b32 s30, v40, 0
-; GFX1064-NEXT:    v_readlane_b32 s4, v41, 0
+; GFX1064-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX1064-NEXT:    s_or_saveexec_b64 s[6:7], -1
-; GFX1064-NEXT:    s_clause 0x1
-; GFX1064-NEXT:    buffer_load_dword v40, off, s[0:3], s33
-; GFX1064-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4
+; GFX1064-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX1064-NEXT:    s_addk_i32 s32, 0xfc00
