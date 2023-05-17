@@ -808,9 +808,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return I;
       }
 
-      // Increase high zero bits from the input.
-      Known.Zero.setHighBits(
-          std::min(BitWidth, LHSKnown.Zero.countl_one() + RHSTrailingZeros));
+      Known = KnownBits::udiv(LHSKnown, KnownBits::makeConstant(*SA),
+                              cast<BinaryOperator>(I)->isExact());
     } else {
       computeKnownBits(I, Known, Depth, CxtI);
     }
