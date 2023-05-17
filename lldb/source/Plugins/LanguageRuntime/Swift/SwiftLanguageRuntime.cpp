@@ -2102,7 +2102,10 @@ public:
       : CommandObjectParsed(interpreter, "demangle",
                             "Demangle a Swift mangled name",
                             "language swift demangle"),
-        m_options() {}
+        m_options() {
+    CommandArgumentData mangled_name_arg{eArgTypeSymbol};
+    m_arguments.push_back({mangled_name_arg});
+  }
 
   ~CommandObjectSwift_Demangle() {}
 
