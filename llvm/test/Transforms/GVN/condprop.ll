@@ -521,19 +521,15 @@ define i32 @test13(ptr %ptr1, ptr %ptr2) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[PTR2:%.*]], i32 1
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[PTR2]], i32 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR1:%.*]], [[PTR2]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ENTRY_END_CRIT_EDGE:%.*]]
-; CHECK:       entry.end_crit_edge:
 ; CHECK-NEXT:    [[VAL2_PRE:%.*]] = load i32, ptr [[GEP2]], align 4
-; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[VAL2:%.*]] = phi i32 [ [[VAL1]], [[IF]] ], [ [[VAL2_PRE]], [[ENTRY_END_CRIT_EDGE]] ]
-; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr [ [[PTR2]], [[IF]] ], [ [[GEP1]], [[ENTRY_END_CRIT_EDGE]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[VAL1]], [[IF]] ], [ 0, [[ENTRY_END_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr [ [[PTR2]], [[IF]] ], [ [[GEP1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[VAL2_PRE]], [[IF]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[PHI1]], align 4
-; CHECK-NEXT:    [[RET:%.*]] = add i32 [[PHI2]], [[VAL2]]
+; CHECK-NEXT:    [[RET:%.*]] = add i32 [[PHI2]], [[VAL2_PRE]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:
