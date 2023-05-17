@@ -8,8 +8,6 @@
 // RUN:     -o FoE.o -x objective-c >> %t.result
 // RUN: cat %t.result | sed 's/\\/\//g' | FileCheck %s -DOUTPUTS=%/t
 
-// XFAIL: !rdar109472165
-
 // CHECK: [[PREFIX:.*]]
 // CHECK-NEXT: modules:
 // CHECK-NEXT:   module:
@@ -29,4 +27,5 @@
 // CHECK-NEXT:     module-deps:
 // CHECK-NEXT:       ModA:[[HASH_MOD_A]]
 // CHECK-NEXT:     file-deps:
+// CHECK-NEXT:       {{.*}}ModA-{{.*}}.input
 // CHECK-NEXT:     build-args: -cc1 {{.*}} -fmodule-file={{(ModA=)?}}{{.*}}ModA_{{.*}}.pcm
