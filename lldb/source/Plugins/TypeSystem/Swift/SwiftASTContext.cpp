@@ -4802,27 +4802,15 @@ bool SwiftASTContext::SetColorizeDiagnostics(bool b) {
 void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                                        uint32_t bufferID, uint32_t first_line,
                                        uint32_t last_line) const {
+  // VALID_OR_RETURN cannot be used here here since would exit on error.
   LLDB_SCOPED_TIMER();
-  // If this is a fatal error, copy the error into the AST context's
-  // fatal error field, and then put it to the stream, otherwise just
-  // dump the diagnostics to the stream.
-
-  // N.B. you cannot use VALID_OR_RETURN here since that exits if
-  // you have fatal errors, which are what we are trying to print
-  // here.
   if (!m_ast_context_ap.get()) {
-    SymbolFile *sym_file = GetSymbolFile();
-    if (sym_file) {
-      ConstString name =
-          sym_file->GetObjectFile()->GetModule()->GetObjectName();
-      m_fatal_errors.SetErrorStringWithFormat("Null context for %s.",
-                                              name.AsCString());
-    } else {
-      m_fatal_errors.SetErrorString("Unknown fatal error occurred.");
-    }
+    RaiseFatalError("Swift compiler could not be initialized");
     return;
   }
 
+  // Forward diagnostics into diagnostic_manager.
+  // If there is a fatal error, also copy the error into m_fatal_errors.
   if (m_ast_context_ap->Diags.hasFatalErrorOccurred() &&
       !m_reported_fatal_error) {
     DiagnosticManager fatal_diagnostics;
@@ -4832,9 +4820,9 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
           ->PrintDiagnostics(fatal_diagnostics, bufferID, first_line,
                              last_line);
     if (fatal_diagnostics.Diagnostics().size())
-      m_fatal_errors.SetErrorString(fatal_diagnostics.GetString().c_str());
+      RaiseFatalError(fatal_diagnostics.GetString());
     else
-      m_fatal_errors.SetErrorString("Unknown fatal error occurred.");
+      RaiseFatalError("Unknown fatal error occurred.");
 
     m_reported_fatal_error = true;
 
@@ -4881,9 +4869,9 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
     if (use_all_compiler_flags && !extra_clang_args.empty()) {
       // We cannot reconfigure ClangImporter after its creation.
       // Instead poison the SwiftASTContext so it gets recreated.
-      m_fatal_errors.SetErrorStringWithFormat(
-          "New Swift image added: %s. ClangImporter needs to be reinitialized.",
-          module_sp->GetFileSpec().GetPath().c_str());
+      RaiseFatalError(
+          "New Swift image added: " + module_sp->GetFileSpec().GetPath() +
+          "ClangImporter needs to be reinitialized.");
       HEALTH_LOG_PRINTF(
           "New Swift image added: %s. ClangImporter needs to be reinitialized.",
           module_sp->GetFileSpec().GetPath().c_str());
