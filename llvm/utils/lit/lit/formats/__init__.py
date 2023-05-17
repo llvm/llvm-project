@@ -2,7 +2,7 @@ from lit.formats.base import (  # noqa: F401
     TestFormat,
     FileBasedTest,
     OneCommandPerFileTest,
-    ExecutableTest
+    ExecutableTest,
 )
 
 from lit.formats.googletest import GoogleTest  # noqa: F401

@@ -19,6 +19,7 @@
 // FIXME: Is it easiest to fix this layering violation by moving the .inc
 // #includes from AArch64MCTargetDesc.h to here?
 #include "MCTargetDesc/AArch64MCTargetDesc.h" // For AArch64::X0 and friends.
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -528,6 +529,27 @@ getSVEPredPatternFromNumElements(unsigned MinNumElts) {
     return AArch64SVEPredPattern::vl256;
   }
 }
+
+/// An enum to describe what types of loops we should attempt to tail-fold:
+///   Disabled:    None
+///   Reductions:  Loops containing reductions
+///   Recurrences: Loops with first-order recurrences, i.e. that would
+///                  require a SVE splice instruction
+///   Reverse:     Reverse loops
+///   Simple:      Loops that are not reversed and don't contain reductions
+///                  or first-order recurrences.
+///   All:         All
+enum class TailFoldingOpts : uint8_t {
+  Disabled = 0x00,
+  Simple = 0x01,
+  Reductions = 0x02,
+  Recurrences = 0x04,
+  Reverse = 0x08,
+  All = Reductions | Recurrences | Simple | Reverse
+};
+
+LLVM_DECLARE_ENUM_AS_BITMASK(TailFoldingOpts,
+                             /* LargestValue */ (long)TailFoldingOpts::Reverse);
 
 namespace AArch64ExactFPImm {
   struct ExactFPImm {

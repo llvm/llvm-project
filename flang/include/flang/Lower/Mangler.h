@@ -50,6 +50,10 @@ std::string mangleName(const semantics::Symbol &,
 /// Convert a derived type instance to an internal name.
 std::string mangleName(const semantics::DerivedTypeSpec &, ScopeBlockIdMap &);
 
+/// Add a scope specific mangling prefix to a compiler generated name.
+std::string mangleName(std::string &, const Fortran::semantics::Scope &,
+                       ScopeBlockIdMap &);
+
 /// Recover the bare name of the original symbol from an internal name.
 std::string demangleName(llvm::StringRef name);
 

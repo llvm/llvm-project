@@ -150,6 +150,12 @@ bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
       if (LineNo == 0)
         continue;
       unsigned Discriminator = DIL->getDiscriminator();
+      // Clean up discriminators for pseudo probes at the first FS discriminator
+      // pass as their discriminators should not ever be used.
+      if ((Pass == FSDiscriminatorPass::Pass1) && I.isPseudoProbe()) {
+        Discriminator = 0;
+        I.setDebugLoc(DIL->cloneWithDiscriminator(0));
+      }
       uint64_t CallStackHashVal = 0;
       if (ImprovedFSDiscriminator)
         CallStackHashVal = getCallStackHash(DIL);

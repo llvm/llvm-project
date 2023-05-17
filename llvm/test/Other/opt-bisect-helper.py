@@ -9,12 +9,12 @@ import subprocess
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--start', type=int, default=0)
-parser.add_argument('--end', type=int, default=(1 << 32))
-parser.add_argument('--optcmd', default=("opt"))
-parser.add_argument('--filecheckcmd', default=("FileCheck"))
-parser.add_argument('--prefix', default=("CHECK-BISECT"))
-parser.add_argument('--test', default=(""))
+parser.add_argument("--start", type=int, default=0)
+parser.add_argument("--end", type=int, default=(1 << 32))
+parser.add_argument("--optcmd", default=("opt"))
+parser.add_argument("--filecheckcmd", default=("FileCheck"))
+parser.add_argument("--prefix", default=("CHECK-BISECT"))
+parser.add_argument("--test", default=(""))
 
 args = parser.parse_args()
 
@@ -24,9 +24,9 @@ end = args.end
 opt_command = [args.optcmd, "-O2", "-opt-bisect-limit=%(count)s", "-S", args.test]
 check_command = [args.filecheckcmd, args.test, "--check-prefix=%s" % args.prefix]
 last = None
-while start != end and start != end-1:
-    count = int(round(start + (end - start)/2))
-    cmd = [x % {'count':count} for x in opt_command]
+while start != end and start != end - 1:
+    count = int(round(start + (end - start) / 2))
+    cmd = [x % {"count": count} for x in opt_command]
     print("opt: " + str(cmd))
     opt_result = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     filecheck_result = subprocess.Popen(check_command, stdin=opt_result.stdout)

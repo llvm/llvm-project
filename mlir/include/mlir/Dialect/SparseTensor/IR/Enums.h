@@ -300,7 +300,7 @@ constexpr std::optional<LevelFormat> getLevelFormat(DimLevelType dlt) {
 /// TODO: factor out a new LevelProperties type so we can add new properties
 /// without changing this function's signature
 constexpr std::optional<DimLevelType>
-getDimLevelType(LevelFormat lf, bool ordered, bool unique) {
+buildLevelType(LevelFormat lf, bool ordered, bool unique) {
   auto dlt = static_cast<DimLevelType>(static_cast<uint8_t>(lf) |
                                        (ordered ? 0 : 2) | (unique ? 0 : 1));
   return isValidDLT(dlt) ? std::optional(dlt) : std::nullopt;
@@ -321,27 +321,27 @@ static_assert(
     "getLevelFormat conversion is broken");
 
 static_assert(
-    (getDimLevelType(LevelFormat::Dense, false, true) == std::nullopt &&
-     getDimLevelType(LevelFormat::Dense, true, false) == std::nullopt &&
-     getDimLevelType(LevelFormat::Dense, false, false) == std::nullopt &&
-     *getDimLevelType(LevelFormat::Dense, true, true) == DimLevelType::Dense &&
-     *getDimLevelType(LevelFormat::Compressed, true, true) ==
+    (buildLevelType(LevelFormat::Dense, false, true) == std::nullopt &&
+     buildLevelType(LevelFormat::Dense, true, false) == std::nullopt &&
+     buildLevelType(LevelFormat::Dense, false, false) == std::nullopt &&
+     *buildLevelType(LevelFormat::Dense, true, true) == DimLevelType::Dense &&
+     *buildLevelType(LevelFormat::Compressed, true, true) ==
          DimLevelType::Compressed &&
-     *getDimLevelType(LevelFormat::Compressed, true, false) ==
+     *buildLevelType(LevelFormat::Compressed, true, false) ==
          DimLevelType::CompressedNu &&
-     *getDimLevelType(LevelFormat::Compressed, false, true) ==
+     *buildLevelType(LevelFormat::Compressed, false, true) ==
          DimLevelType::CompressedNo &&
-     *getDimLevelType(LevelFormat::Compressed, false, false) ==
+     *buildLevelType(LevelFormat::Compressed, false, false) ==
          DimLevelType::CompressedNuNo &&
-     *getDimLevelType(LevelFormat::Singleton, true, true) ==
+     *buildLevelType(LevelFormat::Singleton, true, true) ==
          DimLevelType::Singleton &&
-     *getDimLevelType(LevelFormat::Singleton, true, false) ==
+     *buildLevelType(LevelFormat::Singleton, true, false) ==
          DimLevelType::SingletonNu &&
-     *getDimLevelType(LevelFormat::Singleton, false, true) ==
+     *buildLevelType(LevelFormat::Singleton, false, true) ==
          DimLevelType::SingletonNo &&
-     *getDimLevelType(LevelFormat::Singleton, false, false) ==
+     *buildLevelType(LevelFormat::Singleton, false, false) ==
          DimLevelType::SingletonNuNo),
-    "getDimLevelType conversion is broken");
+    "buildLevelType conversion is broken");
 
 // Ensure the above predicates work as intended.
 static_assert((isValidDLT(DimLevelType::Undef) &&

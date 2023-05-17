@@ -1447,6 +1447,7 @@ cc_library(
     ]),
     deps = [
         ":Analysis",
+        ":BitReader",
         ":Core",
         ":MC",
         ":Scalar",

@@ -270,15 +270,53 @@ public:
 
   /// Assigns `Loc` as the storage location of `E` in the environment.
   ///
+  /// This function is deprecated; prefer `setStorageLocationStrict()`.
+  /// For details, see https://discourse.llvm.org/t/70086.
+  ///
   /// Requirements:
   ///
   ///  `E` must not be assigned a storage location in the environment.
   void setStorageLocation(const Expr &E, StorageLocation &Loc);
 
+  /// Assigns `Loc` as the storage location of the glvalue `E` in the
+  /// environment.
+  ///
+  /// This function is the preferred alternative to
+  /// `setStorageLocation(const Expr &, StorageLocation &)`. Once the migration
+  /// to strict handling of value categories is complete (see
+  /// https://discourse.llvm.org/t/70086), `setStorageLocation()` will be
+  /// removed and this function will be renamed to `setStorageLocation()`.
+  ///
+  /// Requirements:
+  ///
+  ///  `E` must not be assigned a storage location in the environment.
+  ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
+  void setStorageLocationStrict(const Expr &E, StorageLocation &Loc);
+
   /// Returns the storage location assigned to `E` in the environment, applying
   /// the `SP` policy for skipping past indirections, or null if `E` isn't
   /// assigned a storage location in the environment.
+  ///
+  /// This function is deprecated; prefer `getStorageLocationStrict()`.
+  /// For details, see https://discourse.llvm.org/t/70086.
   StorageLocation *getStorageLocation(const Expr &E, SkipPast SP) const;
+
+  /// Returns the storage location assigned to the glvalue `E` in the
+  /// environment, or null if `E` isn't assigned a storage location in the
+  /// environment.
+  ///
+  /// If the storage location for `E` is associated with a
+  /// `ReferenceValue RefVal`, returns `RefVal.getReferentLoc()` instead.
+  ///
+  /// This function is the preferred alternative to
+  /// `getStorageLocation(const Expr &, SkipPast)`. Once the migration
+  /// to strict handling of value categories is complete (see
+  /// https://discourse.llvm.org/t/70086), `getStorageLocation()` will be
+  /// removed and this function will be renamed to `getStorageLocation()`.
+  ///
+  /// Requirements:
+  ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
+  StorageLocation *getStorageLocationStrict(const Expr &E) const;
 
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
@@ -305,6 +343,25 @@ public:
   /// Assigns `Val` as the value of `Loc` in the environment.
   void setValue(const StorageLocation &Loc, Value &Val);
 
+  /// Assigns `Val` as the value of the prvalue `E` in the environment.
+  ///
+  /// If `E` is not yet associated with a storage location, associates it with
+  /// a newly created storage location. In any case, associates the storage
+  /// location of `E` with `Val`.
+  ///
+  /// Once the migration to strict handling of value categories is complete
+  /// (see https://discourse.llvm.org/t/70086), this function will be renamed to
+  /// `setValue()`. At this point, prvalue expressions will be associated
+  /// directly with `Value`s, and the legacy behavior of associating prvalue
+  /// expressions with storage locations (as described above) will be
+  /// eliminated.
+  ///
+  /// Requirements:
+  ///
+  ///  `E` must be a prvalue
+  ///  `Val` must not be a `ReferenceValue`
+  void setValueStrict(const Expr &E, Value &Val);
+
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
   Value *getValue(const StorageLocation &Loc) const;
@@ -315,7 +372,24 @@ public:
 
   /// Equivalent to `getValue(getStorageLocation(E, SP), SkipPast::None)` if `E`
   /// is assigned a storage location in the environment, otherwise returns null.
+  ///
+  /// This function is deprecated; prefer `getValueStrict()`. For details, see
+  /// https://discourse.llvm.org/t/70086.
   Value *getValue(const Expr &E, SkipPast SP) const;
+
+  /// Returns the `Value` assigned to the prvalue `E` in the environment, or
+  /// null if `E` isn't assigned a value in the environment.
+  ///
+  /// This function is the preferred alternative to
+  /// `getValue(const Expr &, SkipPast)`. Once the migration to strict handling
+  /// of value categories is complete (see https://discourse.llvm.org/t/70086),
+  /// `getValue()` will be removed and this function will be renamed to
+  /// `getValue()`.
+  ///
+  /// Requirements:
+  ///
+  ///  `E` must be a prvalue
+  Value *getValueStrict(const Expr &E) const;
 
   // FIXME: should we deprecate the following & call arena().create() directly?
 

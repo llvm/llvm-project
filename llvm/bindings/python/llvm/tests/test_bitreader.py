@@ -8,8 +8,8 @@ from ..core import Context
 from ..core import Module
 from ..bit_reader import parse_bitcode
 
-class TestBitReader(TestBase):
 
+class TestBitReader(TestBase):
     def test_parse_bitcode(self):
         source = self.get_test_bc()
         m = parse_bitcode(MemoryBuffer(filename=source))

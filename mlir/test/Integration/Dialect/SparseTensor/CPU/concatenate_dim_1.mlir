@@ -16,26 +16,26 @@
 // REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=4 reassociate-fp-reductions=true enable-index-optimizations=true"
 // RUN: %{compile} | %{run}
 
-#MAT_C_C = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
-#MAT_D_C = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
-#MAT_C_D = #sparse_tensor.encoding<{dimLevelType = ["compressed", "dense"]}>
+#MAT_C_C = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#MAT_D_C = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#MAT_C_D = #sparse_tensor.encoding<{lvlTypes = ["compressed", "dense"]}>
 #MAT_D_D = #sparse_tensor.encoding<{
-  dimLevelType = ["dense", "dense"],
+  lvlTypes = ["dense", "dense"],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
 #MAT_C_C_P = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ],
+  lvlTypes = [ "compressed", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
 #MAT_C_D_P = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "dense" ],
+  lvlTypes = [ "compressed", "dense" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
 #MAT_D_C_P = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
+  lvlTypes = [ "dense", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 

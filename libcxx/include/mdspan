@@ -1,0 +1,69 @@
+// -*-C++ - *-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===---------------------------------------------------------------------===//
+
+/*
+    extents synopsis
+
+namespace std {
+  template<class _IndexType, size_t... _Extents>
+  class extents {
+  public:
+    using index_type = _IndexType;
+    using size_type = make_unsigned_t<index_type>;
+    using rank_type = size_t;
+
+    // [mdspan.extents.obs], observers of the multidimensional index space
+    static constexpr rank_type rank() noexcept { return sizeof...(_Extents); }
+    static constexpr rank_type rank_dynamic() noexcept { return dynamic-index(rank()); }
+    static constexpr size_t static_extent(rank_type) noexcept;
+    constexpr index_type extent(rank_type) const noexcept;
+
+    // [mdspan.extents.cons], constructors
+    constexpr extents() noexcept = default;
+
+    template<class _OtherIndexType, size_t... _OtherExtents>
+      constexpr explicit(see below)
+        extents(const extents<_OtherIndexType, _OtherExtents...>&) noexcept;
+    template<class... _OtherIndexTypes>
+      constexpr explicit extents(_OtherIndexTypes...) noexcept;
+    template<class _OtherIndexType, size_t N>
+      constexpr explicit(N != rank_dynamic())
+        extents(span<_OtherIndexType, N>) noexcept;
+    template<class _OtherIndexType, size_t N>
+      constexpr explicit(N != rank_dynamic())
+        extents(const array<_OtherIndexType, N>&) noexcept;
+
+    // [mdspan.extents.cmp], comparison operators
+    template<class _OtherIndexType, size_t... _OtherExtents>
+      friend constexpr bool operator==(const extents&,
+                                       const extents<_OtherIndexType, _OtherExtents...>&) noexcept;
+
+  private:
+    // libcxx note: we do not use an array here, but we need to preserve the as-if behavior
+    // for example the default constructor must zero initialize dynamic extents
+    array<index_type, rank_dynamic()> dynamic-extents{};                // exposition only
+  };
+
+  template<class... Integrals>
+    explicit extents(Integrals...)
+      -> see below;
+}
+*/
+
+#ifndef _LIBCPP_MDSPAN
+#define _LIBCPP_MDSPAN
+
+#include <__config>
+#include <__mdspan/extents.h>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#endif // _LIBCPP_MDSPAN

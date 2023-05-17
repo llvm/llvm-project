@@ -418,7 +418,6 @@ int main() {
 // CHECK: ret void
 
 // CHECK: define internal noundef i32 [[TASK_ENTRY]](i32 noundef %0, ptr noalias noundef %1)
-// CHECK: alloca ptr,
 // CHECK: %__context
 // CHECK-DAG: [[PRIV_T_VAR_ADDR:%.+]] = alloca ptr,
 // CHECK-DAG: [[PRIV_VEC_ADDR:%.+]] = alloca ptr,

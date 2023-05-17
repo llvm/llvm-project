@@ -768,9 +768,6 @@ class VectorType;
 
     const InstrItineraryData *Itins;
 
-    /// ARMPCLabelIndex - Keep track of the number of ARM PC labels created.
-    unsigned ARMPCLabelIndex;
-
     // TODO: remove this, and have shouldInsertFencesForAtomic do the proper
     // check.
     bool InsertFencesForAtomic;
@@ -972,8 +969,6 @@ class VectorType;
                                 MachineBasicBlock *DispatchBB, int FI) const;
 
     void EmitSjLjDispatchBlock(MachineInstr &MI, MachineBasicBlock *MBB) const;
-
-    bool RemapAddSubWithFlags(MachineInstr &MI, MachineBasicBlock *BB) const;
 
     MachineBasicBlock *EmitStructByval(MachineInstr &MI,
                                        MachineBasicBlock *MBB) const;

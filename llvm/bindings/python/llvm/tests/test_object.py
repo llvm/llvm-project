@@ -6,6 +6,7 @@ from ..object import Relocation
 from ..object import Section
 from ..object import Symbol
 
+
 class TestObjectFile(TestBase):
     def get_object_file(self):
         source = self.get_test_binary()

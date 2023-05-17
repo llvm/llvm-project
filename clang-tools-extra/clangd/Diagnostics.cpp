@@ -918,7 +918,7 @@ std::optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
         .str();
   }
   case Diag::Clangd:
-    if (Name == "unused-includes")
+    if (Name == "unused-includes" || Name == "missing-includes")
       return {"https://clangd.llvm.org/guides/include-cleaner"};
     break;
   case Diag::ClangdConfig:

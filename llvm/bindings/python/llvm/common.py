@@ -1,10 +1,10 @@
-#===- common.py - Python LLVM Bindings -----------------------*- python -*--===#
+# ===- common.py - Python LLVM Bindings -----------------------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
+# ===------------------------------------------------------------------------===#
 
 from ctypes import POINTER
 from ctypes import c_void_p
@@ -15,20 +15,22 @@ import platform
 
 # LLVM_VERSION: sync with PACKAGE_VERSION in CMakeLists.txt
 #               but leave out the 'svn' suffix.
-LLVM_VERSION = '10.0.0'
+LLVM_VERSION = "10.0.0"
 
 __all__ = [
-    'c_object_p',
-    'get_library',
+    "c_object_p",
+    "get_library",
 ]
 
 c_object_p = POINTER(c_void_p)
+
 
 class LLVMObject(object):
     """Base class for objects that are backed by an LLVM data structure.
 
     This class should never be instantiated outside of this package.
     """
+
     def __init__(self, ptr, ownable=True, disposer=None):
         assert isinstance(ptr, c_object_p)
 
@@ -61,11 +63,12 @@ class LLVMObject(object):
         return self._as_parameter_
 
     def __del__(self):
-        if not hasattr(self, '_self_owned') or not hasattr(self, '_disposer'):
+        if not hasattr(self, "_self_owned") or not hasattr(self, "_disposer"):
             return
 
         if self._self_owned and self._disposer:
             self._disposer(self)
+
 
 class CachedProperty(object):
     """Decorator that caches the result of a property lookup.
@@ -74,11 +77,12 @@ class CachedProperty(object):
     decorator on properties that invoke C API calls for which the result of the
     call will be idempotent.
     """
+
     def __init__(self, wrapped):
         self.wrapped = wrapped
         try:
             self.__doc__ = wrapped.__doc__
-        except: # pragma: no cover
+        except:  # pragma: no cover
             pass
 
     def __get__(self, instance, instance_type=None):
@@ -89,6 +93,7 @@ class CachedProperty(object):
         setattr(instance, self.wrapped.__name__, value)
 
         return value
+
 
 def get_library():
     """Obtain a reference to the llvm library."""
@@ -101,14 +106,14 @@ def get_library():
     # library into a default linker search path.  Always Try ctypes.cdll.LoadLibrary()
     # with all possible library names first, then try ctypes.util.find_library().
 
-    names = ['LLVM-' + LLVM_VERSION, 'LLVM-' + LLVM_VERSION + 'svn']
+    names = ["LLVM-" + LLVM_VERSION, "LLVM-" + LLVM_VERSION + "svn"]
     t = platform.system()
-    if t == 'Darwin':
-        pfx, ext = 'lib', '.dylib'
-    elif t == 'Windows':
-        pfx, ext = '', '.dll'
+    if t == "Darwin":
+        pfx, ext = "lib", ".dylib"
+    elif t == "Windows":
+        pfx, ext = "", ".dll"
     else:
-        pfx, ext = 'lib', '.so'
+        pfx, ext = "lib", ".so"
 
     for i in names:
         try:
@@ -122,4 +127,4 @@ def get_library():
         t = ctypes.util.find_library(i)
         if t:
             return cdll.LoadLibrary(t)
-    raise Exception('LLVM shared library not found!')
+    raise Exception("LLVM shared library not found!")

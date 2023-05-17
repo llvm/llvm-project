@@ -88,38 +88,33 @@ public:
     return std::nullopt;
   }
 
-  std::optional<int64_t>
-  getVariableRelocAdjustment(const DWARFDie &DIE) override {
-    assert((DIE.getTag() == dwarf::DW_TAG_variable ||
-            DIE.getTag() == dwarf::DW_TAG_constant) &&
-           "Wrong type of input die");
-
-    if (Expected<DWARFLocationExpressionsVector> Loc =
-            DIE.getLocations(dwarf::DW_AT_location)) {
-      DWARFUnit *U = DIE.getDwarfUnit();
-      for (const auto &Entry : *Loc) {
-        DataExtractor Data(toStringRef(Entry.Expr),
-                           U->getContext().isLittleEndian(), 0);
-        DWARFExpression Expression(Data, U->getAddressByteSize(),
-                                   U->getFormParams().Format);
-        bool HasLiveAddresses =
-            any_of(Expression, [&](const DWARFExpression::Operation &Op) {
-              // TODO: add handling of dwarf::DW_OP_addrx
-              return !Op.isError() &&
-                     (Op.getCode() == dwarf::DW_OP_addr &&
-                      !isDeadAddress(Op.getRawOperand(0), U->getVersion(),
-                                     Opts.Tombstone,
-                                     DIE.getDwarfUnit()->getAddressByteSize()));
-            });
-
-        if (HasLiveAddresses)
+  std::optional<int64_t> getExprOpAddressRelocAdjustment(
+      DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
+      uint64_t EndOffset) override {
+    switch (Op.getCode()) {
+    default: {
+      assert(false && "Specified operation does not have address operand");
+    } break;
+    case dwarf::DW_OP_const4u:
+    case dwarf::DW_OP_const8u:
+    case dwarf::DW_OP_const4s:
+    case dwarf::DW_OP_const8s:
+    case dwarf::DW_OP_addr: {
+      if (!isDeadAddress(Op.getRawOperand(0), U.getVersion(), Opts.Tombstone,
+                         U.getAddressByteSize()))
+        // Relocation value for the linked binary is 0.
+        return 0;
+    } break;
+    case dwarf::DW_OP_constx:
+    case dwarf::DW_OP_addrx: {
+      if (std::optional<object::SectionedAddress> Address =
+              U.getAddrOffsetSectionItem(Op.getRawOperand(0))) {
+        if (!isDeadAddress(Address->Address, U.getVersion(), Opts.Tombstone,
+                           U.getAddressByteSize()))
           // Relocation value for the linked binary is 0.
           return 0;
       }
-    } else {
-      // FIXME: missing DW_AT_location is OK here, but other errors should be
-      // reported to the user.
-      consumeError(Loc.takeError());
+    } break;
     }
 
     return std::nullopt;

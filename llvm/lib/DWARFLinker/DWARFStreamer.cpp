@@ -240,16 +240,18 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
     // Emit a null terminator.
     Asm->emitInt8(0);
   }
+}
 
-#if 0
-  if (DwarfVersion >= 5) {
-    // Emit an empty string offset section.
-    Asm->OutStreamer->switchSection(MOFI->getDwarfStrOffSection());
-    Asm->emitDwarfUnitLength(4, "Length of String Offsets Set");
-    Asm->emitInt16(DwarfVersion);
-    Asm->emitInt16(0);
+/// Emit the debug_line_str section stored in \p Pool.
+void DwarfStreamer::emitLineStrings(const NonRelocatableStringpool &Pool) {
+  Asm->OutStreamer->switchSection(MOFI->getDwarfLineStrSection());
+  std::vector<DwarfStringPoolEntryRef> Entries = Pool.getEntriesForEmission();
+  for (auto Entry : Entries) {
+    // Emit the string itself.
+    Asm->OutStreamer->emitBytes(Entry.getString());
+    // Emit a null terminator.
+    Asm->emitInt8(0);
   }
-#endif
 }
 
 void DwarfStreamer::emitDebugNames(
@@ -631,27 +633,225 @@ void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
   LocListsSectionSize += 1;
 }
 
-void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
-                                         StringRef PrologueBytes,
-                                         unsigned MinInstLength,
-                                         std::vector<DWARFDebugLine::Row> &Rows,
-                                         unsigned PointerSize) {
+void DwarfStreamer::emitLineTableForUnit(
+    const DWARFDebugLine::LineTable &LineTable, const CompileUnit &Unit,
+    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool) {
   // Switch to the section where the table will be emitted into.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfLineSection());
+
   MCSymbol *LineStartSym = MC->createTempSymbol();
   MCSymbol *LineEndSym = MC->createTempSymbol();
 
-  // The first 4 bytes is the total length of the information for this
-  // compilation unit (not including these 4 bytes for the length).
-  Asm->emitLabelDifference(LineEndSym, LineStartSym, 4);
+  // unit_length.
+  if (LineTable.Prologue.FormParams.Format == dwarf::DwarfFormat::DWARF64) {
+    MS->emitInt32(dwarf::DW_LENGTH_DWARF64);
+    LineSectionSize += 4;
+  }
+  emitLabelDifference(LineEndSym, LineStartSym,
+                      LineTable.Prologue.FormParams.Format, LineSectionSize);
   Asm->OutStreamer->emitLabel(LineStartSym);
-  // Copy Prologue.
-  MS->emitBytes(PrologueBytes);
-  LineSectionSize += PrologueBytes.size() + 4;
+
+  // Emit prologue.
+  emitLineTablePrologue(LineTable.Prologue, DebugStrPool, DebugLineStrPool);
+
+  // Emit rows.
+  emitLineTableRows(LineTable, LineEndSym,
+                    Unit.getOrigUnit().getAddressByteSize());
+}
+
+void DwarfStreamer::emitLineTablePrologue(const DWARFDebugLine::Prologue &P,
+                                          OffsetsStringPool &DebugStrPool,
+                                          OffsetsStringPool &DebugLineStrPool) {
+  MCSymbol *PrologueStartSym = MC->createTempSymbol();
+  MCSymbol *PrologueEndSym = MC->createTempSymbol();
+
+  // version (uhalf).
+  MS->emitInt16(P.getVersion());
+  LineSectionSize += 2;
+  if (P.getVersion() == 5) {
+    // address_size (ubyte).
+    MS->emitInt8(P.getAddressSize());
+    LineSectionSize += 1;
+
+    // segment_selector_size (ubyte).
+    MS->emitInt8(P.SegSelectorSize);
+    LineSectionSize += 1;
+  }
+
+  // header_length.
+  emitLabelDifference(PrologueEndSym, PrologueStartSym, P.FormParams.Format,
+                      LineSectionSize);
+
+  Asm->OutStreamer->emitLabel(PrologueStartSym);
+  emitLineTableProloguePayload(P, DebugStrPool, DebugLineStrPool);
+  Asm->OutStreamer->emitLabel(PrologueEndSym);
+}
+
+void DwarfStreamer::emitLineTablePrologueV2IncludeAndFileTable(
+    const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
+    OffsetsStringPool &DebugLineStrPool) {
+  // include_directories (sequence of path names).
+  for (const DWARFFormValue &Include : P.IncludeDirectories)
+    emitLineTableString(P, Include, DebugStrPool, DebugLineStrPool);
+  // The last entry is followed by a single null byte.
+  MS->emitInt8(0);
+  LineSectionSize += 1;
+
+  // file_names (sequence of file entries).
+  for (const DWARFDebugLine::FileNameEntry &File : P.FileNames) {
+    // A null-terminated string containing the full or relative path name of a
+    // source file.
+    emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool);
+    // An unsigned LEB128 number representing the directory index of a directory
+    // in the include_directories section.
+    LineSectionSize += MS->emitULEB128IntValue(File.DirIdx);
+    // An unsigned LEB128 number representing the (implementation-defined) time
+    // of last modification for the file, or 0 if not available.
+    LineSectionSize += MS->emitULEB128IntValue(File.ModTime);
+    // An unsigned LEB128 number representing the length in bytes of the file,
+    // or 0 if not available.
+    LineSectionSize += MS->emitULEB128IntValue(File.Length);
+  }
+  // The last entry is followed by a single null byte.
+  MS->emitInt8(0);
+  LineSectionSize += 1;
+}
+
+void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
+    const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
+    OffsetsStringPool &DebugLineStrPool) {
+  if (P.IncludeDirectories.empty()) {
+    // directory_entry_format_count(ubyte).
+    MS->emitInt8(0);
+    LineSectionSize += 1;
+  } else {
+    // directory_entry_format_count(ubyte).
+    MS->emitInt8(1);
+    LineSectionSize += 1;
+
+    // directory_entry_format (sequence of ULEB128 pairs).
+    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_path);
+    LineSectionSize +=
+        MS->emitULEB128IntValue(P.IncludeDirectories[0].getForm());
+  }
+
+  // directories_count (ULEB128).
+  LineSectionSize += MS->emitULEB128IntValue(P.IncludeDirectories.size());
+  // directories (sequence of directory names).
+  for (auto Include : P.IncludeDirectories)
+    emitLineTableString(P, Include, DebugStrPool, DebugLineStrPool);
+
+  if (P.FileNames.empty()) {
+    // file_name_entry_format_count (ubyte).
+    MS->emitInt8(0);
+    LineSectionSize += 1;
+  } else {
+    // file_name_entry_format_count (ubyte).
+    MS->emitInt8(2);
+    LineSectionSize += 1;
+
+    // file_name_entry_format (sequence of ULEB128 pairs).
+    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_path);
+    LineSectionSize += MS->emitULEB128IntValue(P.FileNames[0].Name.getForm());
+
+    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_directory_index);
+    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_data1);
+  }
+
+  // file_names_count (ULEB128).
+  LineSectionSize += MS->emitULEB128IntValue(P.FileNames.size());
+
+  // file_names (sequence of file name entries).
+  for (auto File : P.FileNames) {
+    emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool);
+    MS->emitInt8(File.DirIdx);
+    LineSectionSize += 1;
+  }
+}
+
+void DwarfStreamer::emitLineTableString(const DWARFDebugLine::Prologue &P,
+                                        const DWARFFormValue &String,
+                                        OffsetsStringPool &DebugStrPool,
+                                        OffsetsStringPool &DebugLineStrPool) {
+  std::optional<const char *> StringVal = dwarf::toString(String);
+  if (!StringVal) {
+    warn("Cann't read string from line table.");
+    return;
+  }
+
+  switch (String.getForm()) {
+  case dwarf::DW_FORM_string: {
+    StringRef TranslatedString =
+        (Translator) ? Translator(*StringVal) : *StringVal;
+    Asm->OutStreamer->emitBytes(TranslatedString.data());
+    Asm->emitInt8(0);
+    LineSectionSize += TranslatedString.size() + 1;
+  } break;
+  case dwarf::DW_FORM_strp:
+  case dwarf::DW_FORM_line_strp: {
+    DwarfStringPoolEntryRef StringRef =
+        String.getForm() == dwarf::DW_FORM_strp
+            ? DebugStrPool.getEntry(*StringVal)
+            : DebugLineStrPool.getEntry(*StringVal);
+
+    emitIntOffset(StringRef.getOffset(), P.FormParams.Format, LineSectionSize);
+  } break;
+  default:
+    warn("Unsupported string form inside line table.");
+    break;
+  };
+}
+
+void DwarfStreamer::emitLineTableProloguePayload(
+    const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
+    OffsetsStringPool &DebugLineStrPool) {
+  // minimum_instruction_length (ubyte).
+  MS->emitInt8(P.MinInstLength);
+  LineSectionSize += 1;
+  if (P.FormParams.Version >= 4) {
+    // maximum_operations_per_instruction (ubyte).
+    MS->emitInt8(P.MaxOpsPerInst);
+    LineSectionSize += 1;
+  }
+  // default_is_stmt (ubyte).
+  MS->emitInt8(P.DefaultIsStmt);
+  LineSectionSize += 1;
+  // line_base (sbyte).
+  MS->emitInt8(P.LineBase);
+  LineSectionSize += 1;
+  // line_range (ubyte).
+  MS->emitInt8(P.LineRange);
+  LineSectionSize += 1;
+  // opcode_base (ubyte).
+  MS->emitInt8(P.OpcodeBase);
+  LineSectionSize += 1;
+
+  // standard_opcode_lengths (array of ubyte).
+  for (auto Length : P.StandardOpcodeLengths) {
+    MS->emitInt8(Length);
+    LineSectionSize += 1;
+  }
+
+  if (P.FormParams.Version < 5)
+    emitLineTablePrologueV2IncludeAndFileTable(P, DebugStrPool,
+                                               DebugLineStrPool);
+  else
+    emitLineTablePrologueV5IncludeAndFileTable(P, DebugStrPool,
+                                               DebugLineStrPool);
+}
+
+void DwarfStreamer::emitLineTableRows(
+    const DWARFDebugLine::LineTable &LineTable, MCSymbol *LineEndSym,
+    unsigned AddressByteSize) {
+
+  MCDwarfLineTableParams Params;
+  Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
+  Params.DWARF2LineBase = LineTable.Prologue.LineBase;
+  Params.DWARF2LineRange = LineTable.Prologue.LineRange;
 
   SmallString<128> EncodingBuffer;
 
-  if (Rows.empty()) {
+  if (LineTable.Rows.empty()) {
     // We only have the dummy entry, dsymutil emits an entry with a 0
     // address in that case.
     MCDwarfLineAddr::encode(*MC, Params, std::numeric_limits<int64_t>::max(), 0,
@@ -672,17 +872,19 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
   unsigned RowsSinceLastSequence = 0;
 
-  for (DWARFDebugLine::Row &Row : Rows) {
+  for (const DWARFDebugLine::Row &Row : LineTable.Rows) {
     int64_t AddressDelta;
     if (Address == -1ULL) {
       MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);
-      MS->emitULEB128IntValue(PointerSize + 1);
+      MS->emitULEB128IntValue(AddressByteSize + 1);
       MS->emitIntValue(dwarf::DW_LNE_set_address, 1);
-      MS->emitIntValue(Row.Address.Address, PointerSize);
-      LineSectionSize += 2 + PointerSize + getULEB128Size(PointerSize + 1);
+      MS->emitIntValue(Row.Address.Address, AddressByteSize);
+      LineSectionSize +=
+          2 + AddressByteSize + getULEB128Size(AddressByteSize + 1);
       AddressDelta = 0;
     } else {
-      AddressDelta = (Row.Address.Address - Address) / MinInstLength;
+      AddressDelta =
+          (Row.Address.Address - Address) / LineTable.Prologue.MinInstLength;
     }
 
     // FIXME: code copied and transformed from MCDwarf.cpp::EmitDwarfLineTable.
@@ -734,7 +936,8 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
     int64_t LineDelta = int64_t(Row.Line) - LastLine;
     if (!Row.EndSequence) {
-      MCDwarfLineAddr::encode(*MC, Params, LineDelta, AddressDelta, EncodingBuffer);
+      MCDwarfLineAddr::encode(*MC, Params, LineDelta, AddressDelta,
+                              EncodingBuffer);
       MS->emitBytes(EncodingBuffer);
       LineSectionSize += EncodingBuffer.size();
       EncodingBuffer.resize(0);
@@ -774,86 +977,19 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
   MS->emitLabel(LineEndSym);
 }
 
-/// Copy the debug_line over to the updated binary while unobfuscating the file
-/// names and directories.
-void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
-  MS->switchSection(MC->getObjectFileInfo()->getDwarfLineSection());
-  StringRef Contents = Data.getData();
+void DwarfStreamer::emitIntOffset(uint64_t Offset, dwarf::DwarfFormat Format,
+                                  uint64_t &SectionSize) {
+  uint8_t Size = dwarf::getDwarfOffsetByteSize(Format);
+  MS->emitIntValue(Offset, Size);
+  SectionSize += Size;
+}
 
-  // We have to deconstruct the line table header, because it contains to
-  // length fields that will need to be updated when we change the length of
-  // the files and directories in there.
-  unsigned UnitLength = Data.getU32(&Offset);
-  uint64_t UnitEnd = Offset + UnitLength;
-  MCSymbol *BeginLabel = MC->createTempSymbol();
-  MCSymbol *EndLabel = MC->createTempSymbol();
-  unsigned Version = Data.getU16(&Offset);
-
-  if (Version > 5) {
-    warn("Unsupported line table version: dropping contents and not "
-         "unobfsucating line table.");
-    return;
-  }
-
-  Asm->emitLabelDifference(EndLabel, BeginLabel, 4);
-  Asm->OutStreamer->emitLabel(BeginLabel);
-  Asm->emitInt16(Version);
-  LineSectionSize += 6;
-
-  MCSymbol *HeaderBeginLabel = MC->createTempSymbol();
-  MCSymbol *HeaderEndLabel = MC->createTempSymbol();
-  Asm->emitLabelDifference(HeaderEndLabel, HeaderBeginLabel, 4);
-  Asm->OutStreamer->emitLabel(HeaderBeginLabel);
-  Offset += 4;
-  LineSectionSize += 4;
-
-  uint64_t AfterHeaderLengthOffset = Offset;
-  // Skip to the directories.
-  Offset += (Version >= 4) ? 5 : 4;
-  unsigned OpcodeBase = Data.getU8(&Offset);
-  Offset += OpcodeBase - 1;
-  Asm->OutStreamer->emitBytes(Contents.slice(AfterHeaderLengthOffset, Offset));
-  LineSectionSize += Offset - AfterHeaderLengthOffset;
-
-  // Offset points to the first directory.
-  while (const char *Dir = Data.getCStr(&Offset)) {
-    if (Dir[0] == 0)
-      break;
-
-    StringRef Translated = Translator(Dir);
-    Asm->OutStreamer->emitBytes(Translated);
-    Asm->emitInt8(0);
-    LineSectionSize += Translated.size() + 1;
-  }
-  Asm->emitInt8(0);
-  LineSectionSize += 1;
-
-  while (const char *File = Data.getCStr(&Offset)) {
-    if (File[0] == 0)
-      break;
-
-    StringRef Translated = Translator(File);
-    Asm->OutStreamer->emitBytes(Translated);
-    Asm->emitInt8(0);
-    LineSectionSize += Translated.size() + 1;
-
-    uint64_t OffsetBeforeLEBs = Offset;
-    Asm->emitULEB128(Data.getULEB128(&Offset));
-    Asm->emitULEB128(Data.getULEB128(&Offset));
-    Asm->emitULEB128(Data.getULEB128(&Offset));
-    LineSectionSize += Offset - OffsetBeforeLEBs;
-  }
-  Asm->emitInt8(0);
-  LineSectionSize += 1;
-
-  Asm->OutStreamer->emitLabel(HeaderEndLabel);
-
-  // Copy the actual line table program over.
-  Asm->OutStreamer->emitBytes(Contents.slice(Offset, UnitEnd));
-  LineSectionSize += UnitEnd - Offset;
-
-  Asm->OutStreamer->emitLabel(EndLabel);
-  Offset = UnitEnd;
+void DwarfStreamer::emitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
+                                        dwarf::DwarfFormat Format,
+                                        uint64_t &SectionSize) {
+  uint8_t Size = dwarf::getDwarfOffsetByteSize(Format);
+  Asm->emitLabelDifference(Hi, Lo, Size);
+  SectionSize += Size;
 }
 
 /// Emit the pubnames or pubtypes section contribution for \p
