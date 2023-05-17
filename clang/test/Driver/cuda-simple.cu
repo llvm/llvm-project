@@ -15,7 +15,7 @@
 //
 // Verify that compiler accepts CUDA syntax with "-x cuda-cpp-output".
 // RUN: %clang --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
-// RUN:        -Werror -fsyntax-only -x cuda-cpp-output -c %s
+// RUN:        -Werror -fsyntax-only -x cuda-cpp-output %s
 
 extern "C" int cudaConfigureCall(int, int);
 extern "C" int __cudaPushCallConfiguration(int, int);
