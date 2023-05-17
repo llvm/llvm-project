@@ -809,7 +809,7 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FPAtomic;
   }
 
-  static bool isNeverUniform(const MachineInstr &MI){
+  static bool isNeverUniform(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::IsNeverUniform;
   }
 
